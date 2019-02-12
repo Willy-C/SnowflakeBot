@@ -31,12 +31,14 @@ async def viv(ctx):
         # await ctx.send(f'https://discordapp.com/channels/{ctx.message.guild.id}/{ctx.message.author.voice.channel.id}/')
 
         author = ctx.message.author  # Instance of Member representing the author
+        timeout = 120  # seconds before the message is self-deleted
+
         embed = discord.Embed(title="Video in Voice channel",
                               colour=discord.Colour(0xff0000))
 
         embed.set_thumbnail(url="https://i.imgur.com/amveTdH.png")
         embed.set_footer(
-            text="This message will self-delete in 1 minute to reduce clutter")
+            text=f"This message will self-delete in {timeout/60} minute(s) to reduce clutter")
 
         embed.add_field(
             name="----------------------------------------------------------",
@@ -49,7 +51,7 @@ async def viv(ctx):
             value=f"Otherwise the link does nothing!")
         await ctx.send(
             content=f"{author.mention} has started a video session in {author.voice.channel.name}!",
-            embed=embed, delete_after=60)
+            embed=embed, delete_after=timeout)
         await ctx.message.delete()  # Delete command invocation message
     else:
         await ctx.send(
