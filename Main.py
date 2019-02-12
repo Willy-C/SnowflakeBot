@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 
-# import datetime
 
 PREFIX = '!'
 DESCR = 'This is a test'
