@@ -11,7 +11,7 @@ bot = commands.Bot(command_prefix=PREFIX, description=DESCR)
 @bot.event
 async def on_ready():
     print(f'Logged in as: {bot.user.name}')
-    print(f'User id:  + {bot.user.id}')
+    print(f'User id: {bot.user.id}')
     print('------')
 
 
