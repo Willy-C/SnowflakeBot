@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-#import datetime
+# import datetime
 
 PREFIX = '!'
 DESCR = 'This is a test'
@@ -23,11 +23,15 @@ async def on_ready():
 
 @bot.command()
 async def viv(ctx):
-    """Returns a link that links current channel and video"""
-    if ctx.message.author.voice is not None:
-        #await ctx.send(f'https://discordapp.com/channels/{ctx.message.guild.id}/{ctx.message.author.voice.channel.id}/')
+    """Returns a link that links current channel and video in an embed"""
+    if isinstance(ctx.message.author, discord.User):
+        await ctx.author.send(
+            f'The command {PREFIX}{ctx.command} can not be used in Private Messages.')
 
-        author = ctx.message.author # Instance of Member representing the author
+    elif ctx.message.author.voice is not None:
+        # await ctx.send(f'https://discordapp.com/channels/{ctx.message.guild.id}/{ctx.message.author.voice.channel.id}/')
+
+        author = ctx.message.author  # Instance of Member representing the author
         embed = discord.Embed(title="Video in Voice channel",
                               colour=discord.Colour(0xff0000))
 
@@ -35,15 +39,19 @@ async def viv(ctx):
         embed.set_footer(
             text="This message will self-delete in 1 minute to reduce clutter")
 
-        embed.add_field(name="----------------------------------------------------------",
-                        value=f"[Click here to join video session for {author.voice.channel.name}]"
-                              f"(https://discordapp.com/channels/"
-                              f"{ctx.message.guild.id}/"
-                              f"{author.voice.channel.id}/)")
-        embed.add_field(name=f"Note: You must be in {author.voice.channel.name} to join",
-                       value=f"Otherwise the link does nothing!")
-        await ctx.send(content=f"{author.mention} has started a video session in {author.voice.channel.name}!", embed=embed, delete_after=60)
-        await ctx.message.delete()
+        embed.add_field(
+            name="----------------------------------------------------------",
+            value=f"[Click here to join video session for {author.voice.channel.name}]"
+                  f"(https://discordapp.com/channels/"
+                  f"{ctx.message.guild.id}/"
+                  f"{author.voice.channel.id}/)")
+        embed.add_field(
+            name=f"Note: You must be in {author.voice.channel.name} to join",
+            value=f"Otherwise the link does nothing!")
+        await ctx.send(
+            content=f"{author.mention} has started a video session in {author.voice.channel.name}!",
+            embed=embed, delete_after=60)
+        await ctx.message.delete()  # Delete command invocation message
     else:
         await ctx.send(
             'You are not in a voice channel! <:beemad:544404624724066304>')
