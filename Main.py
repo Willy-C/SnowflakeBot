@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 
-
 PREFIX = '!'
 DESCR = 'This is a test'
 TOKEN = 'NTQyOTUxOTAyNjY5OTYzMjcx.D0KQQg.7nEH1DzzXWsH6deNad8FftrRh38'
@@ -25,12 +24,14 @@ async def viv(ctx):
     """Returns a link that links current channel and video in an embed"""
     if isinstance(ctx.message.author, discord.User):
         await ctx.author.send(
-            f'The command {PREFIX}{ctx.command} can not be used in Private Messages.')
+            f'The command {PREFIX}{ctx.command} can '
+            f'not be used in Private Messages.')
 
     elif ctx.message.author.voice is not None:
-        # await ctx.send(f'https://discordapp.com/channels/{ctx.message.guild.id}/{ctx.message.author.voice.channel.id}/')
+        # await ctx.send(f'https://discordapp.com/channels/
+        # {ctx.message.guild.id}/{ctx.message.author.voice.channel.id}/')
 
-        author = ctx.message.author  # Instance of Member representing the author
+        author = ctx.message.author  # Instance of Member representing author
         timeout = 120  # seconds before the message is self-deleted
 
         embed = discord.Embed(title="Video in Voice channel",
@@ -38,11 +39,13 @@ async def viv(ctx):
 
         embed.set_thumbnail(url="https://i.imgur.com/amveTdH.png")
         embed.set_footer(
-            text=f"This message will self-delete in {timeout/60} minute(s) to reduce clutter")
+            text=f"This message will self-delete in {timeout/60} minute(s)"
+                 f" to reduce clutter")
 
         embed.add_field(
             name="----------------------------------------------------------",
-            value=f"[Click here to join video session for {author.voice.channel.name}]"
+            value=f"[Click here to join video session for "
+                  f"{author.voice.channel.name}]"
                   f"(https://discordapp.com/channels/"
                   f"{ctx.message.guild.id}/"
                   f"{author.voice.channel.id}/)")
@@ -50,12 +53,18 @@ async def viv(ctx):
             name=f"Note: You must be in {author.voice.channel.name} to join",
             value=f"Otherwise the link does nothing!")
         await ctx.send(
-            content=f"{author.mention} has started a video session in {author.voice.channel.name}!",
+            content=f"{author.mention} has started a video session in "
+                    f"{author.voice.channel.name}!",
             embed=embed, delete_after=timeout)
         await ctx.message.delete()  # Delete command invocation message
     else:
         await ctx.send(
             'You are not in a voice channel! <:beemad:545443640323997717>')
+
+
+@bot.command()
+def avatar(ctx):
+    """Returns the avatar link of user"""
 
 
 bot.run(TOKEN)
