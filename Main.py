@@ -55,7 +55,7 @@ async def viv(ctx):
         await ctx.message.delete()  # Delete command invocation message
     else:
         await ctx.send(
-            'You are not in a voice channel! <:beemad:544404624724066304>')
+            'You are not in a voice channel! <:beemad:545443640323997717>')
 
 
 bot.run(TOKEN)
