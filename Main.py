@@ -63,8 +63,12 @@ async def viv(ctx):
 
 
 @bot.command()
-def avatar(ctx):
+async def avatar(ctx, *, user: discord.Member = None):
     """Returns the avatar link of user"""
+    # if user is None:
+    #     user = ctx.message.author
+    user = ctx.message.author if user is None else user
+    await ctx.send(user.avatar_url_as(static_format='png'))
 
 
 bot.run(TOKEN)
