@@ -62,7 +62,7 @@ async def viv(ctx):
             'You are not in a voice channel! <:beemad:545443640323997717>')
 
 
-@bot.command()
+@bot.command(aliases=['ava', 'pfp'])
 async def avatar(ctx, *, user: discord.Member = None):
     """Returns the avatar link of user"""
     # if user is None:
