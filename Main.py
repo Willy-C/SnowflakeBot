@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 
+from typing import Union
+
 PREFIX = '!'
 DESCR = 'This is a test'
 TOKEN = 'NTQyOTUxOTAyNjY5OTYzMjcx.D0KQQg.7nEH1DzzXWsH6deNad8FftrRh38'
@@ -69,6 +71,63 @@ async def avatar(ctx, *, user: discord.Member = None):
     #     user = ctx.message.author
     user = ctx.message.author if user is None else user
     await ctx.send(user.avatar_url_as(static_format='png'))
+
+
+@bot.command(aliases=['presence'])
+async def change_presence(ctx, mode: Union[int, str], *, game: str = 'nothing'):
+    """Change the bot's presence to specified mode and game"""
+    modes = {0: None,
+             1: discord.ActivityType.playing,
+             2: discord.ActivityType.streaming,
+             3: discord.ActivityType.listening,
+             4: discord.ActivityType.watching}
+
+    if ctx.message.author.id == 94271181271605248:  # Change to check()
+
+        if mode == 'list':
+            await ctx.send('Here is a list of valid modes: \n '
+                           '0: None \n '
+                           '1: Playing \n'
+                           '2: Streaming \n'
+                           '3: Listening to \n'
+                           '4: Watching')
+            return
+
+        # Converts inputted mode to predefined key if mode is a string
+        elif isinstance(mode, str):
+            mode = mode.lower()
+            if mode in ['n', 'none']:
+                mode = 0
+            elif mode in ['p', 'playing']:
+                mode = 1
+            elif mode in ['s', 'streaming']:
+                mode = 2
+            elif mode in ['l', 'listening']:
+                mode = 3
+            elif mode in ['w', 'watching']:
+                mode = 4
+            else:
+                await ctx.send("Invalid mode! Use: n/p/s/l/w/list)")
+                return
+
+        elif mode not in modes:
+            await ctx.send("Invalid mode! Use: 0-4 or list")
+            return
+
+        if mode == 0:
+            await bot.change_presence(activity=None)
+            return
+
+        # Make an instance of discord.Activity with given parameters
+        activity = discord.Activity(type=modes[mode],
+                                    name=game)
+        # Change bot's presence with given activity
+        await bot.change_presence(activity=activity)
+
+    else:  # Change to check()
+        # This command can only be invoked by bot owner
+        emote = '<:beemad:545443640323997717>'
+        await ctx.send(f"This command can only be invoked by my owner! {emote}")
 
 
 bot.run(TOKEN)
