@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from typing import Union
+from typing import Union, Optional
 
 PREFIX = '!'
 DESCR = 'This is a test'
@@ -27,33 +27,41 @@ async def viv(ctx):
     if isinstance(ctx.message.author, discord.User):
         await ctx.author.send(
             f'The command {PREFIX}{ctx.command} can '
-            f'not be used in Private Messages.')
+            f'not be used in private messages.')
 
     elif ctx.message.author.voice is not None:
         # await ctx.send(f'https://discordapp.com/channels/
         # {ctx.message.guild.id}/{ctx.message.author.voice.channel.id}/')
 
         author = ctx.message.author  # Instance of Member representing author
-        timeout = 120  # seconds before the message is self-deleted
+        timeout = 300  # seconds before the message is self-deleted
 
         embed = discord.Embed(title="Video in Voice channel",
-                              colour=discord.Colour(0xff0000))
+                              colour=discord.Colour(0xff0000),
+                              description="[Click here to join video session for "
+                                          f"{author.voice.channel.name}]"
+                                          f"(https://discordapp.com/channels/"
+                                          f"{ctx.message.guild.id}/"
+                                          f"{author.voice.channel.id}/)\n"
+                                          f"Note: You must be in "
+                                          f"#{author.voice.channel.name}"
+                                          f" to join")
+        #  embed.set_thumbnail(url=bot.user.avatar_url_as(format='png'))
+        # embed.set_thumbnail(url="https://i.imgur.com/amveTdH.png")
+        # embed.set_footer(
+        #     text=f"This message will self-delete in {timeout/60} minute(s)"
+        #          f" to reduce clutter")
 
-        embed.set_thumbnail(url="https://i.imgur.com/amveTdH.png")
-        embed.set_footer(
-            text=f"This message will self-delete in {timeout/60} minute(s)"
-                 f" to reduce clutter")
-
-        embed.add_field(
-            name="----------------------------------------------------------",
-            value=f"[Click here to join video session for "
-                  f"{author.voice.channel.name}]"
-                  f"(https://discordapp.com/channels/"
-                  f"{ctx.message.guild.id}/"
-                  f"{author.voice.channel.id}/)")
-        embed.add_field(
-            name=f"Note: You must be in {author.voice.channel.name} to join",
-            value=f"Otherwise the link does nothing!")
+        # embed.add_field(
+        #     name="----------------------------------------------------------",
+        #     value=f"[Click here to join video session for "
+        #           f"{author.voice.channel.name}]"
+        #           f"(https://discordapp.com/channels/"
+        #           f"{ctx.message.guild.id}/"
+        #           f"{author.voice.channel.id}/)")
+        # embed.add_field(
+        #     name=f"Note: You must be in #{author.voice.channel.name} to join",
+        #     value=f"Otherwise the link does nothing!")
         await ctx.send(
             content=f"{author.mention} has started a video session in "
                     f"{author.voice.channel.name}!",
@@ -65,22 +73,36 @@ async def viv(ctx):
 
 
 @bot.command(aliases=['ava', 'pfp'])
-async def avatar(ctx, *, user: discord.Member = None):
+async def avatar(ctx, *, user: Optional[discord.Member] = None):
     """Returns the avatar link of user"""
-    # if user is None:
-    #     user = ctx.message.author
-    user = ctx.message.author if user is None else user
-    await ctx.send(user.avatar_url_as(static_format='png'))
+    # Prints this if user not found
+    if user is None:
+        await ctx.send("No user on found on this server matching that name\n"
+                       "I will search in this order: \n"
+                       "1.  By ID                          (ex. 5429519026)\n"
+                       "2. By Mention               (ex. @Snowflake)\n"
+                       "3. By Name#Discrim  (ex. Snowflake#7321)\n"
+                       "4. By Name                   (ex. Snowflake)\n"
+                       "5. By Nickname            (ex. BeepBoop)\n"
+                       "Note: Names are Case-sensitive!\n")
+    else:
+        await ctx.send(user.avatar_url_as(static_format='png'))
 
 
 @bot.command(aliases=['presence'])
-async def change_presence(ctx, mode: Union[int, str], *, game: str = 'nothing'):
+async def change_presence(ctx, mode: Union[int, str] = 0, *,
+                          game: str = 'nothing'):
     """Change the bot's presence to specified mode and game"""
     modes = {0: None,
              1: discord.ActivityType.playing,
              2: discord.ActivityType.streaming,
              3: discord.ActivityType.listening,
              4: discord.ActivityType.watching}
+    displaymode = {0: 'None',
+                   1: 'Playing',
+                   2: 'Streaming',
+                   3: 'Listening to',
+                   4: 'Watching'}
 
     if ctx.message.author.id == 94271181271605248:  # Change to check()
 
@@ -116,6 +138,8 @@ async def change_presence(ctx, mode: Union[int, str], *, game: str = 'nothing'):
 
         if mode == 0:
             await bot.change_presence(activity=None)
+            await ctx.send('Removing my current presence')
+            await ctx.message.delete()  # Delete command invocation message
             return
 
         # Make an instance of discord.Activity with given parameters
@@ -123,6 +147,8 @@ async def change_presence(ctx, mode: Union[int, str], *, game: str = 'nothing'):
                                     name=game)
         # Change bot's presence with given activity
         await bot.change_presence(activity=activity)
+        await ctx.send(f'Setting my presence to: {displaymode[mode]} {game}')
+        # await ctx.message.delete()  # Delete command invocation message
 
     else:  # Change to check()
         # This command can only be invoked by bot owner
