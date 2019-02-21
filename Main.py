@@ -4,7 +4,7 @@ from discord.ext import commands
 from typing import Union, Optional
 
 PREFIX = ['!', '%']
-DESCR = 'This is a test'
+DESCR = 'This bot is a small side project and still very WIP '
 TOKEN = 'NTQyOTUxOTAyNjY5OTYzMjcx.D0KQQg.7nEH1DzzXWsH6deNad8FftrRh38'
 
 bot = commands.Bot(command_prefix=PREFIX, description=DESCR)
