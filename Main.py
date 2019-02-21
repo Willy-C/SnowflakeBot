@@ -3,7 +3,7 @@ from discord.ext import commands
 
 from typing import Union, Optional
 
-PREFIX = '!'
+PREFIX = ['!', '%']
 DESCR = 'This is a test'
 TOKEN = 'NTQyOTUxOTAyNjY5OTYzMjcx.D0KQQg.7nEH1DzzXWsH6deNad8FftrRh38'
 
@@ -38,8 +38,8 @@ async def viv(ctx):
 
         embed = discord.Embed(title="Video in Voice channel",
                               colour=discord.Colour(0xff0000),
-                              description="[Click here to join video session for "
-                                          f"{author.voice.channel.name}]"
+                              description="[Click here to join video session "
+                                          f"for {author.voice.channel.name}]"
                                           f"(https://discordapp.com/channels/"
                                           f"{ctx.message.guild.id}/"
                                           f"{author.voice.channel.id}/)\n"
@@ -77,7 +77,7 @@ async def avatar(ctx, *, user: Optional[discord.Member] = None):
     """Returns the avatar link of user"""
     # Prints this if user not found
     if user is None:
-        await ctx.send("No user on found on this server matching that name\n"
+        await ctx.send("No user found on this server matching that name.\n"
                        "I will search in this order: \n"
                        "1.  By ID                          (ex. 5429519026)\n"
                        "2. By Mention               (ex. @Snowflake)\n"
@@ -89,9 +89,9 @@ async def avatar(ctx, *, user: Optional[discord.Member] = None):
         await ctx.send(user.avatar_url_as(static_format='png'))
 
 
-@bot.command(aliases=['presence'])
-async def change_presence(ctx, mode: Union[int, str] = 0, *,
-                          game: str = 'nothing'):
+@bot.command(aliases=['change_presence'])
+async def presence(ctx, mode: Union[int, str] = 0, *,
+                   game: str = 'nothing'):
     """Change the bot's presence to specified mode and game"""
     modes = {0: None,
              1: discord.ActivityType.playing,
