@@ -2,6 +2,9 @@ import discord
 from discord.ext import commands
 
 from typing import Union, Optional
+import time
+
+# import ErrorHandler
 
 PREFIX = ['!', '%']
 DESCR = 'This bot is a small side project and still very WIP '
@@ -154,6 +157,17 @@ async def presence(ctx, mode: Union[int, str] = 0, *,
         # This command can only be invoked by bot owner
         emote = '<:beemad:545443640323997717>'
         await ctx.send(f"This command can only be invoked by my owner! {emote}")
+
+
+@bot.command()
+async def ping(ctx):
+    start = time.perf_counter()
+    message = await ctx.send('Beep...')
+    end = time.perf_counter()
+    duration = (end - start) * 1000
+
+    await message.edit(content='Boop'
+                               '\nPing: {:.2f}ms'.format(duration))
 
 
 bot.run(TOKEN)
