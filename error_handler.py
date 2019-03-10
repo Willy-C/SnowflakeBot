@@ -30,8 +30,8 @@ class CommandErrorHandler:
             return await ctx.author.send(f'{ctx.command} can not be used in Private Messages.')
 
         elif isinstance(error, commands.BadArgument):
-            if ctx.command.qualified_name == '':
-                return await ctx.send('I could not find that member. Please try again.')
+            return await ctx.send(
+                f'One or more of arguments are incorrect. Please see {self.bot.prefix}help for more info')
 
         print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
         traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
