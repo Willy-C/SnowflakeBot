@@ -167,8 +167,8 @@ async def ping(ctx):
     end = time.perf_counter()
     duration = (end - start) * 1000
 
-    await message.edit(content='Boop'
-                               '\nPing: {:.2f}ms'.format(duration))
+    await message.edit(content='Boop\n'
+                               'Ping: {:.2f}ms'.format(duration))
 
 
 bot.run(TOKEN)
