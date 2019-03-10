@@ -6,7 +6,7 @@ import time
 
 # import ErrorHandler
 
-PREFIX = ['!', '%']
+PREFIX = '!'
 DESCR = 'This bot is a small side project and still very WIP '
 TOKEN = 'NTQyOTUxOTAyNjY5OTYzMjcx.D0KQQg.7nEH1DzzXWsH6deNad8FftrRh38'
 
@@ -29,7 +29,7 @@ async def viv(ctx):
     """Returns a link that links current channel and video in an embed"""
     if isinstance(ctx.message.author, discord.User):
         await ctx.author.send(
-            f'The command {PREFIX}{ctx.command} can '
+            f'The command {PREFIX}{ctx.command} can'
             f'not be used in private messages.')
 
     elif ctx.message.author.voice is not None:
@@ -92,7 +92,7 @@ async def avatar(ctx, *, user: Optional[discord.Member] = None):
         await ctx.send(user.avatar_url_as(static_format='png'))
 
 
-@bot.command(aliases=['change_presence'])
+@bot.command(hidden=True)
 async def presence(ctx, mode: Union[int, str] = 0, *,
                    game: str = 'nothing'):
     """Change the bot's presence to specified mode and game"""
