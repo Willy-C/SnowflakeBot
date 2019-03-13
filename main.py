@@ -6,13 +6,12 @@ from typing import Union
 import datetime
 
 import config
-import error_handler
 
 DESCR = 'This bot is a small side project and still very WIP'
 TOKEN = config.BOT_TOKEN
 
-# List of cogs with 'cogs.NAME' where NAME is the name of the cog's file name.
-startup_extensions = []
+# File names of extensions we are loading on startup
+startup_extensions = ['jishaku', 'error_handler']
 
 
 def get_prefix(bot, message):
@@ -32,13 +31,18 @@ def get_prefix(bot, message):
 bot = commands.Bot(command_prefix=get_prefix, description=DESCR)
 
 if __name__ == '__main__':
+    total = len(startup_extensions)
+    successes = 0
     for extension in startup_extensions:
         try:
             bot.load_extension(extension)
             print(f'Successfully loaded extension {extension}.')
+            successes += 1
         except Exception as e:
             print(f'Failed to load extension {extension}.')
             # traceback.print_exc()
+            # ^uncomment for traceback when extension fails to load
+    print(f'Successfully loaded {successes}/{total} extensions.')
 
 
 @bot.event
