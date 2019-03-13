@@ -4,12 +4,17 @@ from discord.ext import commands
 from typing import Union, Optional
 import time
 
-# import ErrorHandler
+"""
+To whomever is reading this file:
+    I made this file without really knowing what I was doing so it is messy in a lot of places
+    I know this is not very good pls no flame, it was just a side project I wanted to try out for fun.
+    These are also some of the reasons why I have decided to redo the entire bot.
+"""
 
 PREFIX = '!'
 DESCR = 'This bot is a small side project and still very WIP '
 # If I eventually make the repo becomes public, this token would have been regenerated.
-TOKEN = 'NTQyOTUxOTAyNjY5OTYzMjcx.D0KQQg.7nEH1DzzXWsH6deNad8FftrRh38'
+TOKEN = '--'
 
 bot = commands.Bot(command_prefix=PREFIX, description=DESCR)
 
