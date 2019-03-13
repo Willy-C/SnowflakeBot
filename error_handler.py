@@ -31,7 +31,7 @@ class CommandErrorHandler(commands.Cog):
             return await ctx.author.send(f'{ctx.command} can not be used in Private Messages.')
 
         elif isinstance(error, commands.CommandNotFound):
-            leven_search(ctx.command.name)
+            return await ctx.send(f'{ctx.command} is not found.')
 
         elif isinstance(error, commands.BadArgument):
             return await ctx.send(
