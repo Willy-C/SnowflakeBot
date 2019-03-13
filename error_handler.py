@@ -4,10 +4,11 @@ from discord.ext import commands
 import discord
 
 
-class CommandErrorHandler:
+class CommandErrorHandler(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         """The event triggered when an error is raised while invoking a command.
         ctx   : Context
@@ -35,6 +36,9 @@ class CommandErrorHandler:
         elif isinstance(error, commands.BadArgument):
             return await ctx.send(
                 f'One or more of arguments are incorrect. Please see {self.bot.prefix}help for more info')
+
+        elif isinstance(error, commands.NotOwner):
+            return await ctx.send('Sorry, this command can only be used by my owner.')
 
         print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
         traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
