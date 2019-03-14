@@ -25,7 +25,7 @@ class CommandErrorHandler(commands.Cog):
 
         elif isinstance(error, commands.DisabledCommand):
             return await ctx.send(
-                f'{ctx.command} has been disabled. If you believe this was a mistake, please contact @Willy#7692')
+                f'{ctx.command} has been disabled. If you believe this is a mistake, please contact @Willy#7692')
 
         elif isinstance(error, commands.NoPrivateMessage):
             return await ctx.author.send(f'{ctx.command} can not be used in Private Messages.')
@@ -38,10 +38,11 @@ class CommandErrorHandler(commands.Cog):
                 f'One or more of arguments are incorrect. Please see {self.bot.prefix}help for more info')
 
         elif isinstance(error, commands.NotOwner):
-            return await ctx.send('Sorry, this command can only be used by my owner.')
+            return await ctx.send(
+                'Sorry, this command can only be used by my owner. If you believe this is a mistake, please contact @Willy#7692')
 
-        print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
-        traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+        print('Ignoring exception in command {}:'.format(ctx.command))
+        traceback.print_exception(type(error), error, error.__traceback__)
 
 
 def setup(bot):

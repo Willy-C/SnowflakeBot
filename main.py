@@ -11,13 +11,13 @@ DESCR = 'This bot is a small side project and still very WIP'
 TOKEN = config.BOT_TOKEN
 
 # File names of extensions we are loading on startup
-startup_extensions = ['jishaku', 'error_handler']
+startup_extensions = ['jishaku', 'error_handler', 'utilities']
 
 
 def get_prefix(bot, message):
     """A callable Prefix for our bot. This could be edited to allow per server prefixes."""
 
-    prefixes = ['?', '! ', '%']
+    prefixes = ['?', '!', '%']
 
     # Check to see if we are outside of a guild. e.g DM's etc.
     if not message.guild:
@@ -29,6 +29,7 @@ def get_prefix(bot, message):
 
 
 bot = commands.Bot(command_prefix=get_prefix, description=DESCR)
+# bot = config.OwnerOverwrite(command_prefix=get_prefix, description=DESCR)
 
 if __name__ == '__main__':
     total = len(startup_extensions)
