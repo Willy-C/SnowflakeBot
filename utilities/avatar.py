@@ -1,9 +1,8 @@
 import discord
 from discord.ext import commands
-import time
 
 
-class UtililtyCog(commands.Cog, name='utilities'):
+class Avatar(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -15,7 +14,7 @@ class UtililtyCog(commands.Cog, name='utilities'):
 
     @get_avatar.error
     async def get_avatar_handler(self, ctx, error):
-        if isinstance(error, commands.BadArgument) or isinstance(error, commands.MissingRequiredArgument):
+        if isinstance(error, commands.BadArgument):
             return await ctx.send("No user found on this server matching that name.\n"
                                   "I will search in this order: \n"
                                   "1.  By ID                          (ex. 5429519026699)\n"
@@ -28,16 +27,6 @@ class UtililtyCog(commands.Cog, name='utilities'):
             ctx.send(
                 "Some unknown error occurred. Please try again, if this error persists, please contact @Willy#7692")
 
-    @commands.command(brief='Gets the ping')
-    async def ping(self, ctx):
-        start = time.perf_counter()
-        message = await ctx.send('Beep...')
-        end = time.perf_counter()
-        duration = (end - start) * 1000
-
-        await message.edit(content=f'Boop\n'
-                                   f'Ping:{duration:.2f}ms')
-
 
 def setup(bot):
-    bot.add_cog(UtililtyCog(bot))
+    bot.add_cog(Avatar(bot))
