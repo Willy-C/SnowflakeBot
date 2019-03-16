@@ -17,7 +17,7 @@ class CommandErrorHandler(commands.Cog):
         if hasattr(ctx.command, 'on_error'):
             return
 
-        ignored = (commands.CommandNotFound, commands.UserInputError)
+        ignored = (commands.CommandNotFound)
         error = getattr(error, 'original', error)
 
         if isinstance(error, ignored):
@@ -34,13 +34,11 @@ class CommandErrorHandler(commands.Cog):
             return await ctx.send(f'{ctx.command} is not found.')
 
         elif isinstance(error, commands.BadArgument):
-            return await ctx.send(
-                f'One or more of arguments are incorrect. Please see {self.bot.prefix}help for more info')
+            return await ctx.send(f'One or more of arguments are incorrect. Please see {ctx.prefix}help for more info')
 
         elif isinstance(error, commands.NotOwner):
             return await ctx.send(
                 'Sorry, this command can only be used by my owner. If you believe this is a mistake, please contact @Willy#7692')
-
         print('Ignoring exception in command {}:'.format(ctx.command))
         traceback.print_exception(type(error), error, error.__traceback__)
 
