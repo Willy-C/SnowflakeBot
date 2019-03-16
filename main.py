@@ -11,7 +11,11 @@ DESCR = 'This bot is a small side project and still very WIP'
 TOKEN = config.BOT_TOKEN
 
 # File names of extensions we are loading on startup
-startup_extensions = ['jishaku', 'error_handler', 'utilities']
+startup_extensions = ['jishaku',
+                      'cogs.error_handler',
+                      'cogs.avatar',
+                      'cogs.ping',
+                      'cogs.vc_video']
 
 
 def get_prefix(bot, message):
@@ -24,7 +28,7 @@ def get_prefix(bot, message):
         # Only allow ? to be used in DMs
         return '?'
 
-    # If we are in a guild, we allow for the user to mention us or use any of the prefixes in our list.
+    # If in a guild, allow for the user to mention or use any of the prefixes in the list.
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 

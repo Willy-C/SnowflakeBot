@@ -5,6 +5,9 @@ import time
 
 
 class Ping(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
     @commands.command(brief='Gets the ping')
     async def ping(self, ctx):
         start = time.perf_counter()
