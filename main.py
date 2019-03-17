@@ -15,7 +15,10 @@ startup_extensions = ['jishaku',
                       'cogs.error_handler',
                       'cogs.avatar',
                       'cogs.ping',
-                      'cogs.vc_video']
+                      'cogs.vc_video',
+                      'cogs.members',
+                      'cogs.owner',
+                      'cogs.general']
 
 
 def get_prefix(bot, message):
@@ -33,7 +36,7 @@ def get_prefix(bot, message):
 
 
 bot = commands.Bot(command_prefix=get_prefix, description=DESCR)
-# bot = config.OwnerOverwrite(command_prefix=get_prefix, description=DESCR)
+# bot = config.OwnerOverride(command_prefix=get_prefix, description=DESCR)
 
 if __name__ == '__main__':
     total = len(startup_extensions)

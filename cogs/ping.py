@@ -10,13 +10,17 @@ class Ping(commands.Cog):
 
     @commands.command(brief='Gets the ping')
     async def ping(self, ctx):
-        start = time.perf_counter()
-        message = await ctx.send('Beep...')
-        end = time.perf_counter()
-        duration = (end - start) * 1000
+        ping = round(self.bot.latency * 1000)
+        await ctx.send(f"Ping: `{ping}ms`")
 
-        await message.edit(content=f'Boop\n'
-                                   f'Ping:{duration:.2f}ms')
+    # async def ping(self, ctx):
+    #     start = time.perf_counter()
+    #     message = await ctx.send('Beep...')
+    #     end = time.perf_counter()
+    #     duration = (end - start) * 1000
+    #
+    #     await message.edit(content=f'Boop\n'
+    #                                f'Ping:{duration:.2f}ms')
 
 
 def setup(bot):
