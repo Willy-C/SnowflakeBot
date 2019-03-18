@@ -8,6 +8,12 @@ class OwnerCog(commands.Cog, name='Owner Commands', command_attrs=command_attrs)
     def __init__(self, bot):
         self.bot = bot
 
+    # Applies commands.is_owner() check for all methods in this cog
+    async def cog_check(self, ctx):
+        if not await ctx.bot.is_owner(ctx.author):
+            raise commands.NotOwner('You do not own this bot.')
+        return True
+
     @commands.command(name='load')
     async def load_cog(self, ctx, *, cog: str):
         """Command which Loads a Module.
@@ -44,12 +50,6 @@ class OwnerCog(commands.Cog, name='Owner Commands', command_attrs=command_attrs)
             await ctx.send(f'**`ERROR:`** {type(e).__name__} - {e}')
         else:
             await ctx.send(f'**`SUCCESS`** reloaded {cog}')
-
-    # Applies commands.is_owner() check for all methods in this cog
-    async def cog_check(self, ctx):
-        if not await ctx.bot.is_owner(ctx.author):
-            raise commands.NotOwner('You do not own this bot.')
-        return True
 
 
 def setup(bot):

@@ -13,9 +13,6 @@ TOKEN = config.BOT_TOKEN
 # File names of extensions we are loading on startup
 startup_extensions = ['jishaku',
                       'cogs.error_handler',
-                      'cogs.avatar',
-                      'cogs.ping',
-                      'cogs.vc_video',
                       'cogs.members',
                       'cogs.owner',
                       'cogs.general']
