@@ -17,7 +17,7 @@ class CommandErrorHandler(commands.Cog):
         if hasattr(ctx.command, 'on_error'):
             return
 
-        ignored = (commands.CommandNotFound)
+        ignored = ()  # Tuple of errors to ignore
         error = getattr(error, 'original', error)
 
         if isinstance(error, ignored):
@@ -28,7 +28,7 @@ class CommandErrorHandler(commands.Cog):
                 f'{ctx.command} has been disabled. If you believe this is a mistake, please contact @Willy#7692')
 
         elif isinstance(error, commands.NoPrivateMessage):
-            return await ctx.author.send(f'{ctx.command} can not be used in Private Messages.')
+            return await ctx.author.send(f'The command {ctx.prefix}{ctx.command} cannot be used in Private Messages.')
 
         elif isinstance(error, commands.CommandNotFound):
             return await ctx.send(f'{ctx.command} is not found.')
@@ -39,6 +39,10 @@ class CommandErrorHandler(commands.Cog):
         elif isinstance(error, commands.NotOwner):
             return await ctx.send(
                 'Sorry, this command can only be used by my owner. If you believe this is a mistake, please contact @Willy#7692')
+
+        elif isinstance(error, commands.MissingRequiredArgument):
+            return await ctx.send('Missing one or more required arguments.')
+
         print('Ignoring exception in command {}:'.format(ctx.command))
         traceback.print_exception(type(error), error, error.__traceback__)
 

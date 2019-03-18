@@ -13,7 +13,7 @@ class VideoInVoiceChannel(commands.Cog):
         timeout = 300  # seconds before the message is self-deleted
 
         embed = discord.Embed(title="Video in Voice channel",
-                              colour=discord.Colour(0xff0000),
+                              colour=author.color,
                               description=f"[Click here to join video session for {author.voice.channel.name}](https://discordapp.com/channels/{ctx.message.guild.id}/{author.voice.channel.id}/)\n"
                                           f"Note: You must be in #{author.voice.channel.name} to join")
 

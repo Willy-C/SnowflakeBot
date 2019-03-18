@@ -36,7 +36,6 @@ def get_prefix(bot, message):
 
 
 bot = commands.Bot(command_prefix=get_prefix, description=DESCR)
-# bot = config.OwnerOverride(command_prefix=get_prefix, description=DESCR)
 
 if __name__ == '__main__':
     total = len(startup_extensions)
