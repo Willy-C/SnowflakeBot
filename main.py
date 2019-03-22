@@ -15,7 +15,8 @@ startup_extensions = ['jishaku',
                       'cogs.error_handler',
                       'cogs.members',
                       'cogs.owner',
-                      'cogs.general']
+                      'cogs.general',
+                      'cogs.logger']
 
 
 def get_prefix(bot, message):
@@ -34,7 +35,9 @@ def get_prefix(bot, message):
 
 bot = commands.Bot(command_prefix=get_prefix, description=DESCR)
 
-if __name__ == '__main__':
+
+async def load_startup_extensions():
+    await bot.wait_until_ready()
     total = len(startup_extensions)
     successes = 0
     for extension in startup_extensions:
@@ -46,6 +49,7 @@ if __name__ == '__main__':
             print(f'Failed to load extension {extension}.')
             # traceback.print_exc()
             # ^uncomment for traceback when extension fails to load
+    print('----------------------------------------------------')
     print(f'Successfully loaded {successes}/{total} extensions.')
 
 
@@ -57,7 +61,10 @@ async def on_ready():
 
     activity = discord.Activity(type=discord.ActivityType.listening, name='you :)')
     await bot.change_presence(activity=activity)
-    print(f'Ready! {datetime.datetime.now()}')
+    print(f'Ready! {datetime.datetime.now()}\n')
+    await load_startup_extensions()
 
 
-bot.run(TOKEN, bot=True, reconnect=True)
+bot.run(TOKEN, reconnect=True)
+
+bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name='not kat'))

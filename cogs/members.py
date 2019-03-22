@@ -39,7 +39,7 @@ class MembersCog(commands.Cog, name='Member Commands'):
 
         await ctx.send(content=None, embed=embed)
 
-    @commands.command(name='video in vc', aliases='viv')
+    @commands.command(name='video in vc', aliases=['viv'])
     async def video_inVC(self, ctx):
         """Enables video call functionality in a guild voice channel"""
         author = ctx.message.author

@@ -10,7 +10,7 @@ class GeneralCog(commands.Cog, name='General Commands'):
     @commands.command(name='eval')
     async def _eval(self, ctx, *, args: CodeblockConverter):
         """Evaluates python code in a single line or code block"""
-        await ctx.invoke(self.bot.get_command("jishaku py"), argument=args)
+        await ctx.invoke(self.bot.get_command("jsk py"), argument=args)
 
     @commands.command(brief='Gets the ping')
     async def ping(self, ctx):
