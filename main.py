@@ -48,7 +48,7 @@ async def load_startup_extensions():
             successes += 1
         except Exception as e:
             print(f'Failed to load extension {extension}.')
-            # traceback.print_exc()
+            traceback.print_exc()
             # ^uncomment for traceback when extension fails to load
     print('----------------------------------------------------')
     print(f'Successfully loaded {successes}/{total} extensions.')
