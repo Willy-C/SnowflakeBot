@@ -16,7 +16,8 @@ startup_extensions = ['jishaku',
                       'cogs.members',
                       'cogs.owner',
                       'cogs.general',
-                      'cogs.logger']
+                      'cogs.logger',
+                      'cogs.roll']
 
 
 def get_prefix(bot, message):
@@ -65,6 +66,8 @@ async def on_ready():
     await load_startup_extensions()
 
 
-bot.run(TOKEN, reconnect=True)
+@bot.check
+async def global_blacklist(ctx):
+    return ctx.author.id not in config.blacklist
 
-bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name='not kat'))
+bot.run(TOKEN, reconnect=True)
