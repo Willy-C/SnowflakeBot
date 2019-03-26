@@ -8,16 +8,21 @@ class RollCog(commands.Cog, name='General Commands'):
         self.bot = bot
 
     @commands.command(name='roll')
-    async def roll_die(self, ctx, num_die: int = 1, faces: int = 6):
+    async def roll_die(self, ctx, num_die: int = 1, faces: int = 6, sorted: bool = False):
         rolls = []
         for _ in range(num_die):
             rolls.append(random.randint(1, faces))
-            separator = ' '
+        sort = ''
+        if sorted:
+            rolls.sort()
+            sort = 'Sorted '
+
+        separator = ' '
 
         embed = discord.Embed(colour=discord.Color.dark_teal(),
-                              description=f'Results for rolling {faces} sided die {num_die} time(s):')
+                              description=f'{sort}Results for rolling a {faces} sided die {num_die} time(s):')
         embed.add_field(name='Rolls', value=separator.join(str(roll) for roll in rolls))
-        embed.add_field(name='Total', value=sum(rolls))
+        embed.add_field(name='Total', value=sum(rolls), inline=False)
         await ctx.send(embed=embed)
 
 
