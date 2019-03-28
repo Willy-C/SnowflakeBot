@@ -17,7 +17,7 @@ class MembersCog(commands.Cog, name='Member Commands'):
         """Says when a member joined."""
         if not member:
             member = ctx.author
-        await ctx.send(f'{member.display_name} joined on {member.joined_at}')
+        await ctx.send(f'{member.display_name} joined on {member.joined_at.isoformat(" ", "seconds")}')
 
     @commands.command(name='perms', aliases=['permissions'])
     async def check_permissions(self, ctx, *, member: discord.Member = None):

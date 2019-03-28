@@ -15,9 +15,9 @@ class RollCog(commands.Cog, name='General Commands'):
         sort = ''
         if sorted:
             rolls.sort()
-            sort = 'Sorted '
+            sort = 'Sorted '  # Empty string if unsorted
 
-        separator = ' '
+        separator = ' '  # Space between each element in list when outputting
 
         embed = discord.Embed(colour=discord.Color.dark_teal(),
                               description=f'{sort}Results for rolling a {faces} sided die {num_die} time(s):')

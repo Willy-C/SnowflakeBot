@@ -17,8 +17,8 @@ startup_extensions = ['jishaku',
                       'cogs.owner',
                       'cogs.general',
                       'cogs.logger',
-                      'cogs.roll']
-
+                      'cogs.roll',
+                      'cogs.googleimage']
 
 def get_prefix(bot, message):
     """A callable Prefix for our bot. This could be edited to allow per server prefixes."""
@@ -64,7 +64,6 @@ async def on_ready():
     await bot.change_presence(activity=activity)
     print(f'Ready! {datetime.datetime.now()}\n')
     await load_startup_extensions()
-
 
 @bot.check
 async def global_blacklist(ctx):

@@ -45,6 +45,13 @@ class GeneralCog(commands.Cog, name='General Commands'):
             await ctx.send(
                 "Some unknown error occurred. Please try again, if this error persists, please contact @Willy#7692")
 
+    @commands.command(aliases=['msg'])
+    async def quote(self, ctx, user: discord.Member, *, message: commands.clean_content()):
+        """Send a message as someone else"""
+        hook = await ctx.channel.create_webhook(name=user.display_name)
+        await hook.send(message, avatar_url=user.avatar_url_as(format='png'))
+        await hook.delete()
+
 
 def setup(bot):
     bot.add_cog(GeneralCog(bot))
