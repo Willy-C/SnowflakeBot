@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 
+from typing import Optional
+
 command_attrs = {'hidden': True}
 
 
@@ -65,6 +67,31 @@ class OwnerCog(commands.Cog, name='Owner Commands', command_attrs=command_attrs)
             await ctx.message.add_reaction("\u2705")
         except:
             pass
+
+    @commands.command(name='presence')
+    async def change_presence(self, ctx, type: str, *, name: Optional[str]):
+        activities = {'L': discord.Activity(name=name, type=discord.ActivityType.listening),
+                      'P': discord.Game(name=name),
+                      'S': discord.Streaming(name=name, url='https://www.twitch.tv/directory'),
+                      'W': discord.Activity(name=name, type=discord.ActivityType.watching),
+                      'N': None,
+                      'Default': discord.Activity(type=discord.ActivityType.listening, name='you :)')}
+
+        statuses = {'Online': discord.Status.online,
+                    'Offline': discord.Status.invisible,
+                    'Idle': discord.Status.idle,
+                    'DND': discord.Status.dnd}
+
+        if type in activities:
+            await self.bot.change_presence(activity=activities[type])
+            await ctx.send('Changing my activity...')
+        elif type in statuses:
+            await self.bot.change_presence(status=statuses[type])
+            await ctx.send('Changing my status...')
+        else:
+            await ctx.send('The specified presence cannot be found\n'
+                           '```Activity: L | P | S | W | N | Default\n'
+                           'Status: Online | Offline | Idle | DND```')
 
 
 def setup(bot):

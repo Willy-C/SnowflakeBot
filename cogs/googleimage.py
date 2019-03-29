@@ -5,7 +5,7 @@ from config import GOOGLE_API_KEY, GOOGLE_CUSTOM_SEARCH_ENGINE
 from google_images_search import GoogleImagesSearch
 
 
-class GoogleImage(commands.Cog):
+class GoogleImage(commands.Cog, name='General Commands'):
     def __init__(self, bot):
         self.bot = bot
 

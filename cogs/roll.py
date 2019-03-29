@@ -2,13 +2,15 @@ import discord
 from discord.ext import commands
 import random
 
+from typing import Optional
+
 
 class RollCog(commands.Cog, name='General Commands'):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name='roll')
-    async def roll_die(self, ctx, num_die: int = 1, faces: int = 6, sorted: bool = False):
+    async def roll_die(self, ctx, num_die: Optional[int] = 1, faces: Optional[int] = 6, sorted: bool = False):
         rolls = []
         for _ in range(num_die):
             rolls.append(random.randint(1, faces))

@@ -65,8 +65,9 @@ async def on_ready():
     print(f'Ready! {datetime.datetime.now()}\n')
     await load_startup_extensions()
 
-@bot.check
-async def global_blacklist(ctx):
-    return ctx.author.id not in config.blacklist
+
+# @bot.check
+# async def global_blacklist(ctx):
+#     return ctx.author.id not in config.blacklist
 
 bot.run(TOKEN, reconnect=True)
