@@ -16,8 +16,10 @@ startup_extensions = ['jishaku',
                       'cogs.members',
                       'cogs.owner',
                       'cogs.general',
+                      'cogs.avatar',
                       'cogs.logger',
                       'cogs.roll',
+                      'cogs.ping',
                       'cogs.googleimage']
 
 def get_prefix(bot, message):
