@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 
 from typing import Optional
+from jishaku.codeblocks import Codeblock, CodeblockConverter
+from global_utils import copy_context
 
 command_attrs = {'hidden': True}
 
@@ -92,6 +94,31 @@ class OwnerCog(commands.Cog, name='Owner Commands', command_attrs=command_attrs)
             await ctx.send('The specified presence cannot be found\n'
                            '```Activity: L | P | S | W | N | Default\n'
                            'Status: Online | Offline | Idle | DND```')
+
+    @commands.command(name='eval')
+    async def _eval(self, ctx, *, args: CodeblockConverter):
+        """Evaluates python code in a single line or code block"""
+        await ctx.invoke(self.bot.get_command("jsk py"), argument=args)
+
+    @commands.command(name='su')
+    async def _su(self, ctx: commands.Context, target: discord.User, *, command_string: str):
+        """
+        Run a command as someone else.
+        Try to resolve to a Member, but will use a User if it can't find one.
+        """
+        if ctx.guild:
+            # Try to upgrade to a Member instance
+            # This used to be done by a Union converter, but doing it like this makes
+            #  the command more compatible with chaining, e.g. `jsk in .. jsk su ..`
+            target = ctx.guild.get_member(target.id) or target
+
+        alt_ctx = await copy_context(ctx, author=target, content=ctx.prefix + command_string)
+
+        if alt_ctx.command is None:
+            return await ctx.send(f'Command "{alt_ctx.invoked_with}" is not found')
+
+        return await alt_ctx.command.invoke(alt_ctx)
+
 
 
 def setup(bot):
