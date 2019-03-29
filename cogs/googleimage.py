@@ -16,7 +16,7 @@ class GoogleImage(commands.Cog, name='General Commands'):
         _search_params = {'q': search_param,
                           'num': 1,
                           'searchType': 'image',
-                          'safe': 'medium'}
+                          'safe': 'high'}
 
         try:
             gis.search(_search_params)
@@ -32,7 +32,7 @@ class GoogleImage(commands.Cog, name='General Commands'):
 
         e = discord.Embed(colour=discord.Colour.green())
         e.set_image(url=image_url)
-        e.set_footer(text=f'Google Image Search for: {search_param} — Safe Search: Medium')
+        e.set_footer(text=f'Google Image Search for: {search_param} — Safe Search: High')
 
         await ctx.send(embed=e)
 

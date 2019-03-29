@@ -20,7 +20,9 @@ startup_extensions = ['jishaku',
                       'cogs.logger',
                       'cogs.roll',
                       'cogs.ping',
-                      'cogs.googleimage']
+                      'cogs.googleimage',
+                      'cogs.choice',
+                      'cogs.charinfo']
 
 def get_prefix(bot, message):
     """A callable Prefix for our bot. This could be edited to allow per server prefixes."""
