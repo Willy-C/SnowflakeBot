@@ -6,7 +6,7 @@ import time
 from global_utils import copy_context
 
 
-class MetaCog(commands.Cog, name='MetaUtil'):
+class MetaCog(commands.Cog, name='Meta Util'):
     def __init__(self, bot):
         self.bot = bot
 
@@ -16,7 +16,6 @@ class MetaCog(commands.Cog, name='MetaUtil'):
         Run a command timing execution and catching exceptions.
         """
         alt_ctx = await copy_context(ctx, content=ctx.prefix + command_string)
-
         if alt_ctx.command is None:
             return await ctx.send(f'Command "{alt_ctx.invoked_with}" is not found')
 
@@ -26,7 +25,7 @@ class MetaCog(commands.Cog, name='MetaUtil'):
 
         return await ctx.send(f'Command `{alt_ctx.command.qualified_name}` finished in {end - start:.3f}s.')
 
-    @commands.command(brief='Gets the ping')
+    @commands.command(brief='Checks latency to Discord.')
     async def ping(self, ctx):
         await ctx.send(f"Ping: `{self.bot.latency*1000:.1f}ms`")
 

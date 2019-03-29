@@ -14,44 +14,42 @@ class MembersCog(commands.Cog, name='Member Commands'):
 
     @commands.command()
     async def joined(self, ctx, *, member: discord.Member = None):
-        """Says when a member joined."""
+        """Looks up when a member joined the server."""
         if not member:
             member = ctx.author
         await ctx.send(f'{member.display_name} joined on {member.joined_at.isoformat(" ", "seconds")}')
 
     @commands.command(name='perms', aliases=['permissions'])
     async def check_permissions(self, ctx, *, member: discord.Member = None):
-        """A simple command which checks a members Guild Permissions.
+        """Lists all permissions of a member in current guild.
         If member is not provided, the author will be checked."""
 
         if not member:
             member = ctx.author
-
         # Check if the value of each permission is True.
         perms = '\n'.join(perm for perm, value in member.guild_permissions if value)
 
         # Embeds look nicer
-        embed = discord.Embed(title='Permissions for:', description=ctx.guild.name, colour=member.colour)
-        embed.set_author(icon_url=member.avatar_url, name=str(member))
-
+        e = discord.Embed(title='Permissions for:', description=ctx.guild.name, colour=member.colour)
+        e.set_author(icon_url=member.avatar_url, name=str(member))
         # \uFEFF is a Zero-Width Space, which allows us to have an empty field name.
-        embed.add_field(name='\uFEFF', value=perms)
+        e.add_field(name='\uFEFF', value=perms)
 
-        await ctx.send(content=None, embed=embed)
+        await ctx.send(content=None, embed=e)
 
-    @commands.command(name='video in vc', aliases=['viv'])
+    @commands.command(name='viv')
     async def video_inVC(self, ctx):
-        """Enables video call functionality in a guild voice channel"""
+        """Enables video call functionality in a guild voice channel."""
         author = ctx.message.author
         timeout = 180  # seconds before the message is self-deleted to reduce clutter
 
-        embed = discord.Embed(title="Video in Voice channel",
-                              colour=author.color,
-                              description=f"[Click here to join video session for {author.voice.channel.name}](https://discordapp.com/channels/{ctx.message.guild.id}/{author.voice.channel.id}/)\n"
+        e = discord.Embed(title="Video in Voice channel",
+                          colour=author.color,
+                          description=f"[Click here to join video session for {author.voice.channel.name}](https://discordapp.com/channels/{ctx.message.guild.id}/{author.voice.channel.id}/)\n"
                                           f"Note: You must be in #{author.voice.channel.name} to join")
 
         await ctx.send(content=f"{author.mention} has started a video session in {author.voice.channel.name}!",
-                       embed=embed,
+                       embed=e,
                        delete_after=timeout)
         await ctx.message.delete()  # Delete command invocation message
 

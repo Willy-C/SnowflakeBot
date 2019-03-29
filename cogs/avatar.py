@@ -6,8 +6,10 @@ class AvatarCog(commands.Cog, name='General Commands'):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='avatar', aliases=['ava', 'pfp'], brief='Returns the avatar of a user')
+    @commands.command(name='avatar', aliases=['ava', 'pfp'])
     async def get_avatar(self, ctx, *, user: discord.Member = None):
+        """Retrieves the avatar of a user.
+        Defaults to author if no user is provided."""
 
         user = ctx.author if user is None else user  # Defaults to invoker if no user is specified
 

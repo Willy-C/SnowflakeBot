@@ -11,6 +11,7 @@ class GoogleImage(commands.Cog, name='General Commands'):
 
     @commands.command(name='gi')
     async def google_image(self, ctx, *, search_param: str = 'cat'):
+        """Returns first result of Google Image Search."""
         gis = GoogleImagesSearch(GOOGLE_API_KEY, GOOGLE_CUSTOM_SEARCH_ENGINE)
 
         _search_params = {'q': search_param,

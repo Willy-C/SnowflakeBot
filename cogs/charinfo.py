@@ -4,13 +4,13 @@ from discord.ext import commands
 import unicodedata
 
 
-class CharCog(commands.Cog):
+class CharCog(commands.Cog, name='General Commands'):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command()
     async def charinfo(self, ctx, *, characters: str):
-        """Shows you information about a number of characters.
+        """Gives you information about character(s).
         Only up to 25 characters at a time.
         """
 
