@@ -14,7 +14,7 @@ class RNGCog(commands.Cog, name='RNG Commands'):
     #     if ctx.invoked_subcommand is None:
     #         raise commands.MissingRequiredArgument
 
-    @commands.command(name='number', aliases=['num'])
+    @commands.command(name='randnum', aliases=['randnumber'])
     async def random_num(self, ctx, min: int = 0, max: int = 10):
         """Chooses a random number within a given range.
         Defaults to 0 to 10"""
@@ -24,7 +24,9 @@ class RNGCog(commands.Cog, name='RNG Commands'):
 
     @commands.command(name='roll')
     async def roll_die(self, ctx, num_rolls: Optional[int] = 1, faces: Optional[int] = 6, sorted: bool = False):
-        """Roll a die with Y faces X times."""
+        """Roll a die with Y faces X times.
+        Defaults to 1 roll of a 6-side die
+        Ex. "%roll 2 20" will roll a 20-sided die twice"""
         rolls = []
         for _ in range(num_rolls):
             rolls.append(random.randint(1, faces))

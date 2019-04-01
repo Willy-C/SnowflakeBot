@@ -14,10 +14,12 @@ class GoogleImage(commands.Cog, name='General Commands'):
         """Returns first result of Google Image Search."""
         gis = GoogleImagesSearch(GOOGLE_API_KEY, GOOGLE_CUSTOM_SEARCH_ENGINE)
 
+        safe = 'off' if ctx.channel.is_nsfw() else 'high'
+
         _search_params = {'q': search_param,
                           'num': 1,
                           'searchType': 'image',
-                          'safe': 'high'}
+                          'safe': safe}
 
         try:
             gis.search(_search_params)
@@ -33,7 +35,7 @@ class GoogleImage(commands.Cog, name='General Commands'):
 
         e = discord.Embed(colour=discord.Colour.green())
         e.set_image(url=image_url)
-        e.set_footer(text=f'Google Image Search for: {search_param} — Safe Search: High')
+        e.set_footer(text=f'Google Image Search for: {search_param} — Safe Search: {safe}')
 
         await ctx.send(embed=e)
 

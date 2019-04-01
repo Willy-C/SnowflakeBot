@@ -21,17 +21,18 @@ startup_extensions = ['jishaku',
                       'cogs.random',
                       'cogs.googleimage',
                       'cogs.charinfo',
-                      'cogs.fun']
+                      'cogs.fun',
+                      'cogs.music']
 
 def get_prefix(bot, message):
     """A callable Prefix for our bot. This could be edited to allow per server prefixes."""
 
-    prefixes = ['?', '!', '%']
+    prefixes = ['?', '%']
 
     # Check to see if we are outside of a guild. e.g DM's etc.
     if not message.guild:
-        # Only allow ? to be used in DMs
-        return '?'
+        # Only allow these to be used in DMs
+        return ['?', '%', '$']
 
     # If in a guild, allow for the user to mention or use any of the prefixes in the list.
     return commands.when_mentioned_or(*prefixes)(bot, message)

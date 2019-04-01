@@ -27,7 +27,7 @@ class MetaCog(commands.Cog, name='Meta Util'):
 
     @commands.command(brief='Checks latency to Discord.')
     async def ping(self, ctx):
-        await ctx.send(f"Ping: `{self.bot.latency*1000:.1f}ms`")
+        await ctx.send(f"Latency: `{self.bot.latency*1000:.1f}ms`")
 
 
 def setup(bot):
