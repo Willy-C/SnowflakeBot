@@ -415,5 +415,18 @@ class Music(commands.Cog):
         if isinstance(error, utils.DownloadError):
             await ctx.send('Error: This video is unavailable. Please try again or another video.', delete_after=15)
 
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, error):
+        """The event triggered when an error is raised while invoking a command.
+        ctx   : Context
+        error : Exception"""
+
+        if hasattr(ctx.command, 'on_error'):
+            return
+        error = getattr(error, 'original', error)
+        if isinstance(error, InvalidVoiceChannel):
+            return await ctx.send('No channel to join. Please either specify a valid channel or join one.')
+
+
 def setup(bot):
     bot.add_cog(Music(bot))
