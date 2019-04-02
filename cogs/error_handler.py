@@ -3,6 +3,8 @@ import sys
 from discord.ext import commands
 import discord
 
+from .music import InvalidVoiceChannel, VoiceConnectionError
+
 
 class CommandErrorHandler(commands.Cog):
     def __init__(self, bot):
@@ -42,6 +44,10 @@ class CommandErrorHandler(commands.Cog):
 
         elif isinstance(error, commands.MissingRequiredArgument):
             return await ctx.send('Missing one or more required arguments.')
+
+        elif isinstance(error, InvalidVoiceChannel):
+            return await ctx.send('No channel to join. Please either specify a valid channel or join one.')
+
 
         print('Ignoring exception in command {}:'.format(ctx.command))
         traceback.print_exception(type(error), error, error.__traceback__)
