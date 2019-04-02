@@ -41,7 +41,7 @@ class MembersCog(commands.Cog, name='Member Commands'):
     async def video_inVC(self, ctx):
         """Enables video call functionality in a guild voice channel."""
         author = ctx.message.author
-        timeout = 180  # seconds before the message is self-deleted to reduce clutter
+        timeout = 300  # seconds before the message is self-deleted to reduce clutter
 
         e = discord.Embed(title="Video in Voice channel",
                           colour=author.color,
