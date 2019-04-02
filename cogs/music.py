@@ -8,6 +8,7 @@ import traceback
 from async_timeout import timeout
 from functools import partial
 from youtube_dl import YoutubeDL, utils
+from random import shuffle
 
 ytdlopts = {
     'format': 'bestaudio/best',
@@ -57,13 +58,13 @@ class YTDLSource(discord.PCMVolumeTransformer):
         """
         return self.__getattribute__(item)
 
+
     @classmethod
     async def create_source(cls, ctx, search: str, *, loop, download=False):
         loop = loop or asyncio.get_event_loop()
 
         to_run = partial(ytdl.extract_info, url=search, download=download)
         data = await loop.run_in_executor(None, to_run)
-
         if 'entries' in data:
             # take first item from a playlist
             data = data['entries'][0]
@@ -198,8 +199,8 @@ class Music(commands.Cog):
             await ctx.send('Error connecting to Voice Channel. '
                            'Please make sure you are in a valid channel or provide me with one')
 
-        print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
-        traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+        print('Ignoring exception in command {}:'.format(ctx.command))
+        traceback.print_exception(type(error), error, error.__traceback__)
 
     def get_player(self, ctx):
         """Retrieve the guild player, or generate one."""
@@ -260,16 +261,24 @@ class Music(commands.Cog):
 
         if not vc:
             await ctx.invoke(self.connect_)
-
+        special = {'star': 'https://www.youtube.com/playlist?list=PLszZ0xXW9BjoX6r2ZRqPwF9wAlcxZSvgI',
+                   'xih': 'https://www.youtube.com/playlist?list=PLszZ0xXW9BjqGuovNjdnMsM7xcNxOut23',
+                   'piano': 'https://www.youtube.com/playlist?list=PLszZ0xXW9BjpSwpNLmRJ7dtOlf-qLDP0g'
+                   }
+        if search in special:
+            search = special[search]
+            await ctx.send('Special keyword entered. Playing predefined playlist..\n'
+                           'Due to library limitations, long playlists may have a delay before playing.',
+                           delete_after=20)
         player = self.get_player(ctx)
 
         # If download is False, source will be a dict which will be used later to regather the stream.
         # If download is True, source will be a discord.FFmpegPCMAudio with a VolumeTransformer.
         source = await YTDLSource.create_source(ctx, search, loop=self.bot.loop, download=False)
-
+        print(source)
         await player.queue.put(source)
 
-    @commands.command(name='pause')
+    @commands.command(name='pause', aliases=['ll', '||'])
     async def pause_(self, ctx):
         """Pause the currently playing song."""
         vc = ctx.voice_client
@@ -282,7 +291,7 @@ class Music(commands.Cog):
         vc.pause()
         await ctx.send(f'**`{ctx.author}`**: Paused the song!')
 
-    @commands.command(name='resume')
+    @commands.command(name='resume', aliases=['>'])
     async def resume_(self, ctx):
         """Resume the currently paused song."""
         vc = ctx.voice_client
@@ -389,6 +398,23 @@ class Music(commands.Cog):
 
         await self.cleanup(ctx.guild)
 
+    @commands.command(name='shuffle')
+    async def shuffle_(self, ctx):
+        """Shuffles the queue"""
+        vc = ctx.voice_client
+
+        if not vc or not vc.is_connected():
+            return await ctx.send('I am not currently connected to voice!', delete_after=15)
+        try:
+            shuffle(self.get_player(ctx).queue._queue)
+            await ctx.message.add_reaction("\u2705")
+        except:
+            await ctx.send('An error occurred ')
+
+    @play_.error
+    async def get_avatar_handler(self, ctx, error):
+        if isinstance(error, utils.DownloadError):
+            await ctx.send('Error: This video is unavailable. Please try again or another video.', delete_after=15)
 
 def setup(bot):
     bot.add_cog(Music(bot))
