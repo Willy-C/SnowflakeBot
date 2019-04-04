@@ -18,8 +18,8 @@ class FunCog(commands.Cog, name='For Fun Commands'):
     @commands.command(name='poll')
     async def create_poll(self, ctx, *questions_and_choices: str):
         """Makes a poll.
-        Ex. %poll "question here" "answer 1" "answer 2" "answer 3"...
-        The first argument is the question and the rest are the choices. " " only necessary if there are spaces.
+        Ex. %poll "question here" "answer 1" answer2 "answer 3"...
+        " " Quotations only necessary if there are spaces.
         """
         if len(questions_and_choices) < 3:
             return await ctx.send('Need at least 1 question with 2 choices.')
