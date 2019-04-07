@@ -53,7 +53,7 @@ class MembersCog(commands.Cog, name='Member Commands'):
 
         await ctx.send(content=f"{author.mention} has started a video session in {author.voice.channel.name}!",
                        embed=e)
-        # await ctx.message.delete()  # Delete command invocation message
+        await ctx.message.delete()  # Delete command invocation message
 
 
 def setup(bot):
