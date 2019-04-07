@@ -10,7 +10,7 @@ class MetaCog(commands.Cog, name='Meta Util'):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='debug', aliases=['dbg', 'timit', 'time'])
+    @commands.command(name='debug', aliases=['dbg', 'timeit', 'time'])
     async def _debug(self, ctx: commands.Context, *, command_string: str):
         """
         Run a command timing execution and catching exceptions.

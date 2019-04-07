@@ -25,8 +25,10 @@ class GoogleImage(commands.Cog, name='General Commands'):
             gis.search(_search_params)
         except:
             return await ctx.send(
-                'My daily search limit has been reached and cannot search anymore due to Google\'s restrictions... \n'
-                'Sorry, please try again tomorrow.')
+                'Google Error: Please try again or use another search term.\n'
+                'If this error persists, it means my daily search limit has been reached and cannot '
+                'search anymore due to Google\'s restrictions... \n'
+                'Sorry, please try again tomorrow. \U0001f626')
 
         if gis.results():
             image_url = gis.results()[0].url

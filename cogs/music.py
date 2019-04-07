@@ -65,10 +65,10 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         to_run = partial(ytdl.extract_info, url=search, download=download)
         data = await loop.run_in_executor(None, to_run)
+        # data is a dict, but entries is a list of dicts
         if 'entries' in data:
             # take first item from a playlist
             data = data['entries'][0]
-
         await ctx.send(f'```ini\n[Added {data["title"]} to the Queue.]\n```', delete_after=15)
 
         if download:
@@ -267,14 +267,14 @@ class Music(commands.Cog):
                    }
         if search in special:
             search = special[search]
-            await ctx.send('Special keyword entered. Playing predefined playlist..\n'
-                           'Due to library limitations, long playlists may have a delay before playing.',
-                           delete_after=20)
+            await ctx.send('Special keyword entered. Playing predefined playlist..\n', delete_after=20)
+        await ctx.send('Due to library limitations, long playlists may have a delay before playing.', delete_after=30)
         player = self.get_player(ctx)
 
         # If download is False, source will be a dict which will be used later to regather the stream.
         # If download is True, source will be a discord.FFmpegPCMAudio with a VolumeTransformer.
         source = await YTDLSource.create_source(ctx, search, loop=self.bot.loop, download=False)
+        # Source is a dict^
         await player.queue.put(source)
 
     @commands.command(name='pause', aliases=['ll', '||'])
