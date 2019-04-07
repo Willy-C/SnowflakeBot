@@ -52,9 +52,8 @@ class MembersCog(commands.Cog, name='Member Commands'):
                                           f"Note: You must be in #{author.voice.channel.name} to join")
 
         await ctx.send(content=f"{author.mention} has started a video session in {author.voice.channel.name}!",
-                       embed=e,
-                       delete_after=timeout)
-        await ctx.message.delete()  # Delete command invocation message
+                       embed=e)
+        # await ctx.message.delete()  # Delete command invocation message
 
 
 def setup(bot):
