@@ -41,7 +41,7 @@ class MembersCog(commands.Cog, name='Member Commands'):
     async def video_inVC(self, ctx):
         """Enables video call functionality in a guild voice channel."""
         author = ctx.message.author
-        timeout = 300  # seconds before the message is self-deleted to reduce clutter
+        timeout = 600  # seconds before the message is self-deleted to reduce clutter
 
         if author.voice is None:
             return await ctx.send('You are not in a voice channel! <:beemad:545443640323997717>')
