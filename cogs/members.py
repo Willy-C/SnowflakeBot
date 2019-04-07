@@ -43,6 +43,9 @@ class MembersCog(commands.Cog, name='Member Commands'):
         author = ctx.message.author
         timeout = 300  # seconds before the message is self-deleted to reduce clutter
 
+        if author.voice is None:
+            return await ctx.send('You are not in a voice channel! <:beemad:545443640323997717>')
+
         e = discord.Embed(title="Video in Voice channel",
                           colour=author.color,
                           description=f"[Click here to join video session for {author.voice.channel.name}](https://discordapp.com/channels/{ctx.message.guild.id}/{author.voice.channel.id}/)\n"

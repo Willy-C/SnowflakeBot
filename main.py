@@ -24,7 +24,7 @@ startup_extensions = ['jishaku',
                       'cogs.fun',
                       'cogs.music']
 
-custom_prefix = {386406482888884226: ['%']}
+custom_prefix = {386406482888884226: ['%']}  # Need to store it somewhere else, will do later
 
 def get_prefix(bot, message):
     """A callable Prefix for our bot. This could be edited to allow per server prefixes."""
@@ -36,8 +36,8 @@ def get_prefix(bot, message):
         # Only allow these to be used in DMs
     # return ['?', '%', '$']
 
-    if message.guild.id in custom_prefix:
-        return custom_prefix[message.guild.id]
+    # if message.guild.id in custom_prefix:
+    #     return custom_prefix[message.guild.id]
 
     # If in a guild, allow for the user to mention or use any of the prefixes in the list.
     return commands.when_mentioned_or(*prefixes)(bot, message)
