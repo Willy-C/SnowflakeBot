@@ -8,7 +8,7 @@ from global_utils import copy_context
 command_attrs = {'hidden': True}
 
 
-class OwnerCog(commands.Cog, name='Owner Commands', command_attrs=command_attrs):
+class OwnerCog(commands.Cog, name='Owner', command_attrs=command_attrs):
     def __init__(self, bot):
         self.bot = bot
 

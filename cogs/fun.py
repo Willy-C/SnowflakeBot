@@ -4,7 +4,7 @@ from discord.ext import commands
 import datetime
 
 
-class FunCog(commands.Cog, name='For Fun Commands'):
+class FunCog(commands.Cog, name='Fun'):
     def __init__(self, bot):
         self.bot = bot
 

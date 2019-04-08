@@ -6,7 +6,7 @@ import time
 from global_utils import copy_context
 
 
-class MetaCog(commands.Cog, name='Meta Util'):
+class MetaCog(commands.Cog, name='Metautil'):
     def __init__(self, bot):
         self.bot = bot
 

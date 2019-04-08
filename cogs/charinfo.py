@@ -4,7 +4,7 @@ from discord.ext import commands
 import unicodedata
 
 
-class CharCog(commands.Cog, name='General Commands'):
+class CharCog(commands.Cog, name='General'):
     def __init__(self, bot):
         self.bot = bot
 

@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 
-class MembersCog(commands.Cog, name='Member Commands'):
+class MembersCog(commands.Cog, name='Guild'):
     def __init__(self, bot):
         self.bot = bot
 
