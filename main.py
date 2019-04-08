@@ -5,10 +5,10 @@ import sys, traceback, platform
 from typing import Union
 import datetime
 
-import config
+from config import BOT_TOKEN
 
 DESCR = 'This bot is a small side project and still very WIP'
-TOKEN = config.BOT_TOKEN
+TOKEN = BOT_TOKEN
 
 # File names of extensions we are loading on startup
 startup_extensions = ['jishaku',
