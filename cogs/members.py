@@ -37,6 +37,21 @@ class MembersCog(commands.Cog, name='Guild'):
 
         await ctx.send(content=None, embed=e)
 
+    @commands.command(name='allperms')
+    async def check_permissions_long(self, ctx, *, member: discord.Member = None):
+        """Lists all permissions and shows which ones the member has.
+        If member is not provided, the author will be checked."""
+        if not member:
+            member = ctx.author
+        perms = '\n'.join(f'\U00002705 {perm}' if value else f'<:white_X:555196323574579200> {perm}' for perm, value in
+                          member.guild_permissions)
+
+        e = discord.Embed(title='Permissions for:', description=ctx.guild.name, colour=member.colour)
+        e.set_author(icon_url=member.avatar_url, name=str(member))
+        e.add_field(name='\uFEFF', value=perms)
+
+        await ctx.send(content=None, embed=e)
+
     @commands.command(name='viv')
     async def video_inVC(self, ctx):
         """Enables video call functionality in a guild voice channel."""
