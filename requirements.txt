@@ -1,5 +1,5 @@
 python_version >= '3.7'
-git+https://github.com/Rapptz/discord.py@rewrite#egg=discord.py[voice]
+discord.py[voice]
 jishaku
 google_images_search
 youtube_dl
