@@ -15,7 +15,7 @@ class AvatarCog(commands.Cog, name='General'):
 
         avatar_url = user.avatar_url_as(static_format='png')
 
-        embed = discord.Embed(colour=discord.Colour.blurple())
+        embed = discord.Embed(colour=user.colour)
         embed.set_image(url=avatar_url)
         embed.set_author(name=f"{user.display_name}", url=avatar_url)
 
