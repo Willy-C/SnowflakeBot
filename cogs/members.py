@@ -72,7 +72,8 @@ class MembersCog(commands.Cog, name='Guild'):
 
     @commands.command(name='shareall')
     async def sharescreen_all(self, ctx, output: discord.TextChannel = None):
-        """Returns all voice channel's video links"""
+        """Returns all voice channel's video links
+        Output channel is optional, defaults to current channel"""
         if output is None:
             output = ctx.channel
 
