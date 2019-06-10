@@ -52,7 +52,7 @@ class MembersCog(commands.Cog, name='Guild'):
 
         await ctx.send(content=None, embed=e)
 
-    @commands.command(name='viv')
+    @commands.command(name='sharescreen', aliases=['share', 'ss', 'video'])
     async def video_inVC(self, ctx):
         """Enables video call functionality in a guild voice channel."""
         author = ctx.message.author
@@ -68,8 +68,25 @@ class MembersCog(commands.Cog, name='Guild'):
 
         await ctx.send(content=f"{author.mention} has started a video session in {author.voice.channel.name}!",
                        embed=e)
-        await ctx.message.delete()  # Delete command invocation message
+        # await ctx.message.delete()  # Delete command invocation message
 
+    @commands.command(name='shareall')
+    async def sharescreen_all(self, ctx, output: discord.TextChannel = None):
+        """Returns all voice channel's video links"""
+        if output is None:
+            output = ctx.channel
+
+        _vc = [vc for vc in ctx.guild.voice_channels]
+        guild_id = ctx.guild.id
+        template = f'https://discordapp.com/channels/{guild_id}/'
+        links = [f'[{vc.name}]({template}{vc.id})' for vc in _vc]
+        hyperlinks = '\n'.join(links)
+
+        e = discord.Embed(title="Video links for voice channels",
+                          colour=6430916,
+                          description=hyperlinks)
+
+        await output.send(embed=e)
 
 def setup(bot):
     bot.add_cog(MembersCog(bot))
