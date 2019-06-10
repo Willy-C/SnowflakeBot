@@ -80,11 +80,12 @@ class MembersCog(commands.Cog, name='Guild'):
         guild_id = ctx.guild.id
         template = f'https://discordapp.com/channels/{guild_id}/'
         links = [f'[{vc.name}]({template}{vc.id})' for vc in _vc]
-        hyperlinks = '\n'.join(links)
+        combined = '\n'.join(links)
+        formatted = discord.utils.escape_markdown(combined)  # because some ppl like to have ||name|| for some reason
 
         e = discord.Embed(title="Video links for voice channels",
                           colour=6430916,
-                          description=hyperlinks)
+                          description=formatted)
 
         await output.send(embed=e)
 
