@@ -20,6 +20,8 @@ class HighlightCog(commands.Cog, name='Highlight'):
             if (datetime.utcnow()-msg.created_at).total_seconds() < 900: # Only care about messages within last 15 minutes
                 if msg.author.id == self.highlights[key]: # If target recently spoke, no DM
                     return
+                if key.lower() in msg.content.lower(): # No need to spam mentions
+                    return
                 formatted.append(f'[{msg.created_at.replace(tzinfo=timezone.utc).astimezone(tz=None).strftime(dateformat)}] {msg.author}: {msg.content}')
 
         formatted.reverse()
