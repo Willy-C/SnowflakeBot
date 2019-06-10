@@ -19,7 +19,7 @@ class CommandErrorHandler(commands.Cog):
         if hasattr(ctx.command, 'on_error'):
             return
 
-        ignored = ()  # Tuple of errors to ignore
+        ignored = (commands.CommandNotFound)  # Tuple of errors to ignore
         error = getattr(error, 'original', error)
 
         if isinstance(error, ignored):
@@ -44,6 +44,9 @@ class CommandErrorHandler(commands.Cog):
 
         elif isinstance(error, commands.MissingRequiredArgument):
             return await ctx.send('Missing one or more required arguments.')
+
+        elif isinstance(error, commands.MissingPermissions):
+            return await ctx.send(f'Sorry, but you are missing the following permissions: {error.missing_perms}')
 
         elif isinstance(error, InvalidVoiceChannel):
             return await ctx.send('No channel to join. Please either specify a valid channel or join one.')

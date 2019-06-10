@@ -71,7 +71,7 @@ class MembersCog(commands.Cog, name='Guild'):
         # await ctx.message.delete()  # Delete command invocation message
 
     @commands.command(name='shareall')
-    async def sharescreen_all(self, ctx, output: discord.TextChannel = None):
+    async def sharescreen_all(self, ctx, *, output: discord.TextChannel = None):
         """Returns all voice channel's video links
         Output channel is optional, defaults to current channel"""
         if output is None:
@@ -89,6 +89,15 @@ class MembersCog(commands.Cog, name='Guild'):
                           description=formatted)
 
         await output.send(embed=e)
+
+    @commands.command()
+    async def move(self, ctx, user: discord.Member, *, channel: discord.VoiceChannel = None):
+        """Move a user to another voice channel. Disconnects user if channel is None.
+        Requires Move Members permission to use."""
+        if ctx.author.permissions_in(ctx.guild.voice_channels[0]).move_members:
+            await user.move_to(channel)
+        else:
+            return await ctx.send('Sorry, you are missing the Move Members permission.')
 
 def setup(bot):
     bot.add_cog(MembersCog(bot))
