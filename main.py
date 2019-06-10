@@ -7,8 +7,6 @@ import datetime
 
 from config import BOT_TOKEN
 
-import json
-
 DESCR = 'This bot is a small side project and still very WIP'
 TOKEN = BOT_TOKEN
 
@@ -19,43 +17,34 @@ startup_extensions = ['jishaku',
                       'cogs.owner',
                       'cogs.metautil',
                       'cogs.avatar',
-                      #'cogs.logger',
+                      'cogs.logger',
                       'cogs.random',
                       'cogs.googleimage',
                       'cogs.charinfo',
                       'cogs.fun',
-                      'cogs.music',
-                      'cogs.setprefix']
+                      'cogs.music']
 
 custom_prefix = {386406482888884226: ['%']}  # Need to store it somewhere else, will do later
-# prefix_map_file = open("data/prefix_map.json", "r+")  # temp var that represents the file itself, not the map
-# prefix_map = json.loads(prefix_map_file.read())  # object that actually is the prefix map
-
-with open("data/prefix_map.json") as prefix_map_file:
-    # global prefix_map
-    prefix_map = json.load(prefix_map_file)
 
 
-def init_prefixes(bot, message):
+def get_prefix(bot, message):
     """A callable Prefix for our bot. This could be edited to allow per server prefixes."""
 
     prefixes = ['?', '%']
 
-    # # Check to see if we are outside of a guild. e.g DM's etc.
-    if not message.guild:  # Only allow these to be used in DMs
-        return ['?', '%', '$']
+    # Check to see if we are outside of a guild. e.g DM's etc.
+    # if not message.guild:
+    # Only allow these to be used in DMs
+    # return ['?', '%', '$']
 
-    return bot.prefix_map.get(str(message.guild.id), prefixes)  # get the list associated with id, or default to @prefixes
+    # if message.guild.id in custom_prefix:
+    #     return custom_prefix[message.guild.id]
+
+    # If in a guild, allow for the user to mention or use any of the prefixes in the list.
+    return commands.when_mentioned_or(*prefixes)(bot, message)
 
 
-bot = commands.Bot(command_prefix=init_prefixes, description=DESCR)
-bot.prefix_map = prefix_map  # define prefix_map as bot variable
-
-def get_prefixes(bot_input, some_id):
-    if bot_input.get_guild(some_id) is None:  # passed in a channel id, so probably dms
-        return ['?', '%', '$']
-
-    return bot_input.prefix_map.get(str(some_id), ['?', '%'])  # get the list associated with id, or default
+bot = commands.Bot(command_prefix=get_prefix, description=DESCR)
 
 
 async def load_startup_extensions():
@@ -90,5 +79,5 @@ async def on_ready():
 # @bot.check
 # async def global_blacklist(ctx):
 #     return ctx.author.id not in config.blacklist
-if __name__ == "__main__":
-    bot.run(TOKEN, reconnect=True)
+
+bot.run(TOKEN, reconnect=True)
