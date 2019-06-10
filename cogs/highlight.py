@@ -2,8 +2,9 @@ import discord
 from discord.ext import commands
 
 from typing import Union
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
+EST=timezone(timedelta(hours=-4))
 
 class HighlightCog(commands.Cog, name='Highlight'):
 
@@ -22,10 +23,10 @@ class HighlightCog(commands.Cog, name='Highlight'):
                     return
                 if key.lower() in msg.content.lower(): # No need to spam mentions
                     return
-                formatted.append(f'[{msg.created_at.replace(tzinfo=timezone.utc).astimezone(tz=None).strftime(dateformat)}] {msg.author}: {msg.content}')
+                formatted.append(f'[{msg.created_at.replace(tzinfo=timezone.utc).astimezone(tz=EST).strftime(dateformat)}] {msg.author}: {msg.content}')
 
         formatted.reverse()
-        formatted.append( f'[{message.created_at.replace(tzinfo=timezone.utc).astimezone(tz=None).strftime(dateformat)}] {message.author}: {message.content}')
+        formatted.append( f'[{message.created_at.replace(tzinfo=timezone.utc).astimezone(tz=EST).strftime(dateformat)}] {message.author}: {message.content}')
         return '\n'.join(formatted)
 
     async def _dm_highlight(self, message: discord.Message, key: str):
