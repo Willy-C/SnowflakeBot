@@ -60,14 +60,14 @@ class MembersCog(commands.Cog, name='Guild'):
 
         if author.voice is None:
             return await ctx.send('You are not in a voice channel! <:beemad:545443640323997717>')
+        link = discord.utils.escape_markdown(
+            f'https://discordapp.com/channels/{ctx.message.guild.id}/{author.voice.channel.id}/')
+        name = discord.utils.escape_markdown(author.voice.channel.name)
+        e = discord.Embed(colour=author.color,
+                          description=f"[Click here to join video session for {name}]({link})\n"
+                                      f"You must be in the voice channel to use this link")
 
-        e = discord.Embed(title="Video in Voice channel",
-                          colour=author.color,
-                          description=f"[Click here to join video session for {author.voice.channel.name}](https://discordapp.com/channels/{ctx.message.guild.id}/{author.voice.channel.id}/)\n"
-                                          f"Note: You must be in #{author.voice.channel.name} to join")
-
-        await ctx.send(content=f"{author.mention} has started a video session in {author.voice.channel.name}!",
-                       embed=e)
+        await ctx.send(embed=e)
         # await ctx.message.delete()  # Delete command invocation message
 
     @commands.command(name='shareall')
@@ -83,7 +83,7 @@ class MembersCog(commands.Cog, name='Guild'):
         combined = '\n'.join(links)
         formatted = discord.utils.escape_markdown(combined)  # because some ppl like to have ||name|| for some reason
 
-        e = discord.Embed(title="Video links for voice channels",
+        e = discord.Embed(title="Video Links for Voice Channels",
                           colour=6430916,
                           description=formatted)
 
