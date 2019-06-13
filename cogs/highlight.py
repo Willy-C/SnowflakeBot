@@ -4,7 +4,7 @@ from discord.ext import commands
 from typing import Union
 from datetime import datetime, timezone, timedelta
 
-EST=timezone(timedelta(hours=-4))
+EDT_diff = timedelta(hours=-4)
 
 class HighlightCog(commands.Cog, name='Highlight'):
 
@@ -14,19 +14,19 @@ class HighlightCog(commands.Cog, name='Highlight'):
         self.keys = self.highlights.keys()
 
     async def _get_msg_context(self, message: discord.Message, key: str):
-        prev_msg = await message.channel.history(limit=5, before=message).flatten() # Grabs the previous 5 messages
+        prev_msgs = await message.channel.history(after=(datetime.utcnow()-timedelta(minutes=15))).flatten() # Grabs all messages from the last 15 minutes
         formatted = []
         dateformat = '%m-%d %H:%M:%S'
-        for msg in prev_msg:
-            if (datetime.utcnow()-msg.created_at).total_seconds() < 900: # Only care about messages within last 15 minutes
-                if msg.author.id == self.highlights[key]: # If target recently spoke, no DM
-                    return
-                if key.lower() in msg.content.lower(): # No need to spam mentions
-                    return
-                formatted.append(f'[{msg.created_at.replace(tzinfo=timezone.utc).astimezone(tz=EST).strftime(dateformat)}] {msg.author}: {msg.content}')
 
-        formatted.reverse()
-        formatted.append( f'[{message.created_at.replace(tzinfo=timezone.utc).astimezone(tz=EST).strftime(dateformat)}] {message.author}: {message.content}')
+        if any([msg.author.id == self.highlights[key] for msg in prev_msgs[:-1]]): # If target recently spoke, no DM
+            return
+
+        if any([key.lower() in msg.content.lower() for msg in prev_msgs[:-1]]): # No need to spam highlights
+            return
+
+        for msg in prev_msgs[-6:]:
+            formatted.append(f'[{(msg.created_at + EDT_diff).strftime(dateformat)}] {msg.author}: {msg.content}')
+
         return '\n'.join(formatted)
 
     async def _dm_highlight(self, message: discord.Message, key: str):
