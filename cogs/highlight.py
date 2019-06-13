@@ -49,7 +49,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if message.guild is None or message.author.id == self.bot.user.id:
+        if message.guild is None or message.author.bot:
             return
 
         for key in self.keys:
