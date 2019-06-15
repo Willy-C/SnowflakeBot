@@ -46,9 +46,18 @@ def get_prefix(bot, message):
 
 bot = commands.Bot(command_prefix=get_prefix, description=DESCR)
 
+@bot.event
+async def on_ready():
+    print(f'\nLogged in as: {bot.user.name} - {bot.user.id}\n'
+          f'Python Version: {platform.python_version()}\n'
+          f'Library Version: {discord.__version__}\n')
 
-async def load_startup_extensions():
-    await bot.wait_until_ready()
+    activity = discord.Activity(type=discord.ActivityType.listening, name='you :)')
+    await bot.change_presence(activity=activity)
+    print(f'Ready! {datetime.datetime.now()}\n')
+
+
+if __name__ == '__main__':
     total = len(startup_extensions)
     successes = 0
     for extension in startup_extensions:
@@ -63,21 +72,5 @@ async def load_startup_extensions():
     print('-' * 52)
     print(f'Successfully loaded {successes}/{total} extensions.')
 
-
-@bot.event
-async def on_ready():
-    print(f'\nLogged in as: {bot.user.name} - {bot.user.id}\n'
-          f'Python Version: {platform.python_version()}\n'
-          f'Library Version: {discord.__version__}\n')
-
-    activity = discord.Activity(type=discord.ActivityType.listening, name='you :)')
-    await bot.change_presence(activity=activity)
-    print(f'Ready! {datetime.datetime.now()}\n')
-    await load_startup_extensions()
-
-
-# @bot.check
-# async def global_blacklist(ctx):
-#     return ctx.author.id not in config.blacklist
 
 bot.run(TOKEN, reconnect=True)
