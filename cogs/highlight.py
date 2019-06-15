@@ -10,10 +10,10 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     def __init__(self, bot):
         self.bot = bot
-        self.highlights = {'willy': 94271181271605248}
-        self.keys = self.highlights.keys()
-        self.ignored_channels = {}
-        self.ignored_users={}
+        self.highlights = {'willy': 94271181271605248} # maybe str -> [UserIDs] to support same keyword for multiple people
+        self.ignored_guilds = {} # UserID -> {Guild IDs} | int -> set(int)
+        self.ignored_channels = {} # UserID -> {Channel IDs} | int -> set(int)
+        self.ignored_users={} # UserID -> {User IDs} | int -> set(int)
 
     async def _get_msg_context(self, message: discord.Message, key: str):
         prev_msgs = await message.channel.history(after=(datetime.utcnow()-timedelta(minutes=15))).flatten() # Grabs all messages from the last 15 minutes
@@ -40,10 +40,16 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
         if message.author.id == target_id:
             return
-        if message.channel.id in self.ignored_channels[target_id]:
-            return
-        if message.author.id in self.ignored_users[target_id]:
-            return
+        if target_id in self.ignored_guilds:
+            if message.guild.id in self.ignored_guilds[target_id]:
+                return
+        if target_id in self.ignored_channels:
+            if message.channel.id in self.ignored_channels[target_id]:
+                return
+        if target_id in self.ignored_users:
+            if message.author.id in self.ignored_users[target_id]:
+                return
+
         context = await self._get_msg_context(message, key)
 
         if context is None: # target recently messaged, no need to DM
@@ -65,11 +71,19 @@ class HighlightCog(commands.Cog, name='Highlight'):
         if message.guild is None or message.author.bot:
             return
 
-        for key in self.keys:
+        for key in self.highlights:
             if key in message.content.lower():
                 await self._dm_highlight(message, key)
 
 
+    @commands.group()
+    async def highlight(self, ctx):
+        if ctx.invoked_subcommand is None:
+            pass
+
+    @highlight.command(enabled=False)
+    async def add(self, ctx):
+        pass
 
 
 
