@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 
-class MembersCog(commands.Cog, name='Guild'):
+class GuildCog(commands.Cog, name='Guild'):
     def __init__(self, bot):
         self.bot = bot
 
@@ -100,4 +100,4 @@ class MembersCog(commands.Cog, name='Guild'):
             return await ctx.send('Sorry, you are missing the Move Members permission.')
 
 def setup(bot):
-    bot.add_cog(MembersCog(bot))
+    bot.add_cog(GuildCog(bot))

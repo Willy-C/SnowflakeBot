@@ -29,6 +29,15 @@ class MetaCog(commands.Cog, name='Metautil'):
     async def ping(self, ctx):
         await ctx.send(f"Latency: `{self.bot.latency*1000:.1f}ms`")
 
+    @commands.command()
+    async def invite(self, ctx):
+        """
+        Returns the invite link to add me to your server.
+        """
+        e = discord.Embed(title='Invite me to your server!',
+                          color=discord.Colour(0x00FFFF),
+                          description=f'[Click here to invite me](https://discordapp.com/oauth2/authorize?client_id=542951902669963271&permissions=2146958847&scope=bot)')
+        await ctx.send(embed=e)
 
 def setup(bot):
     bot.add_cog(MetaCog(bot))
