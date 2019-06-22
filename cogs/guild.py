@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 
+from typing import Optional
+
 
 class GuildCog(commands.Cog, name='Guild'):
     def __init__(self, bot):
@@ -53,29 +55,28 @@ class GuildCog(commands.Cog, name='Guild'):
         await ctx.send(content=None, embed=e)
 
     @commands.command(name='sharescreen', aliases=['share', 'ss', 'video'])
-    async def video_inVC(self, ctx):
+    async def video_inVC(self, ctx, *, channel: Optional[discord.VoiceChannel] = None):
         """Enables video call functionality in a guild voice channel."""
         author = ctx.message.author
-        timeout = 600  # seconds before the message is self-deleted to reduce clutter
 
-        if author.voice is None:
-            return await ctx.send('You are not in a voice channel! <:beemad:545443640323997717>')
-        link = discord.utils.escape_markdown(
-            f'https://discordapp.com/channels/{ctx.message.guild.id}/{author.voice.channel.id}/')
-        name = discord.utils.escape_markdown(author.voice.channel.name)
+        if author.voice is None and channel is None:
+            return await ctx.send('Either you did not entire a valid channel or you are not in a voice channel! <:beemad:545443640323997717>')
+
+        if channel is None:
+            channel = author.voice.channel
+
+        link = discord.utils.escape_markdown(f'https://discordapp.com/channels/{ctx.message.guild.id}/{channel.id}/')
+        name = discord.utils.escape_markdown(channel.name)
         e = discord.Embed(colour=author.color,
-                          description=f"[Click here to join video session for {name}]({link})\n"
+                          description=f"[Click here to join video session for __**{name}**__]({link})\n"
                                       f"You must be in the voice channel to use this link")
 
         await ctx.send(embed=e)
         # await ctx.message.delete()  # Delete command invocation message
 
     @commands.command(name='shareall')
-    async def sharescreen_all(self, ctx, *, output: discord.TextChannel = None):
-        """Returns all voice channel's video links
-        Output channel is optional, defaults to current channel"""
-        if output is None:
-            output = ctx.channel
+    async def sharescreen_all(self, ctx):
+        """Returns all voice channel's video links"""
 
         _vc = [vc for vc in ctx.guild.voice_channels]
         guild_id = ctx.guild.id
@@ -88,7 +89,7 @@ class GuildCog(commands.Cog, name='Guild'):
                           colour=6430916,
                           description=formatted)
 
-        await output.send(embed=e)
+        await ctx.send(embed=e)
 
     @commands.command()
     async def move(self, ctx, user: discord.Member, *, channel: discord.VoiceChannel = None):
