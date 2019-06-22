@@ -56,11 +56,12 @@ class GuildCog(commands.Cog, name='Guild'):
 
     @commands.command(name='sharescreen', aliases=['share', 'ss', 'video'])
     async def video_inVC(self, ctx, *, channel: Optional[discord.VoiceChannel] = None):
-        """Enables video call functionality in a guild voice channel."""
+        """Enables video call functionality in a guild voice channel.
+        Defaults to your current voice channel or you can specify a voice channel"""
         author = ctx.message.author
 
         if author.voice is None and channel is None:
-            return await ctx.send('Either you did not entire a valid channel or you are not in a voice channel! <:beemad:545443640323997717>')
+            return await ctx.send('Either you did not enter a valid channel or you are not in a voice channel! <:beemad:545443640323997717>')
 
         if channel is None:
             channel = author.voice.channel
