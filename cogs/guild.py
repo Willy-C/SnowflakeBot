@@ -21,10 +21,10 @@ class GuildCog(commands.Cog, name='Guild'):
             member = ctx.author
         await ctx.send(f'{member.display_name} joined on {member.joined_at.isoformat(" ", "seconds")}')
 
-    @commands.command(name='perms', aliases=['permissions'])
+    @commands.command(name='shortperms', hidden=True)
     async def check_permissions(self, ctx, *, member: discord.Member = None):
-        """Lists all permissions of a member in current guild.
-        If member is not provided, the author will be checked."""
+        """Lists all permissions of a member.
+        If a member is not provided, the author will be checked."""
 
         if not member:
             member = ctx.author
@@ -39,10 +39,10 @@ class GuildCog(commands.Cog, name='Guild'):
 
         await ctx.send(content=None, embed=e)
 
-    @commands.command(name='allperms')
+    @commands.command(name='perms')
     async def check_permissions_long(self, ctx, *, member: discord.Member = None):
-        """Lists all permissions and shows which ones the member has.
-        If member is not provided, the author will be checked."""
+        """Lists permissions of a member.
+        If a member is not provided, the author will be checked."""
         if not member:
             member = ctx.author
         perms = '\n'.join(f'\U00002705 {perm}' if value else f'<:white_X:555196323574579200> {perm}' for perm, value in
@@ -56,7 +56,7 @@ class GuildCog(commands.Cog, name='Guild'):
 
     @commands.command(name='sharescreen', aliases=['share', 'ss', 'video'])
     async def video_inVC(self, ctx, *, channel: Optional[discord.VoiceChannel] = None):
-        """Enables video call functionality in a guild voice channel.
+        """Enables video call in a voice channel.
         Defaults to your current voice channel or you can specify a voice channel"""
         author = ctx.message.author
 
@@ -86,15 +86,18 @@ class GuildCog(commands.Cog, name='Guild'):
         combined = '\n'.join(links)
         formatted = discord.utils.escape_markdown(combined)  # because some ppl like to have ||name|| for some reason
 
-        e = discord.Embed(title="Video Links for Voice Channels",
+        e = discord.Embed(title="Video Links for all Voice Channels",
                           colour=6430916,
                           description=formatted)
 
         await ctx.send(embed=e)
+        await ctx.send(f'You can use {ctx.prefix}share to get the link for a single voice channel or your current voice channel', delete_after=5)
+
 
     @commands.command()
     async def move(self, ctx, user: discord.Member, *, channel: discord.VoiceChannel = None):
-        """Move a user to another voice channel. Disconnects user if channel is None.
+        """Move a user to another voice channel.
+        Disconnects user if channel is None.
         Requires Move Members permission to use."""
         if ctx.author.permissions_in(ctx.guild.voice_channels[0]).move_members:
             await user.move_to(channel)
