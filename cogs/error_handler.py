@@ -39,8 +39,7 @@ class CommandErrorHandler(commands.Cog):
             return await ctx.send(f'One or more of arguments are incorrect. Please see {ctx.prefix}help for more info')
 
         elif isinstance(error, commands.NotOwner):
-            return await ctx.send(
-                'Sorry, this command can only be used by my owner. If you believe this is a mistake, please contact @Willy#7692')
+            return await ctx.send('Sorry, this command can only be used by my owner. If you believe this is a mistake, please contact @Willy#7692')
 
         elif isinstance(error, commands.MissingRequiredArgument):
             return await ctx.send('Missing one or more required arguments.')
@@ -52,8 +51,17 @@ class CommandErrorHandler(commands.Cog):
             return await ctx.send('No channel to join. Please either specify a valid channel or join one.')
 
 
-        print('Ignoring exception in command {}:'.format(ctx.command))
-        traceback.print_exception(type(error), error, error.__traceback__)
+        # print('Ignoring exception in command {}:'.format(ctx.command))
+        # traceback.print_exception(type(error), error, error.__traceback__)
+        await ctx.send('An unknown error has occurred! My owner has been notified.')
+
+        me = self.bot.get_user(self.bot.owner_id)
+        e = discord.Embed(title=f'An unhandled error occurred in {ctx.guild} | #{ctx.channel}',
+                          description=f'Invocation message: {ctx.message.content}\n'
+                                      f'[Jump to message]({ctx.message.jump_url})',
+                          color=discord.Color.red())
+        await me.send(embed=e)
+        await me.send(f'```py\n{"".join(traceback.format_exception(type(error), error, error.__traceback__))}```')
 
 
 def setup(bot):

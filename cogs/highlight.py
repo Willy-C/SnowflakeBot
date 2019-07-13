@@ -64,7 +64,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         if context is None: # target recently messaged, no need to DM
             return
 
-        e = discord.Embed(title=f'You were mentioned in {message.guild.name} | #{message.channel}',
+        e = discord.Embed(title=f'You were mentioned in {message.guild} | #{message.channel}',
                           description=f'{context}\n'
                                       f'[Jump to message]({message.jump_url})',
                           color=discord.Color.blue())
