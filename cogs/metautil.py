@@ -26,8 +26,12 @@ class MetaCog(commands.Cog, name='Metautil'):
         return await ctx.send(f'Command `{alt_ctx.command.qualified_name}` finished in {end - start:.3f}s.')
 
     @commands.command(brief='Checks latency to Discord.')
-    async def ping(self, ctx):
-        await ctx.send(f"Latency: `{self.bot.latency*1000:.1f}ms`")
+    async def ping(self, ctx: commands.Context):
+        start = time.perf_counter()
+        msg = await ctx.send('mew')
+        end = time.perf_counter()
+        await msg.edit(content=f'(WS) Latency: `{self.bot.latency*1000:.2f}ms`\n'
+                               f'Response time: `{(end - start)*1000:.2f}ms`')
 
     @commands.command()
     async def invite(self, ctx):
@@ -36,8 +40,9 @@ class MetaCog(commands.Cog, name='Metautil'):
         """
         e = discord.Embed(title='Invite me to your server!',
                           color=discord.Colour(0x00FFFF),
-                          description=f'[Click here to invite me](https://discordapp.com/oauth2/authorize?client_id=542951902669963271&permissions=2146958847&scope=bot)')
+                          description=f'[Click here to invite me](https://discordapp.com/oauth2/authorize?client_id={self.bot.user.id}&permissions=8&scope=bot)')
         await ctx.send(embed=e)
+
 
 def setup(bot):
     bot.add_cog(MetaCog(bot))
