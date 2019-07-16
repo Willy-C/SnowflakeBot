@@ -36,7 +36,7 @@ class MetaCog(commands.Cog, name='Metautil'):
     @commands.command()
     async def invite(self, ctx):
         """
-        Returns the invite link to add me to your server.
+        The invite link to add me to your server.
         """
         e = discord.Embed(title='Invite me to your server!',
                           color=discord.Colour(0x00FFFF),

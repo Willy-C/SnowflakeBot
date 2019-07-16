@@ -2,9 +2,9 @@ import discord
 from discord.ext import commands
 
 import datetime
+import unicodedata
 
-
-class FunCog(commands.Cog, name='Fun'):
+class GeneralCog(commands.Cog, name='General'):
     def __init__(self, bot):
         self.bot = bot
 
@@ -47,6 +47,22 @@ class FunCog(commands.Cog, name='Fun'):
         for emoji, _ in choices:
             await poll.add_reaction(emoji)
 
+    @commands.command()
+    async def charinfo(self, ctx, *, characters: str):
+        """Gives you information about character(s).
+        Only up to 25 characters at a time.
+        """
+
+        def to_string(c):
+            digit = f'{ord(c):x}'
+            name = unicodedata.name(c, 'Name not found.')
+            return f'`\\U{digit:>08}`: {name} - {c} \N{EM DASH} <http://www.fileformat.info/info/unicode/char/{digit}>'
+
+        msg = '\n'.join(map(to_string, characters))
+        if len(msg) > 2000:
+            return await ctx.send('Output too long to display.')
+        await ctx.send(msg)
+
 
 def to_emoji(c):
     base = 0x1f1e6
@@ -54,4 +70,4 @@ def to_emoji(c):
 
 
 def setup(bot):
-    bot.add_cog(FunCog(bot))
+    bot.add_cog(GeneralCog(bot))

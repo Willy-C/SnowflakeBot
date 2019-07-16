@@ -20,8 +20,7 @@ startup_extensions = ['jishaku',
                       'cogs.logger',
                       'cogs.random',
                       'cogs.googleimage',
-                      'cogs.charinfo',
-                      'cogs.fun',
+                      'cogs.general',
                       'cogs.music']
 
 custom_prefix = {386406482888884226: ['%']}  # Need to store it somewhere else, will do later
