@@ -2,6 +2,9 @@ import discord
 from discord.ext import commands
 
 from typing import Optional
+from datetime import datetime
+
+from global_utils import bright_color
 
 
 class GuildCog(commands.Cog, name='Guild'):
@@ -21,9 +24,27 @@ class GuildCog(commands.Cog, name='Guild'):
             member = ctx.author
         await ctx.send(f'{member.display_name} joined on {member.joined_at.isoformat(" ", "seconds")}')
 
+    @commands.command(name='membercount', aliases=['memcount'])
+    async def member_count(self, ctx):
+        """Returns the member count of the guild"""
+        members = ctx.guild.members
+        statuses = f'<:status_online:602811779948740627> {sum([1 for m in members if m.status is discord.Status.online])}\n' \
+                    f'<:status_offline:602811780053336069> {sum([1 for m in members if m.status is discord.Status.offline])}\n' \
+                    f'<:status_idle:602811780129095701> {sum([1 for m in members if m.status is discord.Status.idle])}\n' \
+                    f'<:status_dnd:602811779931701259> {sum([1 for m in members if m.status is discord.Status.dnd])}'
+
+        e = discord.Embed(color=bright_color(), timestamp=datetime.utcnow())
+        e.set_author(name=f'{ctx.guild}\'s Member Count',  icon_url=ctx.guild.icon_url)
+        e.add_field(name='Total', value=ctx.guild.member_count)
+        e.add_field(name='Humans', value=str(sum([1 for m in members if not m.bot])))
+        e.add_field(name='Bots', value=str(sum([1 for m in members if m.bot])))
+        e.add_field(name='Status', value=statuses)
+
+        await ctx.send(embed=e)
+
     @commands.command(name='shortperms', hidden=True)
     async def check_permissions(self, ctx, *, member: discord.Member = None):
-        """Lists all permissions of a member.
+        """Lists permissions of a member.
         If a member is not provided, the author will be checked."""
 
         if not member:
@@ -34,25 +55,24 @@ class GuildCog(commands.Cog, name='Guild'):
         # Embeds look nicer
         e = discord.Embed(title='Permissions for:', description=ctx.guild.name, colour=member.colour)
         e.set_author(icon_url=member.avatar_url, name=str(member))
-        # \uFEFF is a Zero-Width Space, which allows us to have an empty field name.
+        # \uFEFF = Zero-Width Space
         e.add_field(name='\uFEFF', value=perms)
 
-        await ctx.send(content=None, embed=e)
+        await ctx.send(embed=e)
 
     @commands.command(name='perms')
     async def check_permissions_long(self, ctx, *, member: discord.Member = None):
-        """Lists permissions of a member.
+        """Lists all permissions of a member.
         If a member is not provided, the author will be checked."""
         if not member:
             member = ctx.author
-        perms = '\n'.join(f'\U00002705 {perm}' if value else f'<:white_X:555196323574579200> {perm}' for perm, value in
-                          member.guild_permissions)
+        perms = '\n'.join(f'<:greenTick:602811779835494410> {perm}' if value else f'<:redTick:602811779474522113> {perm}' for perm, value in member.guild_permissions)
 
         e = discord.Embed(title='Permissions for:', description=ctx.guild.name, colour=member.colour)
         e.set_author(icon_url=member.avatar_url, name=str(member))
         e.add_field(name='\uFEFF', value=perms)
 
-        await ctx.send(content=None, embed=e)
+        await ctx.send(embed=e)
 
     @commands.command(name='sharescreen', aliases=['share', 'ss', 'video'])
     async def video_inVC(self, ctx, *, channel: Optional[discord.VoiceChannel] = None):
@@ -73,7 +93,6 @@ class GuildCog(commands.Cog, name='Guild'):
                                       f"You must be in the voice channel to use this link")
 
         await ctx.send(embed=e)
-        # await ctx.message.delete()  # Delete command invocation message
 
     @commands.command(name='shareall')
     async def sharescreen_all(self, ctx):
@@ -93,7 +112,6 @@ class GuildCog(commands.Cog, name='Guild'):
         await ctx.send(embed=e)
         await ctx.send(f'You can use {ctx.prefix}share to get the link for a single voice channel or your current voice channel', delete_after=5)
 
-
     @commands.command()
     async def move(self, ctx, user: discord.Member, *, channel: discord.VoiceChannel = None):
         """Move a user to another voice channel.
@@ -103,6 +121,24 @@ class GuildCog(commands.Cog, name='Guild'):
             await user.move_to(channel)
         else:
             return await ctx.send('Sorry, you are missing the Move Members permission.')
+
+    @commands.command(name='emojis')
+    async def guild_emojis(self, ctx, id: bool = False):
+        """Returns all emojis in the guild sorted by name
+        Pass in True as a parameter to get IDs"""
+        emojis = sorted(ctx.guild.emojis, key=lambda e: e.name)
+        paginator = commands.Paginator(suffix='', prefix='')
+
+        if id:
+            for emoji in emojis:
+                paginator.add_line(f'{emoji} -- {emoji.name} -- `{emoji}`')
+        else:
+            for emoji in emojis:
+                paginator.add_line(f'{emoji} -- {emoji.name}')
+
+        for page in paginator.pages:
+            await ctx.send(page)
+
 
 def setup(bot):
     bot.add_cog(GuildCog(bot))
