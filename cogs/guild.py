@@ -123,13 +123,13 @@ class GuildCog(commands.Cog, name='Guild'):
             return await ctx.send('Sorry, you are missing the Move Members permission.')
 
     @commands.command(name='emojis')
-    async def guild_emojis(self, ctx, id: bool = False):
+    async def guild_emojis(self, ctx, codepoint: bool = False):
         """Returns all emojis in the guild sorted by name
-        Pass in True as a parameter to get IDs"""
+        Pass in True as a parameter to get codepoints"""
         emojis = sorted(ctx.guild.emojis, key=lambda e: e.name)
         paginator = commands.Paginator(suffix='', prefix='')
 
-        if id:
+        if codepoint:
             for emoji in emojis:
                 paginator.add_line(f'{emoji} -- {emoji.name} -- `{emoji}`')
         else:
