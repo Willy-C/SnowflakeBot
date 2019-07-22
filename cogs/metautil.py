@@ -50,7 +50,7 @@ class MetaCog(commands.Cog, name='Metautil'):
         Pass in True as a parameter to get codepoints"""
         paginator = commands.Paginator(suffix='', prefix='')
 
-        for guild in self.bot.guilds:
+        for guild in sorted(self.bot.guilds, key=lambda g: g.name):
 
             if not guild.emojis:
                 continue
