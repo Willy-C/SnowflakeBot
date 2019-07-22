@@ -23,7 +23,7 @@ class AvatarCog(commands.Cog, name='General'):
         # await ctx.send(user.avatar_url_as(static_format='png'))
 
     @get_avatar.error
-    async def get_avatar_handler(self, ctx, error):
+    async def get_avatar_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
             return await ctx.send("```No user found on this server matching that name.\n"
                                   "I will search in this order: \n"

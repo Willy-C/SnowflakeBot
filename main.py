@@ -43,7 +43,10 @@ def get_prefix(bot, message):
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 
-bot = commands.Bot(command_prefix=get_prefix, description=DESCR)
+bot = commands.Bot(command_prefix=get_prefix,
+                   description=DESCR,
+                   case_insensitive=True)
+
 
 @bot.event
 async def on_ready():
@@ -70,6 +73,5 @@ if __name__ == '__main__':
             # ^uncomment for traceback when extension fails to load
     print('-' * 52)
     print(f'Successfully loaded {successes}/{total} extensions.')
-
 
 bot.run(TOKEN, reconnect=True)

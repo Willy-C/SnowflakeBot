@@ -26,8 +26,7 @@ class CommandErrorHandler(commands.Cog):
             return
 
         elif isinstance(error, commands.DisabledCommand):
-            return await ctx.send(
-                f'{ctx.command} has been disabled. If you believe this is a mistake, please contact @Willy#7692')
+            return await ctx.send(f'{ctx.command} has been disabled. If you believe this is a mistake, please contact @Willy#7692')
 
         elif isinstance(error, commands.NoPrivateMessage):
             return await ctx.author.send(f'The command {ctx.prefix}{ctx.command} cannot be used in Private Messages.')
@@ -46,6 +45,9 @@ class CommandErrorHandler(commands.Cog):
 
         elif isinstance(error, commands.MissingPermissions):
             return await ctx.send(f'Sorry, but you are missing the following permissions: {error.missing_perms}')
+
+        elif isinstance(error, commands.BotMissingPermissions):
+            return await ctx.send(f'Sorry, but I am missing the following permissions: {error.missing_perms}')
 
         elif isinstance(error, InvalidVoiceChannel):
             return await ctx.send('No channel to join. Please either specify a valid channel or join one.')
