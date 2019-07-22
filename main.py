@@ -3,7 +3,7 @@ from discord.ext import commands
 
 import sys, traceback, platform
 from typing import Union
-import datetime
+from datetime import datetime
 
 from config import BOT_TOKEN
 
@@ -46,7 +46,7 @@ def get_prefix(bot, message):
 bot = commands.Bot(command_prefix=get_prefix,
                    description=DESCR,
                    case_insensitive=True)
-
+bot.starttime = datetime.utcnow()
 
 @bot.event
 async def on_ready():
@@ -56,7 +56,7 @@ async def on_ready():
 
     activity = discord.Activity(type=discord.ActivityType.listening, name='you :)')
     await bot.change_presence(activity=activity)
-    print(f'Ready! {datetime.datetime.now()}\n')
+    print(f'Ready! {datetime.now()}\n')
 
 
 if __name__ == '__main__':
