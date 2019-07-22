@@ -51,17 +51,21 @@ class MetaCog(commands.Cog, name='Metautil'):
         paginator = commands.Paginator(suffix='', prefix='')
 
         for guild in self.bot.guilds:
+
             if not guild.emojis:
                 continue
+
             paginator.add_line(f'__**{guild.name}**__', empty=True)
             emojis = sorted(guild.emojis, key=lambda e: e.name)
 
             if codepoint:
                 for emoji in emojis:
                     paginator.add_line(f'{emoji} -- {emoji.name} -- `{emoji}`')
+                paginator.add_line('')
             else:
                 for emoji in emojis:
                     paginator.add_line(f'{emoji} -- {emoji.name}')
+                paginator.add_line('')
 
         for page in paginator.pages:
             await ctx.send(page)
