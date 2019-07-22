@@ -26,7 +26,7 @@ class MetaCog(commands.Cog, name='Metautil'):
         return await ctx.send(f'Command `{alt_ctx.command.qualified_name}` finished in {end - start:.3f}s.')
 
     @commands.command(brief='Checks latency to Discord.')
-    async def ping(self, ctx: commands.Context):
+    async def ping(self, ctx):
         start = time.perf_counter()
         msg = await ctx.send('mew')
         end = time.perf_counter()
@@ -42,6 +42,29 @@ class MetaCog(commands.Cog, name='Metautil'):
                           color=discord.Colour(0x00FFFF),
                           description=f'[Click here to invite me](https://discordapp.com/oauth2/authorize?client_id={self.bot.user.id}&permissions=8&scope=bot)')
         await ctx.send(embed=e)
+
+    @commands.command(name='allemojis')
+    async def guild_emojis(self, ctx, codepoint: bool = False):
+        """
+        Returns all emojis from every guild the bot can see
+        Pass in True as a parameter to get codepoints"""
+        paginator = commands.Paginator(suffix='', prefix='')
+
+        for guild in self.bot.guilds:
+            if not guild.emojis:
+                continue
+            paginator.add_line(f'__**{guild.name}**__', empty=True)
+            emojis = sorted(guild.emojis, key=lambda e: e.name)
+
+            if codepoint:
+                for emoji in emojis:
+                    paginator.add_line(f'{emoji} -- {emoji.name} -- `{emoji}`')
+            else:
+                for emoji in emojis:
+                    paginator.add_line(f'{emoji} -- {emoji.name}')
+
+        for page in paginator.pages:
+            await ctx.send(page)
 
 
 def setup(bot):
