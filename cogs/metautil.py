@@ -55,7 +55,7 @@ class MetaCog(commands.Cog, name='Metautil'):
             if not guild.emojis:
                 continue
 
-            paginator.add_line(f'__**{guild.name}**__', empty=True)
+            paginator.add_line(f'__**{guild.name}**__')
             emojis = sorted(guild.emojis, key=lambda e: e.name)
 
             if codepoint:
