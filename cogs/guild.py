@@ -43,7 +43,7 @@ class GuildCog(commands.Cog, name='Guild'):
         await ctx.send(embed=e)
 
     @commands.command(name='shortperms', hidden=True)
-    async def check_permissions(self, ctx, *, member: discord.Member = None):
+    async def get_permissions(self, ctx, *, member: discord.Member = None):
         """Lists permissions of a member.
         If a member is not provided, the author will be checked."""
 
@@ -61,7 +61,7 @@ class GuildCog(commands.Cog, name='Guild'):
         await ctx.send(embed=e)
 
     @commands.command(name='perms')
-    async def check_permissions_long(self, ctx, *, member: discord.Member = None):
+    async def all_permissions(self, ctx, *, member: discord.Member = None):
         """Lists all permissions of a member.
         If a member is not provided, the author will be checked."""
         if not member:
@@ -128,7 +128,7 @@ class GuildCog(commands.Cog, name='Guild'):
         Pass in True as a parameter to get codepoints"""
         emojis = sorted(ctx.guild.emojis, key=lambda e: e.name)
         paginator = commands.Paginator(suffix='', prefix='')
-
+        paginator.add_line(f'Emojis of {ctx.guild.name}:')
         if codepoint:
             for emoji in emojis:
                 paginator.add_line(f'{emoji} -- {emoji.name} -- `{emoji}`')

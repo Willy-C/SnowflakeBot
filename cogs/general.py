@@ -56,10 +56,11 @@ class GeneralCog(commands.Cog, name='General'):
         def to_string(c):
             digit = f'{ord(c):x}'
             name = unicodedata.name(c, 'Name not found.')
-            return f'`\\U{digit:>08}`: {name} - {c} \N{EM DASH} <http://www.fileformat.info/info/unicode/char/{digit}>'
+            return f'`\\U{digit:>08}`: {name} \U00002014 {c} \U00002014 <http://www.fileformat.info/info/unicode/char/{digit}>'
 
         msg = '\n'.join(map(to_string, characters))
         if len(msg) > 2000:
+            await ctx.send('Up to 25 characters at a time and no custom emojis!', delete_after=5)
             return await ctx.send('Output too long to display.')
         await ctx.send(msg)
 
