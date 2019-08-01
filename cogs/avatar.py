@@ -17,7 +17,7 @@ class AvatarCog(commands.Cog, name='General'):
 
         embed = discord.Embed(colour=user.colour)
         embed.set_image(url=avatar_url)
-        embed.set_author(name=f"{user.display_name}", url=avatar_url)
+        embed.set_author(name=f'{user.display_name}', url=avatar_url)
 
         await ctx.send(embed=embed)
         # await ctx.send(user.avatar_url_as(static_format='png'))
@@ -35,7 +35,7 @@ class AvatarCog(commands.Cog, name='General'):
                                   "Note: Names are Case-sensitive!```")
         else:
             await ctx.send(
-                "Some unknown error occurred. Please try again, if this error persists, please contact @Willy#7692")
+                'Some unknown error occurred. Please try again, if this error persists, please contact @Willy#7692')
 
 
 def setup(bot):

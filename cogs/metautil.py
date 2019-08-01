@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 
 import time
+import datetime
 
 from global_utils import copy_context
 
@@ -69,6 +70,17 @@ class MetaCog(commands.Cog, name='Metautil'):
 
         for page in paginator.pages:
             await ctx.send(page)
+
+    @commands.command()
+    async def uptime(self, ctx):
+        """Returns the bot's uptime"""
+        delta = (datetime.datetime.utcnow() - self.bot.starttime)
+        total_seconds = delta.total_seconds()
+        d = delta.days
+        h = int(total_seconds // 3600)
+        m = int((total_seconds % 3600) // 60)
+        s = int((total_seconds % 3600) % 60)
+        await ctx.send(f'Uptime: {d}d {h}h {m}m {s}s')
 
 
 def setup(bot):
