@@ -55,21 +55,6 @@ class OwnerCog(commands.Cog, name='Owner', command_attrs=command_attrs):
         else:
             await ctx.send(f'**`SUCCESS`** reloaded {cog}')
 
-    @commands.command()
-    async def clean(self, ctx, num: int = 10):
-        """Clean's up the bot's messages"""
-        if num > 100:
-            return await ctx.send("Use purge for deleting more than 100 messages")
-
-        def check(msg):
-            return msg.author.id == msg.guild.me.id
-
-        await ctx.channel.purge(limit=num, check=check, bulk=False)
-        try:
-            await ctx.message.add_reaction("\u2705")
-        except:
-            pass
-
     @commands.command(name='presence')
     async def change_presence(self, ctx, type: str, *, name: Optional[str]):
         activities = {'L': discord.Activity(name=name, type=discord.ActivityType.listening),
