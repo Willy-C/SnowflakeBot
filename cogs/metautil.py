@@ -82,6 +82,16 @@ class MetaCog(commands.Cog, name='Metautil'):
         s = int((total_seconds % 3600) % 60)
         await ctx.send(f'Uptime: {d}d {h}h {m}m {s}s')
 
+    @commands.command(name='shared')
+    async def shared_guilds(self, ctx, member: discord.Member=None):
+        """Returns the number of guilds a member shares with the bot"""
+        member = member or ctx.author
+        count = 0
+        for guild in self.bot.guilds:
+            if guild.get_member(member.id):
+                count += 1
+        await ctx.send(f'I share {count} server{"s" if count > 1 else ""} with {member}')
+
 
 def setup(bot):
     bot.add_cog(MetaCog(bot))
