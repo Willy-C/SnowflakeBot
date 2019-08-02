@@ -43,7 +43,7 @@ def can_ban():
 # The actual cog
 
 
-class ModCog(commands.Cog):
+class ModCog(commands.Cog, name='Mod'):
 
     def __init__(self, bot):
         self.bot = bot
@@ -56,6 +56,18 @@ class ModCog(commands.Cog):
         """Deletes a specific message"""
         try:
             await message.delete()
+        except discord.HTTPException:
+            await ctx.send('Discord is being dumb, try again later')
+        else:
+            await ctx.message.add_reaction('\U00002705')  # React with checkmark
+
+    @commands.command(name='suppress', enabled=False, hidden=True)  # disable because suppress not supported yet
+    @commands.bot_has_permissions(manage_messages=True)
+    @can_manage_messages()
+    async def suppress_embed(self, ctx, message: discord.Message, toggle: bool=True):
+        """Suppresses embeds in a given message. Can pass in False to bring embeds back"""
+        try:
+            await message.edit(suppress=toggle)
         except discord.HTTPException:
             await ctx.send('Discord is being dumb, try again later')
         else:

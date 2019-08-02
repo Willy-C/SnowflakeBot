@@ -260,14 +260,14 @@ class Music(commands.Cog):
 
         if not vc:
             await ctx.invoke(self.connect_)
-        special = {'star': 'https://www.youtube.com/playlist?list=PLszZ0xXW9BjoX6r2ZRqPwF9wAlcxZSvgI',
-                   'xih': 'https://www.youtube.com/playlist?list=PLszZ0xXW9BjqGuovNjdnMsM7xcNxOut23',
-                   'piano': 'https://www.youtube.com/playlist?list=PLszZ0xXW9BjpSwpNLmRJ7dtOlf-qLDP0g'
-                   }
-        if search in special:
-            search = special[search]
-            await ctx.send('Special keyword entered. Playing predefined playlist..\n', delete_after=20)
-        await ctx.send('Due to library limitations, long playlists may have a delay before playing.', delete_after=30)
+        # special = {'star': 'https://www.youtube.com/playlist?list=PLszZ0xXW9BjoX6r2ZRqPwF9wAlcxZSvgI',
+        #            'xih': 'https://www.youtube.com/playlist?list=PLszZ0xXW9BjqGuovNjdnMsM7xcNxOut23',
+        #            'piano': 'https://www.youtube.com/playlist?list=PLszZ0xXW9BjpSwpNLmRJ7dtOlf-qLDP0g'
+        #            }
+        # if search in special:
+        #     search = special[search]
+        #     await ctx.send('Special keyword entered. Playing predefined playlist..\n', delete_after=20)
+        await ctx.send('I am currently in the process of improving this, if something is broken please let me know', delete_after=30)
         player = self.get_player(ctx)
 
         # If download is False, source will be a dict which will be used later to regather the stream.
