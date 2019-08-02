@@ -44,10 +44,10 @@ class CommandErrorHandler(commands.Cog):
             return await ctx.send('Missing one or more required arguments.')
 
         elif isinstance(error, commands.MissingPermissions):
-            return await ctx.send(f'Sorry, but you are missing the following permissions: {error.missing_perms}')
+            return await ctx.send(f'Sorry, but you are missing the following permission{"" if len(error.missing_perms) == 1 else "s"}: {",".join(error.missing_perms)}')
 
         elif isinstance(error, commands.BotMissingPermissions):
-            return await ctx.send(f'Sorry, but I am missing the following permissions: {error.missing_perms}')
+            return await ctx.send(f'Sorry, but I am missing the following permission{"" if len(error.missing_perms) == 1 else "s"}: {",".join(error.missing_perms)}')
 
         elif isinstance(error, InvalidVoiceChannel):
             return await ctx.send('No channel to join. Please either specify a valid channel or join one.')
