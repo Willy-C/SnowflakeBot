@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from typing import Optional
-from jishaku.codeblocks import Codeblock, CodeblockConverter
+from jishaku.codeblocks import Codeblock, codeblock_converter
 from global_utils import copy_context
 
 command_attrs = {'hidden': True}
@@ -81,7 +81,7 @@ class OwnerCog(commands.Cog, name='Owner', command_attrs=command_attrs):
                            'Status: Online | Offline | Idle | DND```')
 
     @commands.command(name='eval')
-    async def _eval(self, ctx, *, args: CodeblockConverter):
+    async def _eval(self, ctx, *, args: codeblock_converter):
         """Evaluates python code in a single line or code block"""
         await ctx.invoke(self.bot.get_command("jsk py"), argument=args)
 
