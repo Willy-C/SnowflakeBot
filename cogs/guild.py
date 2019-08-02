@@ -34,7 +34,7 @@ class GuildCog(commands.Cog, name='Guild'):
                     f'<:status_dnd:602811779931701259> {sum([1 for m in members if m.status is discord.Status.dnd])}'
 
         e = discord.Embed(color=bright_color(), timestamp=datetime.utcnow())
-        e.set_author(name=f'{ctx.guild}\'s Member Count',  icon_url=ctx.guild.icon_url)
+        e.set_author(name=f'{ctx.guild}\'s member count',  icon_url=ctx.guild.icon_url)
         e.add_field(name='Total', value=ctx.guild.member_count)
         e.add_field(name='Humans', value=str(sum([1 for m in members if not m.bot])))
         e.add_field(name='Bots', value=str(sum([1 for m in members if m.bot])))
@@ -68,10 +68,8 @@ class GuildCog(commands.Cog, name='Guild'):
             member = ctx.author
         perms = '\n'.join(f'<:greenTick:602811779835494410> {perm}' if value else f'<:redTick:602811779474522113> {perm}' for perm, value in member.guild_permissions)
 
-        e = discord.Embed(title='Permissions for:', description=ctx.guild.name, colour=member.colour)
-        e.set_author(icon_url=member.avatar_url, name=str(member))
-        e.add_field(name='\uFEFF', value=perms)
-
+        e = discord.Embed(description=perms, colour=member.colour)
+        e.set_author(icon_url=member.avatar_url, name=member)
         await ctx.send(embed=e)
 
     @commands.command(name='sharescreen', aliases=['share', 'ss', 'video'])

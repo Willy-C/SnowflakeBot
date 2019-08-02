@@ -17,7 +17,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         # self.ignored_users={} # UserID -> {User IDs} | int -> set(int)
 
     async def _get_msg_context(self, message: discord.Message, key: str):
-        prev_msgs = await message.channel.history(after=(datetime.utcnow()-timedelta(minutes=15))).flatten() # Grabs all messages from the last 15 minutes
+        prev_msgs = await message.channel.history(after=(datetime.utcnow()-timedelta(minutes=5))).flatten() # Grabs all messages from the last 5 minutes
         msg_context = []
         dateformat = '%m-%d %H:%M:%S'
 
@@ -33,9 +33,9 @@ class HighlightCog(commands.Cog, name='Highlight'):
         msg = prev_msgs[-1] # this is just so I can copy and paste the line above
         msg_context.append(f'[{(msg.created_at + EDT_diff).strftime(dateformat)}] {msg.author}: {msg.content.replace(key, f"**{key}**")}')
 
-        for _ in range(2): # Get next 2 messages within 10s
+        for _ in range(2):  # Get next 2 messages within 10s
             try:
-                next_msg = await self.bot.wait_for('message', check=(lambda m : m.channel == message.channel), timeout=5)
+                next_msg = await self.bot.wait_for('message', check=(lambda m: m.channel == message.channel), timeout=5)
             except TimeoutError:
                 pass
             else:
@@ -61,7 +61,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
         context = await self._get_msg_context(message, key)
 
-        if context is None: # target recently messaged, no need to DM
+        if context is None:  # target recently messaged, no need to DM
             return
 
         e = discord.Embed(title=f'You were mentioned in {message.guild} | #{message.channel}',
@@ -84,15 +84,14 @@ class HighlightCog(commands.Cog, name='Highlight'):
             if key in message.content.lower():
                 await self._dm_highlight(message, key)
 
-
-    @commands.group()
-    async def highlight(self, ctx):
-        if ctx.invoked_subcommand is None:
-            pass
-
-    @highlight.command(enabled=False)
-    async def add(self, ctx):
-        pass
+    # @commands.group()
+    # async def highlight(self, ctx):
+    #     if ctx.invoked_subcommand is None:
+    #         pass
+    #
+    # @highlight.command(enabled=False)
+    # async def add(self, ctx):
+    #     pass
 
 
 
