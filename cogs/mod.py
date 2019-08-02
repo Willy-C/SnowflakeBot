@@ -4,6 +4,45 @@ from discord.ext import commands
 from collections import Counter
 
 
+# Checks
+
+
+def can_manage_messages():
+    async def predicate(ctx):
+        is_owner = await ctx.bot.is_owner(ctx.author)
+        if is_owner:
+            return True
+        if ctx.channel.permissions_for(ctx.author).manage_messages:
+            return True
+        raise commands.MissingPermissions(['Manage Messages'])
+    return commands.check(predicate)
+
+
+def can_kick():
+    async def predicate(ctx):
+        is_owner = await ctx.bot.is_owner(ctx.author)
+        if is_owner:
+            return True
+        if ctx.channel.permissions_for(ctx.author).kick_members:
+            return True
+        raise commands.MissingPermissions(['Kick Members'])
+    return commands.check(predicate)
+
+
+def can_ban():
+    async def predicate(ctx):
+        is_owner = await ctx.bot.is_owner(ctx.author)
+        if is_owner:
+            return True
+        if ctx.channel.permissions_for(ctx.author).ban_members:
+            return True
+        raise commands.MissingPermissions(['Ban Members'])
+    return commands.check(predicate)
+
+
+# The actual cog
+
+
 class ModCog(commands.Cog):
 
     def __init__(self, bot):
@@ -11,8 +50,8 @@ class ModCog(commands.Cog):
 # TODO: make custom checks for these
 
     @commands.command(name='delmsg')
-    @commands.has_permissions(manage_messages=True)
     @commands.bot_has_permissions(manage_messages=True)
+    @can_manage_messages()
     async def del_msg(self, ctx, message: discord.Message):
         """Deletes a specific message"""
         try:
@@ -40,7 +79,7 @@ class ModCog(commands.Cog):
             if msg.author == ctx.me:
                 await msg.delete()
                 counter += 1
-        return {'me': counter}
+        return {str(self.bot.user): counter}
 
     async def _good_clean(self, ctx, limit):
         def check(m):
@@ -49,7 +88,7 @@ class ModCog(commands.Cog):
         return Counter(str(msg.author) for msg in deleted)
 
     @commands.command()
-    @commands.has_permissions(manage_messages=True)
+    @can_manage_messages()
     async def clean(self, ctx, limit: int = 10):
         """Clean's up the bot's messages"""
         if ctx.me.permissions_in(ctx.channel).manage_messages:
@@ -69,8 +108,8 @@ class ModCog(commands.Cog):
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
     @commands.command()
-    @commands.has_permissions(kick_members=True)
     @commands.bot_has_permissions(kick_members=True)
+    @can_kick()
     @commands.guild_only()
     async def kick(self, ctx, member: discord.Member, *, reason=None):
         """Kicks member from server"""
@@ -83,8 +122,8 @@ class ModCog(commands.Cog):
         await ctx.send('\U0001f44c')  # OK
 
     @commands.command()
-    @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
+    @can_ban()
     @commands.guild_only()
     async def ban(self, ctx, member: discord.Member, *, reason=None):
         """Bans someone from the server"""
@@ -97,8 +136,8 @@ class ModCog(commands.Cog):
         await ctx.send('\U0001f44c')  # OK
 
     @commands.command()
-    @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
+    @can_ban()
     @commands.guild_only()
     async def unban(self, ctx, id: int, *, reason=None):
         """Unbans someone from the server. Must provide user's ID"""
@@ -116,8 +155,8 @@ class ModCog(commands.Cog):
 
 
     @commands.command()
-    @commands.has_permissions(kick_members=True)
     @commands.bot_has_permissions(ban_members=True)
+    @can_kick()
     @commands.guild_only()
     async def softban(self, ctx, member: discord.Member, *, reason=None):
         """Soft bans a member from the server
