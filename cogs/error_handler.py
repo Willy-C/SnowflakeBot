@@ -55,15 +55,21 @@ class CommandErrorHandler(commands.Cog):
 
         # print('Ignoring exception in command {}:'.format(ctx.command))
         # traceback.print_exception(type(error), error, error.__traceback__)
-        await ctx.send('An unknown error has occurred! My owner has been notified.')
+        tb = traceback.format_exception(type(error), error, error.__traceback__)
+
+        await ctx.send(f'An unexpected error has occurred! My owner has been notified.\n'
+                       f'If you really want to know what went wrong:\n'
+                       f'||```py\n{tb[-1]}```||')
 
         me = self.bot.get_user(self.bot.owner_id)
         e = discord.Embed(title=f'An unhandled error occurred in {ctx.guild} | #{ctx.channel}',
                           description=f'Invocation message: {ctx.message.content}\n'
                                       f'[Jump to message]({ctx.message.jump_url})',
                           color=discord.Color.red())
+        e.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+
         await me.send(embed=e)
-        await me.send(f'```py\n{"".join(traceback.format_exception(type(error), error, error.__traceback__))}```')
+        await me.send(f'```py\n{"".join(tb)}```')
 
 
 def setup(bot):

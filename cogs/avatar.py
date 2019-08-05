@@ -17,7 +17,7 @@ class AvatarCog(commands.Cog, name='General'):
 
         embed = discord.Embed(colour=user.colour)
         embed.set_image(url=avatar_url)
-        embed.set_author(name=f'{user.display_name}', url=avatar_url)
+        embed.set_author(name=user.display_name, url=avatar_url)
 
         await ctx.send(embed=embed)
         # await ctx.send(user.avatar_url_as(static_format='png'))
@@ -25,14 +25,14 @@ class AvatarCog(commands.Cog, name='General'):
     @get_avatar.error
     async def get_avatar_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
-            return await ctx.send("```No user found on this server matching that name.\n"
-                                  "I will search in this order: \n"
-                                  "1. By ID                     (ex. 5429519026699)\n"
-                                  "2. By Mention                (ex. @Snowflake)\n"
-                                  "3. By Name#Discrim           (ex. Snowflake#7321)\n"
-                                  "4. By Name                   (ex. Snowflake)\n"
-                                  "5. By Nickname               (ex. BeepBoop)\n"
-                                  "Note: Names are Case-sensitive!```")
+            return await ctx.send('```No user found on this server matching that name.\n'
+                                  'I will search in this order: \n'
+                                  '1. By ID                     (ex. 5429519026699)\n'
+                                  '2. By Mention                (ex. @Snowflake)\n'
+                                  '3. By Name#Discrim           (ex. Snowflake#7321)\n'
+                                  '4. By Name                   (ex. Snowflake)\n'
+                                  '5. By Nickname               (ex. BeepBoop)\n'
+                                  'Note: Names are Case-sensitive!```')
         else:
             await ctx.send(
                 'Some unknown error occurred. Please try again, if this error persists, please contact @Willy#7692')
