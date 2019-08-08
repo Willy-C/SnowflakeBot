@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 
 from collections import Counter
+from asyncio import TimeoutError
+
 
 
 # Checks
@@ -17,7 +19,6 @@ def can_manage_messages():
         raise commands.MissingPermissions(['Manage Messages'])
     return commands.check(predicate)
 
-
 def can_kick():
     async def predicate(ctx):
         is_owner = await ctx.bot.is_owner(ctx.author)
@@ -27,7 +28,6 @@ def can_kick():
             return True
         raise commands.MissingPermissions(['Kick Members'])
     return commands.check(predicate)
-
 
 def can_ban():
     async def predicate(ctx):
@@ -39,6 +39,35 @@ def can_ban():
         raise commands.MissingPermissions(['Ban Members'])
     return commands.check(predicate)
 
+def can_manage_roles():
+    async def predicate(ctx):
+        is_owner = await ctx.bot.is_owner(ctx.author)
+        if is_owner:
+            return True
+        if ctx.channel.permissions_for(ctx.author).manage_roles:
+            return True
+        raise commands.MissingPermissions(['Manage Roles'])
+    return commands.check(predicate)
+
+def can_manage_channels():
+    async def predicate(ctx):
+        is_owner = await ctx.bot.is_owner(ctx.author)
+        if is_owner:
+            return True
+        if ctx.channel.permissions_for(ctx.author).manage_channels:
+            return True
+        raise commands.MissingPermissions(['Manage Channels'])
+    return commands.check(predicate)
+
+def can_mute():
+    async def predicate(ctx):
+        is_owner = await ctx.bot.is_owner(ctx.author)
+        if is_owner:
+            return True
+        if ctx.channel.permissions_for(ctx.author).manage_roles:
+            return True
+        raise commands.MissingPermissions(['Manage Roles'])
+    return commands.check(predicate)
 
 # Cog
 
@@ -182,10 +211,137 @@ class ModCog(commands.Cog, name='Mod'):
         await ctx.guild.unban(member, reason=reason)
         await ctx.send('\U0001f44c')  # OK
 
+
+    async def set_muterole_perms(self, ctx, role):
+        reason = f'Setting mute role permissions. Done by: {ctx.author} ({ctx.author.id})'
+        done = 0
+        fail = 0
+        no_perm = []
+        for channel in ctx.guild.text_channels:
+            my_perms = channel.permissions_for(ctx.me)
+            ow = discord.PermissionOverwrite()
+            # noinspection PyDunderSlots,PyUnresolvedReferences
+            ow.send_messages = False
+            if my_perms.manage_channels:
+                try:
+                    await channel.set_permissions(role, overwrite=ow, reason=reason)
+                except discord.HTTPException:
+                    fail += 1
+                else:
+                    done += 1
+            else:
+                no_perm.append(channel.name)
+
+        await ctx.trigger_typing()
+        if no_perm:
+            missing = f'\n{len(no_perm)} channels skipped because I am missing `Manage Channel` permission for: {", ".join(no_perm)}'
+        else:
+            missing = ''
+
+        await ctx.send(f'Updated permission overwrites for:\n'
+                       f'{done} channels, {fail} failed{missing}')
+
+        if fail or missing:
+            await ctx.send(f'Try {ctx.prefix}updatemute to try and apply permission overwrites again')
+
+    @commands.command(name='createmute')
+    @commands.bot_has_permissions(manage_roles=True, manage_channels=True)
+    @can_manage_roles()
+    @commands.guild_only()
+    async def create_mute_role(self, ctx):
+        """Creates a role name 'Muted' and denies Send Message permission to all text channels"""
+        muted_role = discord.utils.get(ctx.guild.roles, name='Muted')
+        if muted_role is not None:
+            return await ctx.send(f'A Muted role already exist! Please use `{ctx.prefix}updatemute` to apply permission overwrites.')
+        cont = False
+        def confirm(msg):
+            nonlocal cont
+            if ctx.author.id != msg.author.id or ctx.channel.id != msg.channel.id:
+                return False
+            if msg.content in ('**confirm**', '**Confirm**', 'confirm', 'Confirm'):
+                cont = True
+                return True
+            elif msg.content in ('**abort**', '**Abort**', 'abort', 'Abort'):
+                cont = False # don't continue
+                return True
+            return False # author typed something else in the same channel, keep waiting
+
+        prompt = await ctx.send(f'You are about to create the `Muted` role\n'
+                                f'Please type **confirm** to continue within 1 minute or type **abort** if you changed your mind.')
+        try:
+            await self.bot.wait_for('message', check=confirm, timeout=60)
+        except TimeoutError:
+            await ctx.send('1 minute has passed. Aborting...')
+        finally:
+            await prompt.delete()
+
+        if not cont: # Author typed abort, don't continue
+            return await ctx.send('Aborting...')
+
+        try:
+            muted_role = await ctx.guild.create_role(name='Muted',
+                                                     reason=f'Muted role created. Done by: {ctx.author} ({ctx.author.id})')
+        except discord.HTTPException as e:
+            return await ctx.send(f'An unknown error has occurred..\n'
+                                  f'{e}')
+        else:
+            await ctx.send('Success! Mute role created')
+
+        await self.set_muterole_perms(ctx, muted_role)
+
+    @commands.command()
+    @commands.bot_has_permissions(manage_channels=True)
+    @can_manage_roles()
+    @commands.guild_only()
+    async def updatemute(self, ctx, role: discord.Role=None):
+        """
+        Denies Send Message permissions to all text channels.
+        Useful if permissions failed to set on role creation, when new channels were created or role was manually created
+        """
+        if role is None:
+            role = discord.utils.get(ctx.guild.roles, name='Muted')
+            if role is None:
+                # If still None, then.. welp, we tried
+                return await ctx.send(f'Unable to find Muted role, if you believe this is an error please contact my owner\n'
+                                      f'Use {ctx.prefix}createmute to create the role and set the appropriate permissions')
+
+        await self.set_muterole_perms(ctx, role)
+
     @commands.command()
     @commands.bot_has_permissions(manage_roles=True)
-    async def create_mute(self):
-        pass
+    @can_mute()
+    @commands.guild_only()
+    async def mute(self, ctx, member: discord.Member):
+        role = discord.utils.get(ctx.guild.roles, name='Muted')
+
+        is_owner = await ctx.bot.is_owner(ctx.author)
+        if ctx.author.top_role <= member.top_role and not is_owner:
+            return await ctx.send(f'Unable to mute {member}, his/her top role is higher than yours')
+        if ctx.me.top_role < role:
+            return await ctx.send(f'Unable to mute, please move my role above the Muted role')
+
+        if role is None:
+            return await ctx.send(f'Unable to find Muted role, please use {ctx.prefix}createmute to create the role and set the appropriate permissions\n'
+                                  f'If you believe this is an error please contact my owner')
+
+        await member.add_roles(role, reason=f'Mute done by: {ctx.author} ({ctx.author.id})')
+
+    @commands.command()
+    @commands.bot_has_permissions(manage_roles=True)
+    @can_mute()
+    @commands.guild_only()
+    async def unmute(self, ctx, member: discord.Member):
+        role = discord.utils.get(ctx.guild.roles, name='Muted')
+        if ctx.me.top_role < role:
+            return await ctx.send(f'Unable to unmute, please move my role above the Muted role')
+
+        if role is None:
+            return await ctx.send(f'Unable to find `Muted` role\n'
+                                  f'If you believe this is an error please contact my owner')
+        if role not in member.roles:
+            return await ctx.send(f'{member} is not muted.\n'
+                                  f'If you believe this is an error please contact my owner')
+        await member.remove_roles(role, reason=f'Unmute done by: {ctx.author} ({ctx.author.id})')
 
 
 def setup(bot):
