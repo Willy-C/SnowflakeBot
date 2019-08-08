@@ -26,10 +26,10 @@ class CommandErrorHandler(commands.Cog):
             return
 
         elif isinstance(error, commands.DisabledCommand):
-            return await ctx.send(f'{ctx.command} has been disabled. If you believe this is a mistake, please contact @Willy#7692')
+            return await ctx.send(f'`{ctx.command}` has been disabled. If you believe this is a mistake, please contact @Willy#7692')
 
         elif isinstance(error, commands.NoPrivateMessage):
-            return await ctx.author.send(f'The command {ctx.prefix}{ctx.command} cannot be used in Private Messages.')
+            return await ctx.author.send(f'The command `{ctx.command}` cannot be used in Private Messages.')
 
         elif isinstance(error, commands.CommandNotFound):
             return  # await ctx.send(f'The command `{ctx.invoked_with}` is not found.')

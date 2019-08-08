@@ -40,14 +40,13 @@ def can_ban():
     return commands.check(predicate)
 
 
-# The actual cog
+# Cog
 
 
 class ModCog(commands.Cog, name='Mod'):
 
     def __init__(self, bot):
         self.bot = bot
-# TODO: make custom checks for these
 
     @commands.command(name='delmsg')
     @commands.bot_has_permissions(manage_messages=True)
@@ -85,7 +84,7 @@ class ModCog(commands.Cog, name='Mod'):
                                   '3. Lookup by message URL\n\n'
                                   'Note: You need Developer Mode enabled to retrieve message IDs```')
 
-    async def _sad_clean(self, ctx, limit):
+    async def _sad_clean(self, ctx, limit): # No manage message permission, only delete bot's message
         counter = 0
         async for msg in ctx.history(limit=limit, before=ctx.message):
             if msg.author == ctx.me:
@@ -93,7 +92,7 @@ class ModCog(commands.Cog, name='Mod'):
                 counter += 1
         return {str(self.bot.user): counter}
 
-    async def _good_clean(self, ctx, limit):
+    async def _good_clean(self, ctx, limit): # Do have permission, so delete bot's message any invocation messages
         def check(m):
             return m.author == ctx.me or m.content.startswith(ctx.prefix)
         deleted = await ctx.channel.purge(limit=limit, check=check, before=ctx.message)
