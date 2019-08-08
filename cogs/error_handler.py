@@ -16,8 +16,8 @@ class CommandErrorHandler(commands.Cog):
         ctx   : Context
         error : Exception"""
 
-        if hasattr(ctx.command, 'on_error'):
-            return
+        # if hasattr(ctx.command, 'on_error'):
+        #     return
 
         ignored = (commands.CommandNotFound)  # Tuple of errors to ignore
         error = getattr(error, 'original', error)
@@ -31,8 +31,8 @@ class CommandErrorHandler(commands.Cog):
         elif isinstance(error, commands.NoPrivateMessage):
             return await ctx.author.send(f'The command `{ctx.command}` cannot be used in Private Messages.')
 
-        elif isinstance(error, commands.CommandNotFound):
-            return  # await ctx.send(f'The command `{ctx.invoked_with}` is not found.')
+        # elif isinstance(error, commands.CommandNotFound):
+        #     return  # await ctx.send(f'The command `{ctx.invoked_with}` is not found.')
 
         elif isinstance(error, commands.BadArgument):
             return await ctx.send(f'One or more of arguments are incorrect. Please see {ctx.prefix}help for more info')

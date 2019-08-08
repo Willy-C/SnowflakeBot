@@ -73,7 +73,8 @@ class ModCog(commands.Cog, name='Mod'):
             await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
     @del_msg.error
-    async def del_msg_error(self, ctx, error):
+    @suppress_embed.error
+    async def msg_convert_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
             return await ctx.send('```I am unable to find the specified message.\n'
                                   'I will search in the following order:\n\n'
@@ -180,6 +181,11 @@ class ModCog(commands.Cog, name='Mod'):
         await ctx.guild.ban(member, reason=reason, delete_message_days=7)
         await ctx.guild.unban(member, reason=reason)
         await ctx.send('\U0001f44c')  # OK
+
+    @commands.command()
+    @commands.bot_has_permissions(manage_roles=True)
+    async def create_mute(self):
+        pass
 
 
 def setup(bot):

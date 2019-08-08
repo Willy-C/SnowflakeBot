@@ -33,9 +33,6 @@ class AvatarCog(commands.Cog, name='General'):
                                   '4. By Name                   (ex. Snowflake)\n'
                                   '5. By Nickname               (ex. BeepBoop)\n'
                                   'Note: Names are Case-sensitive!```')
-        else:
-            await ctx.send(
-                'Some unknown error occurred. Please try again, if this error persists, please contact @Willy#7692')
 
 
 def setup(bot):
