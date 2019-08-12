@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 
 from utils.errors import NoBlacklist
+from utils.global_utils import confirm_prompt
 
 from collections import Counter
 from asyncio import TimeoutError
@@ -261,30 +262,10 @@ class ModCog(commands.Cog, name='Mod'):
         muted_role = discord.utils.get(ctx.guild.roles, name='Muted')
         if muted_role is not None:
             return await ctx.send(f'A Muted role already exist! Please use `{ctx.prefix}updatemute` to apply permission overwrites.')
-        cont = False
-        def confirm(msg):
-            nonlocal cont
-            if ctx.author.id != msg.author.id or ctx.channel.id != msg.channel.id:
-                return False
-            if msg.content in ('**confirm**', '**Confirm**', 'confirm', 'Confirm'):
-                cont = True
-                return True
-            elif msg.content in ('**abort**', '**Abort**', 'abort', 'Abort'):
-                cont = False # don't continue
-                return True
-            return False # author typed something else in the same channel, keep waiting
 
-        prompt = await ctx.send(f'You are about to create the `Muted` role\n'
-                                f'Please type **confirm** to continue within 1 minute or type **abort** if you changed your mind.')
-        try:
-            await self.bot.wait_for('message', check=confirm, timeout=60)
-        except TimeoutError:
-            return await ctx.send('1 minute has passed. Aborting...')
-        finally:
-            await prompt.delete()
-
-        if not cont: # Author typed abort, don't continue
-            return await ctx.send('Aborting...')
+        cont = await confirm_prompt(ctx, 'You are about to create the `Muted` role')
+        if not cont:
+            return
 
         try:
             muted_role = await ctx.guild.create_role(name='Muted',
@@ -312,31 +293,9 @@ class ModCog(commands.Cog, name='Mod'):
             return await ctx.send(f'Unable to find `Muted` role, if you believe this is an error please contact my owner\n'
                                   f'Use {ctx.prefix}createmute to create the role and set the appropriate permissions')
 
-        cont = False
-        def confirm(msg):
-            nonlocal cont
-            if ctx.author.id != msg.author.id or ctx.channel.id != msg.channel.id:
-                return False
-            if msg.content in ('**confirm**', '**Confirm**', 'confirm', 'Confirm'):
-                cont = True
-                return True
-            elif msg.content in ('**abort**', '**Abort**', 'abort', 'Abort'):
-                cont = False # don't continue
-                return True
-            return False # author typed something else in the same channel, keep waiting
-
-        prompt = await ctx.send(f'You are about to update permissions for the `Muted` role in all text channels\n'
-                                f'Please type **confirm** to continue within 1 minute or type **abort** if you changed your mind.')
-
-        try:
-            await self.bot.wait_for('message', check=confirm, timeout=60)
-        except TimeoutError:
-            return await ctx.send('1 minute has passed. Aborting...')
-        finally:
-            await prompt.delete()
-
-        if not cont: # Author typed abort, don't continue
-            return await ctx.send('Aborting...')
+        cont = await confirm_prompt(ctx, 'You are about to update permissions for the `Muted` role in all text channels')
+        if not cont:
+            return
 
         await self.set_muterole_perms(ctx, role)
 
