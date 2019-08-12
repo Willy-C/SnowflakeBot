@@ -5,7 +5,7 @@ import sys, traceback, platform
 from typing import Union
 from datetime import datetime
 
-from config import BOT_TOKEN
+from config import BOT_TOKEN, blacklist
 
 DESCR = 'This bot is a small side project and still very WIP'
 TOKEN = BOT_TOKEN
@@ -49,6 +49,7 @@ bot = commands.Bot(command_prefix=get_prefix,
                    description=DESCR,
                    case_insensitive=True)
 bot.starttime = datetime.utcnow()
+bot.blacklist = blacklist
 
 @bot.event
 async def on_ready():

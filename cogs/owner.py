@@ -1,14 +1,17 @@
 import discord
 from discord.ext import commands
 
-from typing import Optional
-from jishaku.codeblocks import Codeblock, codeblock_converter
-from global_utils import copy_context
-
-command_attrs = {'hidden': True}
+from utils.errors import NoBlacklist
+from utils.global_utils import copy_context
 
 
-class OwnerCog(commands.Cog, name='Owner', command_attrs=command_attrs):
+from typing import Optional, Union
+from jishaku.codeblocks import codeblock_converter
+
+# command_attrs = {'hidden': True}
+
+
+class OwnerCog(commands.Cog, name='Owner'):
     def __init__(self, bot):
         self.bot = bot
 
@@ -104,6 +107,31 @@ class OwnerCog(commands.Cog, name='Owner', command_attrs=command_attrs):
 
         return await alt_ctx.command.invoke(alt_ctx)
 
+
+    # Blacklist stuff
+
+    async def bot_check(self, ctx):
+        if ctx.author.id in self.bot.blacklist:
+            raise NoBlacklist
+        return True
+
+    @commands.command(name='blacklist')
+    async def add_blacklist(self, ctx, user: Union[int, discord.User]):
+        if isinstance(user, int):
+            self.bot.blacklist.append(user)
+            user = self.bot.fetch_user(user) or user
+        elif isinstance(user, discord.User):
+            self.bot.blacklist.append(user.id)
+        await ctx.send(f'Blacklisted {user}')
+
+    @commands.command(name='unblacklist')
+    async def remove_blacklist(self, ctx, user: Union[int, discord.User]):
+        if isinstance(user, int):
+            self.bot.blacklist.remove(user)
+            user = self.bot.fetch_user(user) or user
+        elif isinstance(user, discord.User):
+            self.bot.blacklist.remove(user.id)
+        await ctx.send(f'Unblacklisted {user}')
 
 
 def setup(bot):

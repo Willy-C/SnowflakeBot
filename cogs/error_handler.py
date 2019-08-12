@@ -4,6 +4,7 @@ from discord.ext import commands
 import discord
 
 from .music import InvalidVoiceChannel, VoiceConnectionError
+from utils.errors import NoBlacklist
 
 
 class CommandErrorHandler(commands.Cog):
@@ -51,6 +52,9 @@ class CommandErrorHandler(commands.Cog):
 
         elif isinstance(error, InvalidVoiceChannel):
             return await ctx.send('No channel to join. Please either specify a valid channel or join one.')
+
+        elif isinstance(error, NoBlacklist):
+            return await ctx.send('You are blacklisted and cannot use this bot.')
 
 
         # print('Ignoring exception in command {}:'.format(ctx.command))
