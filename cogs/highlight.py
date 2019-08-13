@@ -11,7 +11,11 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     def __init__(self, bot):
         self.bot = bot
-        self.highlights = {'willy': 94271181271605248} # maybe str -> [UserIDs] to support same keyword for multiple people
+        self.highlights = {'willy': 94271181271605248,
+                           '94271181271605248>': 94271181271605248}
+
+        # maybe str -> [UserIDs] to support same keyword for multiple people
+
         # self.ignored_guilds = {} # UserID -> {Guild IDs} | int -> set(int)
         # self.ignored_channels = {} # UserID -> {Channel IDs} | int -> set(int)
         # self.ignored_users={} # UserID -> {User IDs} | int -> set(int)
@@ -68,7 +72,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
                           description=f'{context}\n'
                                       f'[Jump to message]({message.jump_url})',
                           color=discord.Color.blue())
-        e.set_footer(text=f'Highlight word: {key.capitalize()}')
+        e.set_footer(text=f'Highlight word: {key}')
         target = self.bot.get_user(target_id)
         await target.send(embed=e)
         # await target.send(f'You were mentioned in {message.guild.name} | {message.channel}\n'
@@ -84,15 +88,54 @@ class HighlightCog(commands.Cog, name='Highlight'):
             if key in message.content.lower():
                 await self._dm_highlight(message, key)
 
-    # @commands.group()
-    # async def highlight(self, ctx):
-    #     if ctx.invoked_subcommand is None:
-    #         pass
-    #
-    # @highlight.command(enabled=False)
-    # async def add(self, ctx):
-    #     pass
+    @commands.group(hidden=True)
+    async def highlight(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
 
+    @highlight.command()
+    async def add(self, ctx, *, key):
+        key = key.lower()
+        if key in self.highlights:
+            return await ctx.send('This key is already registered to someone. Sharing highlight keys is a feature in the future, sorry.')
+        try:
+            self.highlights[key] = ctx.author.id
+        except:
+            return await ctx.send('An error has occurred.')
+        else:
+            return await ctx.send(f'Successfully added highlight key: {key}')
+
+    @highlight.command()
+    async def remove(self, ctx, *, key):
+        key = key.lower()
+        if key not in self.highlights:
+            return await ctx.send('Sorry, I cannot find this key')
+        if self.highlights[key] != ctx.author.id:
+            return await ctx.send('Sorry, you do not seem to own this key')
+        try:
+            self.highlights.pop(key)
+        except:
+            return await ctx.send('An error has occurred.')
+        else:
+            return await ctx.send(f'Successfully removed  highlight key: {key}')
+
+    @highlight.command()
+    async def list(self, ctx, *, user: Union[int, discord.User]=None):
+        if isinstance(user,  discord.User):
+            target = user.id
+        else:
+            target = user
+            user = self.bot.get_user(user)
+        if user is None:
+            target = ctx.author.id
+            user = ctx.author
+        keys = '\n'.join([k for k,v in self.highlights.items() if v == target])
+        e = discord.Embed(color=discord.Color.dark_orange(),
+                          description=keys,
+                          title='Highlight keys')
+        e.set_author(name=user, icon_url=user.avatar_url)
+
+        await ctx.send(embed=e)
 
 
 def setup(bot):
