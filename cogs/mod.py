@@ -1,12 +1,9 @@
 import discord
 from discord.ext import commands
 
-from utils.errors import NoBlacklist
 from utils.global_utils import confirm_prompt
 
 from collections import Counter
-from asyncio import TimeoutError
-
 
 
 # Checks
@@ -247,8 +244,7 @@ class ModCog(commands.Cog, name='Mod'):
         else:
             missing = ''
 
-        await ctx.send(f'Updated permission overwrites for:\n'
-                       f'{done} channels\n{fail_msg}{missing}')
+        await ctx.send(f'Successfully updated permission overwrites for {done} channels{fail_msg}{missing}')
 
         if failed or missing:
             await ctx.send(f'Use {ctx.prefix}updatemute to try and apply permission overwrites again')
@@ -335,6 +331,32 @@ class ModCog(commands.Cog, name='Mod'):
                                   f'If you believe this is an error please contact my owner')
         await member.remove_roles(role, reason=f'Unmuted. Done by: {ctx.author} ({ctx.author.id})')
 
+    @commands.command()
+    async def block(self, ctx, *, member: discord.Member):
+        """Blocks a user from sending messages to the current channel
+        A blocked user cannot send messages to the channel"""
+
+        reason = f'Block done by {ctx.author} ({ctx.author.id})'
+
+        try:
+            await ctx.channel.set_permissions(member, send_messages=False, reason=reason)
+        except:
+            await ctx.send('\U0001f44e') # Thumbs Down
+        else:
+            await ctx.send('\U0001f44d') # Thumbs Up
+
+
+    @commands.command()
+    async def unblock(self, ctx, *, member: discord.Member):
+        """Unblocks a user from the current channel"""
+
+        reason = f'Unblock done by {ctx.author} ({ctx.author.id})'
+        try:
+            await ctx.channel.set_permissions(member, send_messages=None, reason=reason)
+        except:
+            await ctx.send('\U0001f44e') # Thumbs Down
+        else:
+            await ctx.send('\U0001f44d') # Thumbs Up
 
 def setup(bot):
     bot.add_cog(ModCog(bot))
