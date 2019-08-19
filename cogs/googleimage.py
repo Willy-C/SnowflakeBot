@@ -14,7 +14,7 @@ class GoogleImage(commands.Cog, name='General'):
         """Returns first result of Google Image Search."""
         gis = GoogleImagesSearch(GOOGLE_API_KEY, GOOGLE_CUSTOM_SEARCH_ENGINE)
 
-        safe = 'off' if ctx.channel.is_nsfw() else 'high'
+        safe = 'off' if ctx.message.guild is not None and ctx.channel.is_nsfw() else 'high'
 
         _search_params = {'q': search_param,
                           'num': 1,
