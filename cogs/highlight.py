@@ -58,15 +58,6 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
         if message.author.id == target_id:
             return
-        # if target_id in self.ignored_guilds:
-        #     if message.guild.id in self.ignored_guilds[target_id]:
-        #         return
-        # if target_id in self.ignored_channels:
-        #     if message.channel.id in self.ignored_channels[target_id]:
-        #         return
-        # if target_id in self.ignored_users:
-        #     if message.author.id in self.ignored_users[target_id]:
-        #         return
 
         context = await self._get_msg_context(message, key)
 
