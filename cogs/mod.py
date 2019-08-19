@@ -236,7 +236,7 @@ class ModCog(commands.Cog, name='Mod'):
                 no_perm.append(channel.name)
 
         if failed:
-            fail_msg = f'\n{len(failed)} channels failed due to discord being dumb, please try again: {", ".join(no_perm)}'
+            fail_msg = f'\n{len(failed)} channels failed, please try again: {", ".join(no_perm)}'
         else:
             fail_msg = ''
 
@@ -361,7 +361,6 @@ class ModCog(commands.Cog, name='Mod'):
             await ctx.send('\U0001f44e') # Thumbs Down
         else:
             await ctx.send('\U0001f44d') # Thumbs Up
-
 
     @commands.command()
     @can_manage_channels()
