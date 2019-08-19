@@ -4,6 +4,7 @@ from discord.ext import commands
 from utils.global_utils import confirm_prompt
 
 from collections import Counter
+import asyncio
 
 
 # Checks
@@ -78,7 +79,7 @@ class ModCog(commands.Cog, name='Mod'):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='delmsg')
+    @commands.command(name='delmsg', hidden=True)
     @commands.bot_has_permissions(manage_messages=True)
     @can_manage_messages()
     async def del_msg(self, ctx, message: discord.Message):
@@ -299,7 +300,7 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.bot_has_permissions(manage_roles=True)
     @can_mute()
     @commands.guild_only()
-    async def mute(self, ctx, member: discord.Member):
+    async def mute(self, ctx, member: discord.Member, *, reason=None):
         role = discord.utils.get(ctx.guild.roles, name='Muted')
 
         is_owner = await ctx.bot.is_owner(ctx.author)
@@ -312,13 +313,18 @@ class ModCog(commands.Cog, name='Mod'):
             return await ctx.send(f'Unable to find Muted role, please use {ctx.prefix}createmute to create the role and set the appropriate permissions\n'
                                   f'If you believe this is an error please contact my owner')
 
-        await member.add_roles(role, reason=f'Muted. Done by: {ctx.author} ({ctx.author.id})')
+        if reason is None:
+            reason = f'Muted. Done by: {ctx.author} ({ctx.author.id})'
+        else:
+            reason = f'{ctx.author} ({ctx.author.id}): {reason}'
+
+        await member.add_roles(role, reason=reason)
 
     @commands.command()
     @commands.bot_has_permissions(manage_roles=True)
     @can_mute()
     @commands.guild_only()
-    async def unmute(self, ctx, member: discord.Member):
+    async def unmute(self, ctx, member: discord.Member, *, reason=None):
         role = discord.utils.get(ctx.guild.roles, name='Muted')
         if ctx.me.top_role < role:
             return await ctx.send(f'Unable to unmute, please move my role above the Muted role')
@@ -329,14 +335,25 @@ class ModCog(commands.Cog, name='Mod'):
         if role not in member.roles:
             return await ctx.send(f'{member} is not muted.\n'
                                   f'If you believe this is an error please contact my owner')
-        await member.remove_roles(role, reason=f'Unmuted. Done by: {ctx.author} ({ctx.author.id})')
+
+        if reason is None:
+            reason = f'Unmuted. Done by: {ctx.author} ({ctx.author.id})'
+        else:
+            reason = f'{ctx.author} ({ctx.author.id}): {reason}'
+
+        await member.remove_roles(role, reason=reason)
 
     @commands.command()
-    async def block(self, ctx, *, member: discord.Member):
+    @can_manage_channels()
+    @commands.guild_only()
+    async def block(self, ctx, member: discord.Member, *, reason=None):
         """Blocks a user from sending messages to the current channel
         A blocked user cannot send messages to the channel"""
 
-        reason = f'Block done by {ctx.author} ({ctx.author.id})'
+        if reason is None:
+            reason = f'Blocked. Done by: {ctx.author} ({ctx.author.id})'
+        else:
+            reason = f'{ctx.author} ({ctx.author.id}): {reason}'
 
         try:
             await ctx.channel.set_permissions(member, send_messages=False, reason=reason)
@@ -347,16 +364,42 @@ class ModCog(commands.Cog, name='Mod'):
 
 
     @commands.command()
-    async def unblock(self, ctx, *, member: discord.Member):
+    @can_manage_channels()
+    @commands.guild_only()
+    async def unblock(self, ctx, member: discord.Member, *, reason=None):
         """Unblocks a user from the current channel"""
 
-        reason = f'Unblock done by {ctx.author} ({ctx.author.id})'
+        if reason is None:
+            reason = f'Unblocked. Done by: {ctx.author} ({ctx.author.id})'
+        else:
+            reason = f'{ctx.author} ({ctx.author.id}): {reason}'
+
         try:
             await ctx.channel.set_permissions(member, send_messages=None, reason=reason)
         except:
             await ctx.send('\U0001f44e') # Thumbs Down
         else:
             await ctx.send('\U0001f44d') # Thumbs Up
+
+    @commands.command()
+    @can_manage_channels()
+    @commands.guild_only()
+    async def tempblock(self, ctx, member: discord.Member, seconds: int, *, reason=None):
+        if reason is None:
+            reason = f'Tempblocked for {seconds}s. Done by: {ctx.author} ({ctx.author.id})'
+        else:
+            reason = f'{ctx.author} ({ctx.author.id}) tempblock for {seconds}s: {reason}'
+
+        try:
+            await ctx.channel.set_permissions(member, send_messages=False, reason=reason)
+        except:
+            await ctx.send('\U0001f44e') # Thumbs Down
+        else:
+            await ctx.send('\U0001f44d') # Thumbs Up
+
+        await asyncio.sleep(seconds)
+        await ctx.channel.set_permissions(member, send_messages=None, reason=f'Automatic unblock by {ctx.author} ({ctx.author.id}) for after {seconds}s')
+
 
 def setup(bot):
     bot.add_cog(ModCog(bot))
