@@ -88,7 +88,7 @@ class OwnerCog(commands.Cog, name='Owner'):
         """Evaluates python code in a single line or code block"""
         await ctx.invoke(self.bot.get_command("jsk py"), argument=args)
 
-    @commands.command(name='su')
+    @commands.command(name='as')
     async def _su(self, ctx: commands.Context, target: discord.User, *, command_string: str):
         """
         Run a command as someone else.

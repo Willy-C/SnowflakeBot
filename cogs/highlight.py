@@ -40,6 +40,9 @@ class HighlightCog(commands.Cog, name='Highlight'):
             msg_context.append(f'[{(msg.created_at + EDT_diff).strftime(dateformat)}] {msg.author}: {msg.content.replace(key, f"**{key}**")}')
 
         else:
+            if any([user.id == key  for msg in prev_msgs[:-1] for user in msg.mentions]):
+                return
+
             for msg in prev_msgs[-4:]:
                 msg_context.append(f'[{(msg.created_at + EDT_diff).strftime(dateformat)}] {msg.author}: {msg.content}')
 
@@ -74,7 +77,10 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
 
     async def _dm_mention(self, message, id):
-        context = await self._get_msg_context(message, '', True)
+        context = await self._get_msg_context(message, id, True)
+
+        if context is None:  # target recently messaged, no need to DM
+            return
 
         e = discord.Embed(title=f'You were mentioned in {message.guild} | #{message.channel}',
                           description=f'{context}\n'
@@ -149,15 +155,15 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     @highlight.command()
     async def mention(self, ctx):
-        id = ctx.author.id
-        if id in self.mentions:
-            self.mentions.remove(id)
+        if ctx.author.id in self.mentions:
+            self.mentions.remove(ctx.author.id)
             await ctx.send('You will no longer get a DM when I see you mentioned', delete_after=10)
+            await ctx.message.add_reaction('\U00002795')  # React with heavy plus sign
         else:
-            self.mentions.add(id)
+            self.mentions.add(ctx.author.id)
             await ctx.send('You will now get a DM when I see you mentioned', delete_after=10)
+            await ctx.message.add_reaction('\U00002796')  # React with heavy minus sign
 
-        await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
 def setup(bot):
     bot.add_cog(HighlightCog(bot))
