@@ -57,6 +57,7 @@ async def on_ready():
           f'Python Version: {platform.python_version()}\n'
           f'Library Version: {discord.__version__}\n')
 
+    await bot.change_presence()
     activity = discord.Activity(type=discord.ActivityType.listening, name='you :)')
     await bot.change_presence(activity=activity)
     print(f'Ready! {datetime.now()}\n')
