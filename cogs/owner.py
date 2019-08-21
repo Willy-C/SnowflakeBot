@@ -107,6 +107,13 @@ class OwnerCog(commands.Cog, name='Owner'):
 
         return await alt_ctx.command.invoke(alt_ctx)
 
+    @commands.command(name="shutdown")
+    async def logout(self, ctx):
+        """
+        Logs out the bot.
+        """
+        await ctx.message.add_reaction('\U0001f620')
+        await ctx.bot.logout()
 
     # Blacklist stuff
 
