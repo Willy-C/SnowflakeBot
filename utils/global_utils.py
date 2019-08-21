@@ -50,17 +50,17 @@ async def confirm_prompt(ctx: commands.Context, msg):
         return False  # author typed something else in the same channel, keep waiting
 
     prompt = await ctx.send(f'{msg}\n'
-                            f'Please type **confirm** to continue within 1 minute or type **abort** if you changed your mind.')
+                            f'Please type **confirm** within 1 minute to continue or type **abort** if you change your mind.')
 
     try:
         await ctx.bot.wait_for('message', check=confirm, timeout=60)
     except TimeoutError:
-        await ctx.send('1 minute has passed. Aborting...')
+        await ctx.send('1 minute has passed. Aborting...', delete_after=5)
         return False
     finally:
         await prompt.delete()
 
     if not cont:  # Author typed abort, don't continue
-        await ctx.send('Aborting...')
+        await ctx.send('Aborting...', delete_after=5)
 
     return cont

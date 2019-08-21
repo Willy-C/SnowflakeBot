@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from utils.errors import NoBlacklist
-from utils.global_utils import copy_context
+from utils.global_utils import copy_context, confirm_prompt
 
 
 from typing import Optional, Union
@@ -112,6 +112,8 @@ class OwnerCog(commands.Cog, name='Owner'):
         """
         Logs out the bot.
         """
+        if not await confirm_prompt(ctx, 'Shutdown?'):
+            return
         await ctx.message.add_reaction('\U0001f620')
         await ctx.bot.logout()
 
