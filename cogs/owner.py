@@ -117,6 +117,22 @@ class OwnerCog(commands.Cog, name='Owner'):
         await ctx.message.add_reaction('\U0001f620')
         await ctx.bot.logout()
 
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild: discord.Guild):
+        bots = sum([1 for m in guild.members if m.bot])
+        bot_ratio = (bots / guild.member_count) * 100
+        if guild.member_count > 25 and bot_ratio > 50:
+            try:
+                await guild.owner.send(f'The server `{guild}` has been flagged as a bot collection/farm. I will now leave the server.\n'
+                                       f'If you believe this is a mistake please contact my owner.')
+            except discord.Forbidden:
+                for channel in guild.text_channels:
+                    if channel.permissions_for(guild.me).send_messages:
+                        return await channel.send(f'The server `{guild}` has been flagged as a bot collection/farm. I will now leave the server.\n'
+                                                  f'If you believe this is a mistake please contact my owner.')
+            finally:
+                await guild.leave()
+
     # Blacklist stuff
 
     async def bot_check(self, ctx):
