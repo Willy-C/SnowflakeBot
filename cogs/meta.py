@@ -7,11 +7,11 @@ import datetime
 from utils.global_utils import copy_context
 
 
-class MetaCog(commands.Cog, name='Metautil'):
+class MetaCog(commands.Cog, name='Meta'):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='debug', aliases=['dbg', 'timeit', 'time'])
+    @commands.command(name='debug', aliases=['timeit', 'time'])
     async def _debug(self, ctx: commands.Context, *, command_string: str):
         """
         Run a command timing execution and catching exceptions.
@@ -29,7 +29,7 @@ class MetaCog(commands.Cog, name='Metautil'):
     @commands.command(brief='Checks latency to Discord.')
     async def ping(self, ctx):
         start = time.perf_counter()
-        msg = await ctx.send('mew')
+        msg = await ctx.send('boop')
         end = time.perf_counter()
         await msg.edit(content=f'(WS) Latency: `{self.bot.latency*1000:.2f}ms`\n'
                                f'Response time: `{(end - start)*1000:.2f}ms`')
