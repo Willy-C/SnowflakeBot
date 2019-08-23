@@ -53,7 +53,8 @@ async def confirm_prompt(ctx: commands.Context, msg):
                             f'Please type **confirm** within 1 minute to continue or type **abort** if you change your mind.')
 
     try:
-        await ctx.bot.wait_for('message', check=confirm, timeout=60)
+        reply = await ctx.bot.wait_for('message', check=confirm, timeout=60)
+        await reply.delete()
     except TimeoutError:
         await ctx.send('1 minute has passed. Aborting...', delete_after=5)
         return False
