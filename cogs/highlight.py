@@ -70,7 +70,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         e = discord.Embed(title=f'You were mentioned in {message.guild} | #{message.channel}',
                           description=f'{context}\n'
                                       f'[Jump to message]({message.jump_url})',
-                          color=discord.Color.blue())
+                          color=discord.Color(0x00B0F4))
         e.set_footer(text=f'Highlight word: {key}')
         target = self.bot.get_user(target_id)
         await target.send(embed=e)
@@ -85,7 +85,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         e = discord.Embed(title=f'You were mentioned in {message.guild} | #{message.channel}',
                           description=f'{context}\n'
                                       f'[Jump to message]({message.jump_url})',
-                          color=discord.Color.blue())
+                          color=discord.Color(0xFAA61A))
 
         target = self.bot.get_user(id)
         await target.send(embed=e)
@@ -111,9 +111,10 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     @highlight.command()
     async def add(self, ctx, *, key):
+        """Add a highlight keyword"""
         key = key.lower()
         if key in self.highlights:
-            return await ctx.send('This key is already registered to someone. Sharing highlight keys is a feature in the future, sorry.')
+            return await ctx.send('This key is already registered to someone. Sharing highlight keys currently not supported but is planned, sorry.')
         try:
             self.highlights[key] = ctx.author.id
         except:
@@ -123,6 +124,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     @highlight.command()
     async def remove(self, ctx, *, key):
+        """Remove a highlight keyword"""
         key = key.lower()
         if key not in self.highlights:
             return await ctx.send('Sorry, I cannot find this key')
@@ -137,6 +139,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     @highlight.command()
     async def list(self, ctx, *, user: Union[int, discord.User]=None):
+        """Lists your highlight keywords"""
         if isinstance(user,  discord.User):
             target = user.id
         else:
@@ -155,6 +158,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     @highlight.command()
     async def mention(self, ctx):
+        """Toggle highlight for mentions"""
         if ctx.author.id in self.mentions:
             self.mentions.remove(ctx.author.id)
             await ctx.send('You will no longer get a DM when I see you mentioned', delete_after=10)
