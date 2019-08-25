@@ -3,6 +3,7 @@ from discord.ext import commands
 
 from utils.global_utils import confirm_prompt
 
+from typing import Union
 from collections import Counter
 import asyncio
 
@@ -12,8 +13,7 @@ import asyncio
 
 def can_manage_messages():
     async def predicate(ctx):
-        is_owner = await ctx.bot.is_owner(ctx.author)
-        if is_owner:
+        if await ctx.bot.is_owner(ctx.author):
             return True
         if ctx.channel.permissions_for(ctx.author).manage_messages:
             return True
@@ -22,8 +22,7 @@ def can_manage_messages():
 
 def can_kick():
     async def predicate(ctx):
-        is_owner = await ctx.bot.is_owner(ctx.author)
-        if is_owner:
+        if await ctx.bot.is_owner(ctx.author):
             return True
         if ctx.channel.permissions_for(ctx.author).kick_members:
             return True
@@ -32,8 +31,7 @@ def can_kick():
 
 def can_ban():
     async def predicate(ctx):
-        is_owner = await ctx.bot.is_owner(ctx.author)
-        if is_owner:
+        if await ctx.bot.is_owner(ctx.author):
             return True
         if ctx.channel.permissions_for(ctx.author).ban_members:
             return True
@@ -42,8 +40,7 @@ def can_ban():
 
 def can_manage_roles():
     async def predicate(ctx):
-        is_owner = await ctx.bot.is_owner(ctx.author)
-        if is_owner:
+        if await ctx.bot.is_owner(ctx.author):
             return True
         if ctx.channel.permissions_for(ctx.author).manage_roles:
             return True
@@ -52,8 +49,7 @@ def can_manage_roles():
 
 def can_manage_channels():
     async def predicate(ctx):
-        is_owner = await ctx.bot.is_owner(ctx.author)
-        if is_owner:
+        if await ctx.bot.is_owner(ctx.author):
             return True
         if ctx.channel.permissions_for(ctx.author).manage_channels:
             return True
@@ -62,13 +58,24 @@ def can_manage_channels():
 
 def can_mute():
     async def predicate(ctx):
-        is_owner = await ctx.bot.is_owner(ctx.author)
-        if is_owner:
+        if await ctx.bot.is_owner(ctx.author):
             return True
         if ctx.channel.permissions_for(ctx.author).manage_roles:
             return True
         raise commands.MissingPermissions(['Manage Roles'])
     return commands.check(predicate)
+
+def can_move_members():
+    async def predicate(ctx):
+        if await ctx.bot.is_owner(ctx.author):
+            return True
+        if ctx.channel.permissions_for(ctx.author).move_members:
+            return True
+        raise commands.MissingPermissions(['Move Members'])
+    return commands.check(predicate)
+
+def hierarchy_check(ctx, user, target):
+    return user.id == ctx.bot.owner_id or user == ctx.guild.owner or user.top_role > target.top_role
 
 
 # Cog
@@ -156,6 +163,8 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.guild_only()
     async def kick(self, ctx, member: discord.Member, *, reason=None):
         """Kicks member from server"""
+        if not hierarchy_check(ctx, ctx.author, member):
+            return await ctx.send('You cannot kick this person due to role hierarchy')
         if reason is None:
             reason = f'Done by: {ctx.author} ({ctx.author.id})'
         else:
@@ -170,6 +179,8 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.guild_only()
     async def ban(self, ctx, member: discord.Member, *, reason=None):
         """Bans someone from the server"""
+        if not hierarchy_check(ctx, ctx.author, member):
+            return await ctx.send('You cannot ban this person due to role hierarchy')
         if reason is None:
             reason = f'Done by: {ctx.author} ({ctx.author.id})'
         else:
@@ -204,6 +215,8 @@ class ModCog(commands.Cog, name='Mod'):
     async def softban(self, ctx, member: discord.Member, *, reason=None):
         """Soft bans a member from the server
         Essentially kicks the member while deleting all messages from the last week"""
+        if not hierarchy_check(ctx, ctx.author, member):
+            return await ctx.send('You cannot softban this person due to role hierarchy')
         if reason is None:
             reason = f'Done by: {ctx.author} ({ctx.author.id})'
         else:
@@ -303,15 +316,15 @@ class ModCog(commands.Cog, name='Mod'):
     async def mute(self, ctx, member: discord.Member, *, reason=None):
         role = discord.utils.get(ctx.guild.roles, name='Muted')
 
-        is_owner = await ctx.bot.is_owner(ctx.author)
-        if ctx.author.top_role <= member.top_role and not is_owner:
-            return await ctx.send(f'Unable to mute {member}, his/her/its top role is higher than yours')
-        if ctx.me.top_role < role:
-            return await ctx.send(f'Unable to mute, please move my role above the Muted role')
-
         if role is None:
             return await ctx.send(f'Unable to find Muted role, please use {ctx.prefix}createmute to create the role and set the appropriate permissions\n'
                                   f'If you believe this is an error please contact my owner')
+
+        if not hierarchy_check(ctx, ctx.author, member):
+            return await ctx.send('You cannot mute this person due to role hierarchy')
+
+        if ctx.me.top_role < role:
+            return await ctx.send(f'Unable to mute, please move my role above the Muted role')
 
         if reason is None:
             reason = f'Muted. Done by: {ctx.author} ({ctx.author.id})'
@@ -326,12 +339,16 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.guild_only()
     async def unmute(self, ctx, member: discord.Member, *, reason=None):
         role = discord.utils.get(ctx.guild.roles, name='Muted')
-        if ctx.me.top_role < role:
-            return await ctx.send(f'Unable to unmute, please move my role above the Muted role')
-
         if role is None:
             return await ctx.send(f'Unable to find `Muted` role\n'
                                   f'If you believe this is an error please contact my owner')
+
+        if ctx.me.top_role < role:
+            return await ctx.send(f'Unable to unmute, please move my role above the Muted role')
+
+        if not hierarchy_check(ctx, ctx.author, member):
+            return await ctx.send('You cannot mute this person due to role hierarchy')
+
         if role not in member.roles:
             return await ctx.send(f'{member} is not muted.\n'
                                   f'If you believe this is an error please contact my owner')
@@ -344,11 +361,12 @@ class ModCog(commands.Cog, name='Mod'):
         await member.remove_roles(role, reason=reason)
 
     @commands.command()
+    @commands.bot_has_permissions(manage_channels=True)
     @can_manage_channels()
     @commands.guild_only()
     async def block(self, ctx, member: discord.Member, *, reason=None):
         """Blocks a user from sending messages to the current channel
-        A blocked user cannot send messages to the channel"""
+        """
 
         if reason is None:
             reason = f'Blocked. Done by: {ctx.author} ({ctx.author.id})'
@@ -363,6 +381,7 @@ class ModCog(commands.Cog, name='Mod'):
             await ctx.send('\U0001f44d') # Thumbs Up
 
     @commands.command()
+    @commands.bot_has_permissions(manage_channels=True)
     @can_manage_channels()
     @commands.guild_only()
     async def unblock(self, ctx, member: discord.Member, *, reason=None):
@@ -381,6 +400,7 @@ class ModCog(commands.Cog, name='Mod'):
             await ctx.send('\U0001f44d') # Thumbs Up
 
     @commands.command()
+    @commands.bot_has_permissions(manage_channels=True)
     @can_manage_channels()
     @commands.guild_only()
     async def tempblock(self, ctx, member: discord.Member, seconds: int, *, reason=None):
@@ -399,6 +419,35 @@ class ModCog(commands.Cog, name='Mod'):
         await asyncio.sleep(seconds)
         await ctx.channel.set_permissions(member, send_messages=None, reason=f'Automatic unblock by {ctx.author} ({ctx.author.id}) for after {seconds}s')
 
+    @commands.command(hidden=True)
+    @commands.bot_has_permissions(move_members=True)
+    @can_move_members()
+    async def move(self, ctx, member: discord.Member, *, channel: discord.VoiceChannel = None):
+        """Move a user to another voice channel.
+        Disconnects user if channel is None.
+        """
+        await member.move_to(channel)
+        await ctx.message.add_reaction('\U00002705')  # React with checkmark
+
+
+    @commands.command(name='purge', enabled=False, hidden=True)
+    @commands.bot_has_permissions(manage_messages=True)
+    @can_manage_messages()
+    async def cleanup(self, ctx, limit: int=10, target: Union[discord.Member, str]=None):
+        limit = min(limit, 100)
+        if target == 'bot':
+            def check(msg):
+                return msg.author.bot
+        elif isinstance(target, discord.Member):
+            def check(msg):
+                return msg.author.id == target.id
+        elif target is None:
+            def check(msg):
+                return True
+        else:
+            return await ctx.send('Invalid parameter, please specify a person or "bot"')
+
+        await ctx.channel.purge(limit=limit, check=check, before=ctx.message)
 
 def setup(bot):
     bot.add_cog(ModCog(bot))
