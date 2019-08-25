@@ -77,7 +77,7 @@ class MetaCog(commands.Cog, name='Meta'):
         delta = (datetime.datetime.utcnow() - self.bot.starttime)
         total_seconds = delta.total_seconds()
         d = delta.days
-        h = int(total_seconds // 3600)
+        h = int(total_seconds % 3600)
         m = int((total_seconds % 3600) // 60)
         s = int((total_seconds % 3600) % 60)
         await ctx.send(f'Uptime: {d}d {h}h {m}m {s}s')
