@@ -11,7 +11,7 @@ class MetaCog(commands.Cog, name='Meta'):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='debug', aliases=['timeit', 'time'])
+    @commands.command(name='time', aliases=['timeit', 'debug'])
     async def _debug(self, ctx: commands.Context, *, command_string: str):
         """
         Run a command timing execution and catching exceptions.
@@ -44,7 +44,7 @@ class MetaCog(commands.Cog, name='Meta'):
                           description=f'[Click here to invite me](https://discordapp.com/oauth2/authorize?client_id={self.bot.user.id}&permissions=8&scope=bot)')
         await ctx.send(embed=e)
 
-    @commands.command(name='allemojis')
+    @commands.command(name='allemojis', hidden=True)
     async def guild_emojis(self, ctx, codepoint: bool = False):
         """
         Returns all emojis from every guild the bot can see

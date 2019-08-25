@@ -162,11 +162,11 @@ class HighlightCog(commands.Cog, name='Highlight'):
         if ctx.author.id in self.mentions:
             self.mentions.remove(ctx.author.id)
             await ctx.send('You will no longer get a DM when I see you mentioned', delete_after=10)
-            await ctx.message.add_reaction('\U00002795')  # React with heavy plus sign
+            await ctx.message.add_reaction('\U00002796')  # React with heavy plus sign
         else:
             self.mentions.add(ctx.author.id)
             await ctx.send('You will now get a DM when I see you mentioned', delete_after=10)
-            await ctx.message.add_reaction('\U00002796')  # React with heavy minus sign
+            await ctx.message.add_reaction('\U00002795')  # React with heavy minus sign
 
 
 def setup(bot):
