@@ -110,16 +110,6 @@ class GuildCog(commands.Cog, name='Guild'):
         await ctx.send(embed=e)
         await ctx.send(f'You can use {ctx.prefix}share to get the link for a single voice channel or your current voice channel', delete_after=5)
 
-    @commands.command()
-    async def move(self, ctx, user: discord.Member, *, channel: discord.VoiceChannel = None):
-        """Move a user to another voice channel.
-        Disconnects user if channel is None.
-        Requires Move Members permission to use."""
-        if ctx.author.permissions_in(ctx.guild.voice_channels[0]).move_members:
-            await user.move_to(channel)
-        else:
-            return await ctx.send('Sorry, you are missing the Move Members permission.')
-
     @commands.command(name='emojis')
     async def guild_emojis(self, ctx, codepoint: bool = False):
         """Returns all emojis in the guild sorted by name

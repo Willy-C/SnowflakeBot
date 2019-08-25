@@ -365,8 +365,7 @@ class ModCog(commands.Cog, name='Mod'):
     @can_manage_channels()
     @commands.guild_only()
     async def block(self, ctx, member: discord.Member, *, reason=None):
-        """Blocks a user from sending messages to the current channel
-        """
+        """Blocks a user from sending messages to the current channel"""
 
         if reason is None:
             reason = f'Blocked. Done by: {ctx.author} ({ctx.author.id})'
