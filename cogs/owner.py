@@ -6,6 +6,7 @@ from utils.global_utils import copy_context, confirm_prompt
 
 
 from typing import Optional, Union
+import asyncio
 from jishaku.codeblocks import codeblock_converter
 
 # command_attrs = {'hidden': True}
@@ -157,6 +158,12 @@ class OwnerCog(commands.Cog, name='Owner'):
         elif isinstance(user, discord.User):
             self.bot.blacklist.remove(user.id)
         await ctx.send(f'Unblacklisted {user}')
+
+    @commands.command()
+    async def remind(self, ctx, seconds: int, *, message):
+        await asyncio.sleep(seconds)
+        await ctx.send(f'{ctx.author.mention} from {seconds}s ago: {message}\n'
+                       f'{ctx.message.jump_url}')
 
 
 def setup(bot):
