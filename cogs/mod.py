@@ -263,6 +263,14 @@ class ModCog(commands.Cog, name='Mod'):
         if failed or missing:
             await ctx.send(f'Use {ctx.prefix}updatemute to try and apply permission overwrites again')
 
+        # Move the role as high as I can(just below the bot's top role with manage roles)
+        for _role in ctx.guild.me.roles:
+            if _role.permissions.manage_roles or _role.permissions.administrator:
+                if role > _role:
+                    break
+                await role.edit(position=_role.position-1)
+                break
+
     @commands.command(name='createmute')
     @commands.bot_has_permissions(manage_roles=True, manage_channels=True)
     @can_manage_roles()
@@ -429,10 +437,10 @@ class ModCog(commands.Cog, name='Mod'):
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
 
-    @commands.command(name='purge', enabled=False, hidden=True)
+    @commands.command(enabled=False, hidden=True)
     @commands.bot_has_permissions(manage_messages=True)
     @can_manage_messages()
-    async def cleanup(self, ctx, limit: int=10, target: Union[discord.Member, str]=None):
+    async def purge(self, ctx, limit: int=10, target: Union[discord.Member, str]=None):
         limit = min(limit, 100)
         if target == 'bot':
             def check(msg):
