@@ -89,7 +89,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
         target = self.bot.get_user(id)
         await target.send(embed=e)
-
+        await message.add_reaction('\U0001f440')
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -138,20 +138,16 @@ class HighlightCog(commands.Cog, name='Highlight'):
             return await ctx.send(f'Successfully removed  highlight key: {key}')
 
     @highlight.command()
-    async def list(self, ctx, *, user: Union[int, discord.User]=None):
+    async def list(self, ctx):
         """Lists your highlight keywords"""
-        if isinstance(user,  discord.User):
-            target = user.id
-        else:
-            target = user
-            user = self.bot.get_user(user)
-        if user is None:
-            target = ctx.author.id
-            user = ctx.author
+        target = ctx.author.id
+        user = ctx.author
+
         keys = '\n'.join([k for k,v in self.highlights.items() if v == target])
         e = discord.Embed(color=discord.Color.dark_orange(),
                           description=keys,
                           title='Highlight keys')
+        e.add_field(name='Mentions', value=target in self.mentions)
         e.set_author(name=user, icon_url=user.avatar_url)
 
         await ctx.send(embed=e)
