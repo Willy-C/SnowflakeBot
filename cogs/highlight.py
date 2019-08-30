@@ -89,7 +89,6 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
         target = self.bot.get_user(id)
         await target.send(embed=e)
-        await message.add_reaction('\U0001f440')
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
