@@ -75,11 +75,11 @@ class MetaCog(commands.Cog, name='Meta'):
     async def uptime(self, ctx):
         """Returns the bot's uptime"""
         delta = (datetime.datetime.utcnow() - self.bot.starttime)
-        total_seconds = delta.total_seconds()
+        seconds = abs(delta.seconds)
         d = delta.days
-        h = int(total_seconds % 3600)
-        m = int((total_seconds % 3600) // 60)
-        s = int((total_seconds % 3600) % 60)
+        h = int(seconds // 3600)
+        m = int((seconds % 3600) // 60)
+        s = int((seconds % 3600) % 60)
         await ctx.send(f'Uptime: {d}d {h}h {m}m {s}s')
 
     @commands.command(name='shared')
