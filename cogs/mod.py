@@ -154,7 +154,7 @@ class ModCog(commands.Cog, name='Mod'):
             spammers = sorted(spam.items(), key=lambda t: t[1], reverse=True)
             messages.extend(f'- **{author}**: {count}' for author, count in spammers)
 
-        await ctx.send('\n'.join(messages), delete_after=60)
+        await ctx.send('\n'.join(messages), delete_after=10)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
     @commands.command()
