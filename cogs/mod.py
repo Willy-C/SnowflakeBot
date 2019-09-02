@@ -235,10 +235,9 @@ class ModCog(commands.Cog, name='Mod'):
         await ctx.trigger_typing()
         for channel in ctx.guild.text_channels:
             my_perms = channel.permissions_for(ctx.me)
-            ow = discord.PermissionOverwrite()
-            # noinspection PyDunderSlots,PyUnresolvedReferences
-            ow.send_messages = False
             if my_perms.manage_channels:
+                ow = channel.overwrites_for(role)
+                ow.send_messages = False
                 try:
                     await channel.set_permissions(role, overwrite=ow, reason=reason)
                 except discord.HTTPException:
@@ -376,12 +375,15 @@ class ModCog(commands.Cog, name='Mod'):
         """Blocks a user from sending messages to the current channel"""
 
         if reason is None:
-            reason = f'Blocked. Done by: {ctx.author} ({ctx.author.id})'
+            reason = f'Blocked {member}. Done by: {ctx.author} ({ctx.author.id})'
         else:
             reason = f'{ctx.author} ({ctx.author.id}): {reason}'
 
+
         try:
-            await ctx.channel.set_permissions(member, send_messages=False, reason=reason)
+            ow = ctx.channel.overwrites_for(member)
+            ow.send_messages = False
+            await ctx.channel.set_permissions(member, overwrite=ow, reason=reason)
         except:
             await ctx.send('\U0001f44e') # Thumbs Down
         else:
@@ -395,36 +397,47 @@ class ModCog(commands.Cog, name='Mod'):
         """Unblocks a user from the current channel"""
 
         if reason is None:
-            reason = f'Unblocked. Done by: {ctx.author} ({ctx.author.id})'
+            reason = f'Unblocked {member}. Done by: {ctx.author} ({ctx.author.id})'
         else:
             reason = f'{ctx.author} ({ctx.author.id}): {reason}'
 
         try:
-            await ctx.channel.set_permissions(member, send_messages=None, reason=reason)
+            ow = ctx.channel.overwrites_for(member)
+            ow.send_messages = None
+            await ctx.channel.set_permissions(member, overwrite=ow, reason=reason) # Doing this first instead of just deleting when empty so it shows up on audit logs
+            if ow.is_empty():
+                await ctx.channel.set_permissions(member, overwrite=None) # reason does not work here
         except:
             await ctx.send('\U0001f44e') # Thumbs Down
         else:
             await ctx.send('\U0001f44d') # Thumbs Up
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.bot_has_permissions(manage_channels=True)
     @can_manage_channels()
     @commands.guild_only()
     async def tempblock(self, ctx, member: discord.Member, seconds: int, *, reason=None):
         if reason is None:
-            reason = f'Tempblocked for {seconds}s. Done by: {ctx.author} ({ctx.author.id})'
+            reason = f'Tempblocked {member} for {seconds}s. Done by: {ctx.author} ({ctx.author.id})'
         else:
             reason = f'{ctx.author} ({ctx.author.id}) tempblock for {seconds}s: {reason}'
 
         try:
-            await ctx.channel.set_permissions(member, send_messages=False, reason=reason)
+            ow = ctx.channel.overwrites_for(member)
+            ow.send_messages = False
+            await ctx.channel.set_permissions(member, overwrite=ow, reason=reason)
         except:
             await ctx.send('\U0001f44e') # Thumbs Down
         else:
             await ctx.send('\U0001f44d') # Thumbs Up
 
         await asyncio.sleep(seconds)
-        await ctx.channel.set_permissions(member, send_messages=None, reason=f'Automatic unblock by {ctx.author} ({ctx.author.id}) for after {seconds}s')
+
+        ow = ctx.channel.overwrites_for(member)
+        ow.send_messages = None
+        await ctx.channel.set_permissions(member, overwrite=ow, reason=f'{member} auto unblocked after {seconds}s | by {ctx.author} ({ctx.author.id})')
+        if ow.is_empty():
+            await ctx.channel.set_permissions(member, overwrite=None)
 
     @commands.command(hidden=True)
     @commands.bot_has_permissions(move_members=True)
