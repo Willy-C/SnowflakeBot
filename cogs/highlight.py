@@ -182,8 +182,13 @@ class HighlightCog(commands.Cog, name='Highlight'):
     @highlight.command()
     @commands.is_owner()
     async def save(self, ctx):
-        self.save_highlights()
-        self.save_mentions()
+        try:
+            self.save_highlights()
+            self.save_mentions()
+        except:
+            await ctx.send('An error has occurred ')
+        else:
+            await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
     # noinspection PyCallingNonCallable
     @tasks.loop(hours=6)
