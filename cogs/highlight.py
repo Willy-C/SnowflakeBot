@@ -198,6 +198,8 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     def cog_unload(self):
         self.save_to_json.cancel()
+        self.save_highlights()
+        self.save_mentions()
 
 
 def setup(bot):
