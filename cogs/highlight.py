@@ -1,19 +1,23 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
-from typing import Union
-from datetime import datetime, timezone, timedelta
+import json
+from datetime import datetime, timedelta
 from asyncio import TimeoutError
 
 
 EDT_diff = timedelta(hours=-4)
 
+
 class HighlightCog(commands.Cog, name='Highlight'):
 
     def __init__(self, bot):
         self.bot = bot
-        self.highlights = {'willy': 94271181271605248}
-        self.mentions = {94271181271605248}
+        with open('data/highlights.json') as f:
+            self.highlights = json.load(f)
+        with open('data/mentions.json') as f:
+            self.mentions = set(json.load(f))
+        self.save_to_json.start()
 
         # maybe str -> [UserIDs] to support same keyword for multiple people
 
@@ -21,26 +25,34 @@ class HighlightCog(commands.Cog, name='Highlight'):
         # self.ignored_channels = {} # UserID -> {Channel IDs} | int -> set(int)
         # self.ignored_users={} # UserID -> {User IDs} | int -> set(int)
 
+    def save_highlights(self):
+        with open('data/highlights.json', 'w') as f:
+            json.dump(self.highlights, f, indent=2)
+
+    def save_mentions(self):
+        with open('data/mentions.json', 'w') as f:
+            json.dump(list(self.mentions), f, indent=2)
+
     async def _get_msg_context(self, message: discord.Message, key: str, mention=False):
-        prev_msgs = await message.channel.history(after=(datetime.utcnow()-timedelta(minutes=5))).flatten() # Grabs all messages from the last 5 minutes
+        prev_msgs = await message.channel.history(after=(datetime.utcnow()-timedelta(minutes=5))).flatten()  # Grabs all messages from the last 5 minutes
         msg_context = []
         dateformat = '%m-%d %H:%M:%S'
 
         if not mention:
-            if any([msg.author.id == self.highlights[key] for msg in prev_msgs[:-1]]): # If target recently spoke, no DM
-                return # TODO: will have to redo this if decide to support multiple users for  1 keyword - make a list of users that need to be DM'ed
+            if any([msg.author.id == self.highlights[key] for msg in prev_msgs[:-1]]):  # If target recently spoke, no DM
+                return  # TODO: will have to redo this if decide to support multiple users for  1 keyword - make a list of users that need to be DM'ed
 
-            if any([key.lower() in msg.content.lower() for msg in prev_msgs[:-1]]): # No need to spam highlights
+            if any([key.lower() in msg.content.lower() for msg in prev_msgs[:-1]]):  # No need to spam highlights
                 return
 
             for msg in prev_msgs[-4:-1]:
                 msg_context.append(f'[{(msg.created_at + EDT_diff).strftime(dateformat)}] {msg.author}: {msg.content}')
 
-            msg = prev_msgs[-1] # this is just so I can copy and paste the line above
+            msg = prev_msgs[-1]  # this is just so I can copy and paste the line above
             msg_context.append(f'[{(msg.created_at + EDT_diff).strftime(dateformat)}] {msg.author}: {msg.content.replace(key, f"**{key}**")}')
 
         else:
-            if any([user.id == key  for msg in prev_msgs[:-1] for user in msg.mentions]):
+            if any([user.id == key for msg in prev_msgs[:-1] for user in msg.mentions]):
                 return
 
             for msg in prev_msgs[-4:]:
@@ -75,9 +87,8 @@ class HighlightCog(commands.Cog, name='Highlight'):
         target = self.bot.get_user(target_id)
         await target.send(embed=e)
 
-
-    async def _dm_mention(self, message, id):
-        context = await self._get_msg_context(message, id, True)
+    async def _dm_mention(self, message, _id):
+        context = await self._get_msg_context(message, _id, True)
 
         if context is None:  # target recently messaged, no need to DM
             return
@@ -87,9 +98,9 @@ class HighlightCog(commands.Cog, name='Highlight'):
                                       f'[Jump to message]({message.jump_url})',
                           color=discord.Color(0xFAA61A))
 
-        target = self.bot.get_user(id)
+        target = self.bot.get_user(_id)
         await target.send(embed=e)
-        await message.add_reaction('\U0001f440') # eyes
+        await message.add_reaction('\U0001f440')  # eyes
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -143,10 +154,14 @@ class HighlightCog(commands.Cog, name='Highlight'):
         target = ctx.author.id
         user = ctx.author
 
-        keys = '\n'.join([k for k,v in self.highlights.items() if v == target])
-        e = discord.Embed(color=discord.Color.dark_orange(),
-                          description=keys,
-                          title='Highlight keys')
+        keys = '\n'.join([k for k, v in self.highlights.items() if v == target])
+        if keys:
+            e = discord.Embed(color=discord.Color.dark_orange(),
+                              description=keys,
+                              title='Highlight keys')
+        else:
+            e = discord.Embed(color=discord.Color.dark_orange(),
+                              description='You do not have any highlight keys')
         e.add_field(name='Mentions', value=target in self.mentions)
         e.set_author(name=user, icon_url=user.avatar_url)
 
@@ -163,6 +178,21 @@ class HighlightCog(commands.Cog, name='Highlight'):
             self.mentions.add(ctx.author.id)
             await ctx.send('You will now get a DM when I see you mentioned', delete_after=10)
             await ctx.message.add_reaction('\U00002795')  # React with heavy minus sign
+
+    @highlight.command()
+    @commands.is_owner()
+    async def save(self, ctx):
+        self.save_highlights()
+        self.save_mentions()
+
+    # noinspection PyCallingNonCallable
+    @tasks.loop(hours=6)
+    async def save_to_json(self):
+        self.save_highlights()
+        self.save_mentions()
+
+    def cog_unload(self):
+        self.save_to_json.cancel()
 
 
 def setup(bot):
