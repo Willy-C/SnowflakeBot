@@ -75,7 +75,9 @@ def can_move_members():
     return commands.check(predicate)
 
 def hierarchy_check(ctx, user, target):
-    return (user.id == ctx.bot.owner_id or user == ctx.guild.owner or user.top_role > target.top_role) and target != ctx.guild.owner
+    return (user.id == ctx.bot.owner_id or user == ctx.guild.owner or user.top_role > target.top_role) \
+           and target != ctx.guild.owner \
+           and ctx.bot.top_role > target.top_role
 
 
 # Cog
