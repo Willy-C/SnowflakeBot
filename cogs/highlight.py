@@ -115,7 +115,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             if user.id in self.mentions:
                 await self._dm_mention(message, user.id)
 
-    @commands.group(hidden=True)
+    @commands.group()
     async def highlight(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
