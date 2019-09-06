@@ -22,7 +22,8 @@ class GeneralCog(commands.Cog, name='General'):
         " " Quotations only necessary if there are spaces.
         """
         if len(questions_and_choices) < 3:
-            return await ctx.send('Need at least 1 question with 2 choices.')
+            await ctx.send('Need at least 1 question with 2 choices.')
+            return await ctx.send(f'Ex. {ctx.prefix}poll "My question here?" Yes No "Answer with spaces must be quoted" Maybe')
         elif len(questions_and_choices) > 21:
             return await ctx.send('You can only have up to 20 choices.')
 
