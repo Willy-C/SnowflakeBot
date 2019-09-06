@@ -1,13 +1,13 @@
 import discord
 from discord.ext import commands
 
-import sys, traceback, platform
-from typing import Union
+import json
+import traceback, platform
 from datetime import datetime
 
 from config import BOT_TOKEN, blacklist
 
-DESCR = 'This bot is a small side project and still very WIP'
+DESCR = 'This bot is a small side project I am making for fun'
 TOKEN = BOT_TOKEN
 
 # File names of extensions we are loading on startup
@@ -23,33 +23,36 @@ startup_extensions = ['jishaku',
                       'cogs.general',
                       'cogs.music',
                       'cogs.highlight',
-                      'cogs.mod']
-
-custom_prefix = {386406482888884226: ['%']}  # Need to store it somewhere else, will do later
+                      'cogs.mod',
+                      'cogs.prefix']
 
 
 def get_prefix(bot, message):
     """A callable Prefix for our bot. This could be edited to allow per server prefixes."""
-
-    prefixes = ['?', '%']
-
-    # Check to see if we are outside of a guild. e.g DM's etc.
-    # if not message.guild:
-    # Only allow these to be used in DMs
-    # return ['?', '%', '$']
-
-    # if message.guild.id in custom_prefix:
-    #     return custom_prefix[message.guild.id]
-
-    # If in a guild, allow for the user to mention or use any of the prefixes in the list.
-    return commands.when_mentioned_or(*prefixes)(bot, message)
+    bot_id = bot.user.id
+    default = [f'<@{bot_id}> ', f'<@!{bot_id}>']  # Accept mentioning the bot as prefix
+    if message.guild is None:
+        default.append('%')
+    else:
+        default.extend(bot.prefixes.get(message.guild.id, '%'))
+    return default
 
 
-bot = commands.Bot(command_prefix=get_prefix,
-                   description=DESCR,
-                   case_insensitive=True)
-bot.starttime = datetime.utcnow()
-bot.blacklist = blacklist
+class SnowflakeBot(commands.Bot):
+    def __init__(self):
+        super().__init__(command_prefix=get_prefix, description=DESCR, case_insensitive=True,
+                         activity=discord.Activity(type=discord.ActivityType.listening, name='you :)'))
+
+        self.starttime = datetime.utcnow()
+
+        self.blacklist = blacklist
+
+        with open('data/prefixes.json') as f:
+            self.prefixes = {int(k):v for k, v in json.load(f).items()}
+
+
+bot = SnowflakeBot()
+
 
 @bot.event
 async def on_ready():
@@ -57,9 +60,6 @@ async def on_ready():
           f'Python Version: {platform.python_version()}\n'
           f'Library Version: {discord.__version__}\n')
 
-    await bot.change_presence()
-    activity = discord.Activity(type=discord.ActivityType.listening, name='you :)')
-    await bot.change_presence(activity=activity)
     print(f'Ready! {datetime.now()}\n')
 
 
