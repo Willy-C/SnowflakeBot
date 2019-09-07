@@ -3,6 +3,7 @@ from discord.ext import commands
 
 import time
 import datetime
+import humanize
 
 from utils.global_utils import copy_context
 
@@ -72,9 +73,14 @@ class MetaCog(commands.Cog, name='Meta'):
             await ctx.send(page)
 
     @commands.command()
-    async def uptime(self, ctx):
-        """Returns the bot's uptime"""
+    async def uptime(self, ctx, simple: bool=True):
+        """Returns the bot's uptime
+        Pass in False to view more detailed time"""
         delta = (datetime.datetime.utcnow() - self.bot.starttime)
+
+        if simple:
+            return await ctx.send(f'Uptime: {humanize.naturaldelta(delta)}')
+
         seconds = abs(delta.seconds)
         d = delta.days
         h = int(seconds // 3600)
