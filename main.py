@@ -28,9 +28,9 @@ startup_extensions = ['jishaku',
 
 
 def get_prefix(bot, message):
-    """A callable Prefix for our bot. This could be edited to allow per server prefixes."""
+    """A callable prefix for our bot. Returns a list of valid prefixes for the guild"""
     bot_id = bot.user.id
-    default = [f'<@{bot_id}> ', f'<@!{bot_id}>']  # Accept mentioning the bot as prefix
+    default = [f'<@{bot_id}> ', f'<@!{bot_id}> ']  # Accept mentioning the bot as prefix
     if message.guild is None:
         default.append('%')
     else:
@@ -48,7 +48,7 @@ class SnowflakeBot(commands.Bot):
         self.blacklist = blacklist
 
         with open('data/prefixes.json') as f:
-            self.prefixes = {int(k):v for k, v in json.load(f).items()}
+            self.prefixes = {int(k): v for k, v in json.load(f).items()}
 
 
 bot = SnowflakeBot()
@@ -74,7 +74,7 @@ if __name__ == '__main__':
         except Exception as e:
             print(f'Failed to load extension {extension}.')
             traceback.print_exc()
-            # ^uncomment for traceback when extension fails to load
+
     print('-' * 52)
     print(f'Successfully loaded {successes}/{total} extensions.')
 

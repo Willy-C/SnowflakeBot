@@ -23,7 +23,7 @@ class GeneralCog(commands.Cog, name='General'):
         """
         if len(questions_and_choices) < 3:
             await ctx.send('Need at least 1 question with 2 choices.')
-            return await ctx.send(f'Ex. {ctx.prefix}poll "My question here?" Yes No "Answer with spaces must be quoted" Maybe')
+            return await ctx.send(f'Ex. {ctx.prefix}poll "Is this bot good?" Yes No "Answer with spaces must be quoted" Maybe')
         elif len(questions_and_choices) > 21:
             return await ctx.send('You can only have up to 20 choices.')
 
@@ -40,7 +40,7 @@ class GeneralCog(commands.Cog, name='General'):
             pass
 
         body = "\n".join(f"{key}: {c}" for key, c in choices)
-        e = discord.Embed(color=0xFFFF00, timestamp=datetime.datetime.now())
+        e = discord.Embed(color=0xFFFF00, timestamp=datetime.datetime.utcnow())
         e.set_footer(text=ctx.author)
         e.add_field(name=f'{question}', value=body)
         poll = await ctx.send(embed=e)

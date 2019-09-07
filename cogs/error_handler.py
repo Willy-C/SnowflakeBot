@@ -56,9 +56,6 @@ class CommandErrorHandler(commands.Cog):
         elif isinstance(error, NoBlacklist):
             return await ctx.send('You are blacklisted and cannot use this bot.')
 
-
-        # print('Ignoring exception in command {}:'.format(ctx.command))
-        # traceback.print_exception(type(error), error, error.__traceback__)
         tb = traceback.format_exception(type(error), error, error.__traceback__)
 
         await ctx.send(f'An unexpected error has occurred! My owner has been notified.\n'
