@@ -24,7 +24,8 @@ startup_extensions = ['jishaku',
                       'cogs.music',
                       'cogs.highlight',
                       'cogs.mod',
-                      'cogs.prefix']
+                      'cogs.prefix',
+                      'cogs.latex']
 
 
 def get_prefix(bot, message):

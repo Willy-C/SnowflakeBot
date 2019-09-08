@@ -3,8 +3,11 @@ import sys
 from discord.ext import commands
 import discord
 
+import re
+
 from .music import InvalidVoiceChannel, VoiceConnectionError
 from utils.errors import NoBlacklist
+from .latex import TexRenderError
 
 
 class CommandErrorHandler(commands.Cog):
@@ -56,8 +59,19 @@ class CommandErrorHandler(commands.Cog):
         elif isinstance(error, NoBlacklist):
             return await ctx.send('You are blacklisted and cannot use this bot.')
 
-        tb = traceback.format_exception(type(error), error, error.__traceback__)
+        elif isinstance(error, TexRenderError):
+            if error.logs is None :
+                return await ctx.send('Rendering failed. Check your code.')
 
+            err = re.search(r'^!.*?^!', error.logs + '\n!', re.MULTILINE + re.DOTALL)
+            err_msg = err[0].strip("!\n")
+
+            if len(err_msg) > 1000:
+                return await ctx.send('Rendering failed. Check your code.')
+            return await ctx.send(f'Rendering failed. Check your code.\n```{err_msg}```')
+
+        # Unhandled error, so just return the traceback
+        tb = traceback.format_exception(type(error), error, error.__traceback__)
         await ctx.send(f'An unexpected error has occurred! My owner has been notified.\n'
                        f'If you really want to know what went wrong:\n'
                        f'||```py\n{tb[-1]}```||')
