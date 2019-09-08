@@ -31,7 +31,7 @@ class PrefixCog(commands.Cog, name='Prefix'):
         await ctx.send(f'This guild\'s prefix is set to {", ".join(new_prefixes)}\n')
         await ctx.send(f'Note: Mentioning the bot will always be a valid prefix. Ex: {self.bot.user.mention} ping', delete_after=10)
 
-    @prefix.command()
+    @prefix.command(aliases=['clear'])
     @commands.guild_only()
     async def reset(self, ctx):
         """Reset my prefix for this guild to the default"""
@@ -77,17 +77,7 @@ class PrefixCog(commands.Cog, name='Prefix'):
     @prefix.command()
     async def list(self, ctx):
         """Lists my prefixes here"""
-        prefixes = (await self.bot.get_prefix(ctx.message))[2:]
-        formatted = ' '.join(prefixes)
-        if ctx.guild is not None:
-            here = f'for {ctx.guild.name}'
-        else:
-            here = 'here'
-
-        if len(prefixes) > 1:
-            await ctx.send(f'My prefixes {here} are: `{formatted}`')
-        else:
-            await ctx.send(f'My prefix {here} is: {formatted}')
+        await self._list_prefixes(ctx.message)
         await ctx.send(f'\u200b\nYou can always use my mention as a prefix!\n'
                        f'For example: {self.bot.user.mention} ping\n\n'
                        f'Or just mention me and I will tell you my prefix', delete_after=15)
@@ -108,19 +98,22 @@ class PrefixCog(commands.Cog, name='Prefix'):
             return
         match = self.mention.fullmatch(message.content)
         if match:
-            prefixes = (await self.bot.get_prefix(message))[2:]
-            formatted = ' '.join(prefixes)
-            if message.guild is not None:
-                here = f'for {message.guild.name}'
-            else:
-                here = 'here'
-
-            if len(prefixes) > 1:
-                await message.channel.send(f'My prefixes {here} are: `{formatted}`')
-            else:
-                await message.channel.send(f'My prefix {here} is: {formatted}')
+            await self._list_prefixes(message)
             await message.channel.send(f'You can always use my mention as a prefix!\n'
                                        f'For example: {self.bot.user.mention} ping', delete_after=10)
+
+    async def _list_prefixes(self, message):
+        prefixes = (await self.bot.get_prefix(message))[2:]
+        formatted = ' '.join(prefixes)
+        if message.guild is not None:
+            here = f'for {message.guild.name}'
+        else:
+            here = 'here'
+
+        if len(prefixes) > 1:
+            await message.channel.send(f'My prefixes {here} are: `{formatted}`')
+        else:
+            await message.channel.send(f'My prefix {here} is: {formatted}')
 
     # noinspection PyCallingNonCallable
     @tasks.loop(hours=6)
