@@ -2,9 +2,12 @@ import discord
 from discord.ext import commands
 
 import io
+import copy
 import asyncio
+import datetime
 import textwrap
 import traceback
+from collections import Counter
 from typing import Optional, Union
 from contextlib import redirect_stdout
 
@@ -130,23 +133,18 @@ class OwnerCog(commands.Cog, name='Owner'):
                 await ctx.send(f'```py\n{value}{ret}\n```')
 
     @commands.command(name='as')
-    async def _su(self, ctx: commands.Context, target: discord.User, *, command_string: str):
+    async def _sudo(self, ctx, channel: Optional[discord.TextChannel], target: discord.User, *, command: str):
         """
         Run a command as someone else.
-        Try to resolve to a Member, but will use a User if it can't find one.
+        Try to resolve to a Member, if possible.
         """
-        if ctx.guild:
-            # Try to upgrade to a Member instance
-            # This used to be done by a Union converter, but doing it like this makes
-            #  the command more compatible with chaining, e.g. `jsk in .. jsk su ..`
-            target = ctx.guild.get_member(target.id) or target
-
-        alt_ctx = await copy_context(ctx, author=target, content=ctx.prefix + command_string)
-
-        if alt_ctx.command is None:
-            return await ctx.send(f'Command "{alt_ctx.invoked_with}" is not found')
-
-        return await alt_ctx.command.invoke(alt_ctx)
+        msg = copy.copy(ctx.message)
+        channel = channel or ctx.channel
+        msg.channel = channel
+        msg.author = channel.guild.get_member(target.id) or target
+        msg.content = ctx.prefix + command
+        new_ctx = await self.bot.get_context(msg, cls=type(ctx))
+        await self.bot.invoke(new_ctx)
 
     @commands.command(name="shutdown")
     async def logout(self, ctx):
