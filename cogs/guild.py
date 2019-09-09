@@ -3,6 +3,7 @@ from discord.ext import commands
 
 from typing import Optional
 from datetime import datetime
+from collections import Counter
 
 from utils.global_utils import bright_color
 
@@ -27,18 +28,19 @@ class GuildCog(commands.Cog, name='Guild'):
     @commands.command(name='membercount', aliases=['memcount'])
     async def member_count(self, ctx):
         """Returns the member count of the guild"""
-        members = ctx.guild.members
-        statuses = f'<:status_online:602811779948740627> {sum([1 for m in members if m.status is discord.Status.online])}\n' \
-                    f'<:status_offline:602811780053336069> {sum([1 for m in members if m.status is discord.Status.offline])}\n' \
-                    f'<:status_idle:602811780129095701> {sum([1 for m in members if m.status is discord.Status.idle])}\n' \
-                    f'<:status_dnd:602811779931701259> {sum([1 for m in members if m.status is discord.Status.dnd])}'
+        statuses = Counter(m.status for m in ctx.guild.members)
+        bots = Counter(m.bot for m in ctx.guild.members)
+        formatted_statuses = f'<:status_online:602811779948740627> {statuses.get(discord.Status.online, 0)}\n' \
+                             f'<:status_offline:602811780053336069> {statuses.get(discord.Status.offline, 0)}\n' \
+                             f'<:status_idle:602811780129095701> {statuses.get(discord.Status.idle, 0)}\n' \
+                             f'<:status_dnd:602811779931701259> {statuses.get(discord.Status.dnd, 0)}'
 
         e = discord.Embed(color=bright_color(), timestamp=datetime.utcnow())
         e.set_author(name=f'{ctx.guild}\'s member count',  icon_url=ctx.guild.icon_url)
         e.add_field(name='Total', value=ctx.guild.member_count)
-        e.add_field(name='Humans', value=str(sum([1 for m in members if not m.bot])))
-        e.add_field(name='Bots', value=str(sum([1 for m in members if m.bot])))
-        e.add_field(name='Status', value=statuses)
+        e.add_field(name='Humans', value=bots.get(False, 0))
+        e.add_field(name='Bots', value=bots.get(True, 0))
+        e.add_field(name='Status', value=formatted_statuses)
 
         await ctx.send(embed=e)
 
@@ -55,17 +57,17 @@ class GuildCog(commands.Cog, name='Guild'):
         # Embeds look nicer
         e = discord.Embed(title='Permissions for:', description=ctx.guild.name, colour=member.colour)
         e.set_author(icon_url=member.avatar_url, name=str(member))
-        # \uFEFF = Zero-Width Space
-        e.add_field(name='\uFEFF', value=perms)
+
+        e.add_field(name='\uFEFF', value=perms) # zero-width space
 
         await ctx.send(embed=e)
 
     @commands.command(name='perms')
-    async def all_permissions(self, ctx, *, member: discord.Member = None):
+    async def get_all_permissions(self, ctx, *, member: discord.Member = None):
         """Lists all permissions of a member.
         If a member is not provided, the author will be checked."""
-        if not member:
-            member = ctx.author
+        member = member or ctx.author
+
         perms = '\n'.join(f'<:greenTick:602811779835494410> {perm}' if value else f'<:redTick:602811779474522113> {perm}' for perm, value in member.guild_permissions)
 
         e = discord.Embed(description=perms, colour=member.colour)
