@@ -1,20 +1,21 @@
 import discord
 from discord.ext import commands
 
-from utils.errors import NoBlacklist
-from utils.global_utils import copy_context, confirm_prompt
-
-
-from typing import Optional, Union
+import io
 import asyncio
-from jishaku.codeblocks import codeblock_converter
+import textwrap
+import traceback
+from typing import Optional, Union
+from contextlib import redirect_stdout
 
-# command_attrs = {'hidden': True}
+from utils.errors import NoBlacklist
+from utils.global_utils import copy_context, confirm_prompt, cleanup_code
 
 
 class OwnerCog(commands.Cog, name='Owner'):
     def __init__(self, bot):
         self.bot = bot
+        self._last_result = None
 
     # Applies commands.is_owner() check for all methods in this cog
     async def cog_check(self, ctx):
@@ -60,7 +61,7 @@ class OwnerCog(commands.Cog, name='Owner'):
             await ctx.send(f'**`SUCCESS`** reloaded {cog}')
 
     @commands.command(name='presence')
-    async def change_presence(self, ctx, type: str, *, name: Optional[str]):
+    async def change_presence(self, ctx, _type: str, *, name: Optional[str]):
         activities = {'L': discord.Activity(name=name, type=discord.ActivityType.listening),
                       'P': discord.Game(name=name),
                       'S': discord.Streaming(name=name, url='https://www.twitch.tv/directory'),
@@ -73,11 +74,11 @@ class OwnerCog(commands.Cog, name='Owner'):
                     'Idle': discord.Status.idle,
                     'DND': discord.Status.dnd}
 
-        if type in activities:
-            await self.bot.change_presence(activity=activities[type])
+        if _type in activities:
+            await self.bot.change_presence(activity=activities[_type])
             await ctx.send('Changing my activity...')
-        elif type in statuses:
-            await self.bot.change_presence(status=statuses[type])
+        elif _type in statuses:
+            await self.bot.change_presence(status=statuses[_type])
             await ctx.send('Changing my status...')
         else:
             await ctx.send('The specified presence cannot be found\n'
@@ -85,9 +86,48 @@ class OwnerCog(commands.Cog, name='Owner'):
                            'Status: Online | Offline | Idle | DND```')
 
     @commands.command(name='eval')
-    async def _eval(self, ctx, *, args: codeblock_converter):
+    async def _eval(self, ctx, *, code: str):
         """Evaluates python code in a single line or code block"""
-        await ctx.invoke(self.bot.get_command("jsk py"), argument=args)
+        env = {
+            'bot': self.bot,
+            'ctx': ctx,
+            'channel': ctx.channel,
+            'author': ctx.author,
+            'guild': ctx.guild,
+            'message': ctx.message,
+            '_': self._last_result
+        }
+
+        env.update(globals())
+        code = cleanup_code(code)
+        stdout = io.StringIO()
+        to_compile = f'async def func():\n{textwrap.indent(code, "  ")}'
+
+        try:
+            exec(to_compile, env)
+        except Exception as e:
+            return await ctx.send(f'```py\n{e.__class__.__name__}: {e}\n```')
+
+        func = env['func']
+        try:
+            with redirect_stdout(stdout):
+                ret = await func()
+        except Exception as e:
+            value = stdout.getvalue()
+            await ctx.send(f'```py\n{value}{traceback.format_exc()}\n```')
+        else:
+            value = stdout.getvalue()
+            try:
+                await ctx.message.add_reaction('\u2705')
+            except:
+                pass
+
+            if ret is None:
+                if value:
+                    await ctx.send(f'```py\n{value}\n```')
+            else:
+                self._last_result = ret
+                await ctx.send(f'```py\n{value}{ret}\n```')
 
     @commands.command(name='as')
     async def _su(self, ctx: commands.Context, target: discord.User, *, command_string: str):

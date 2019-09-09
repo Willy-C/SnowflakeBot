@@ -1,8 +1,7 @@
-import copy
-
 import discord
 from discord.ext import commands
 
+import copy
 import colorsys
 import random
 from asyncio import TimeoutError
@@ -65,3 +64,10 @@ async def confirm_prompt(ctx: commands.Context, msg):
         await ctx.send('Aborting...', delete_after=5)
 
     return cont
+
+def cleanup_code(content):
+    """Automatically removes code blocks from the code."""
+    # remove ```py\n```
+    if content.startswith('```') and content.endswith('```'):
+        return '\n'.join(content.split('\n')[1:-1])
+    return content.strip('` \n')
