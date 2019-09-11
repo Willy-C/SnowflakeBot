@@ -49,7 +49,9 @@ class InfoCog(commands.Cog):
         e.add_field(name='Created', value=f'{humanize.naturaldelta((datetime.utcnow() - user.created_at))} ago')
         if isinstance(user, discord.Member):
             e.add_field(name='Joined', value=f'{humanize.naturaldelta((datetime.utcnow() - user.joined_at))} ago')
-            e.add_field(name='Roles', value=', '.join(r.mention for r in user.roles))
+            roles = ['@everyone']
+            roles.extend(r.mention for r in user.roles[1:])
+            e.add_field(name='Roles', value=', '.join(roles))
 
         await ctx.send(embed=e)
 
