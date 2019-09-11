@@ -7,17 +7,26 @@ import io
 TEX_API = 'http://rtex.probablyaweb.site/api/v2'
 TEMPLATE = r'''
 \documentclass{article}
+
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
 \usepackage{geometry}
 \usepackage{mathtools}
 \usepackage{amsthm}
+\usepackage{chemfig}
+\usepackage{color}
+\usepackage{xcolor}
 \geometry{textwidth=8cm}
-\usepackage[dvipsnames]{xcolor}
+
 \begin{document}
-\pagecolor{black}
+\pagenumbering{gobble}
+\definecolor{darktheme}{HTML}{36393F}
+
 \color{white}
+\pagecolor{darktheme}
+
 USERINPUTHERE
+
 \end{document}
 '''
 

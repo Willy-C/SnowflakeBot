@@ -3,7 +3,6 @@ from discord.ext import commands
 
 from utils.global_utils import confirm_prompt
 
-from typing import Union
 from collections import Counter
 import asyncio
 
@@ -91,7 +90,7 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.command(name='delmsg', hidden=True)
     @commands.bot_has_permissions(manage_messages=True)
     @can_manage_messages()
-    async def del_msg(self, ctx, message: discord.Message):
+    async def del_msg(self, ctx, message: commands.Greedy[discord.Message]):
         """Deletes a specific message"""
         try:
             await message.delete()
@@ -133,7 +132,7 @@ class ModCog(commands.Cog, name='Mod'):
                 counter += 1
         return {str(self.bot.user): counter}
 
-    async def _good_clean(self, ctx, limit): # Do have permission, so delete bot's message any invocation messages
+    async def _good_clean(self, ctx, limit): # Do have permission, so delete any invocation messages as well
         def check(m):
             return m.author == ctx.me or m.content.startswith(ctx.prefix)
         deleted = await ctx.channel.purge(limit=limit, check=check, before=ctx.message)
@@ -451,25 +450,57 @@ class ModCog(commands.Cog, name='Mod'):
         await member.move_to(channel)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
-
-    @commands.command(enabled=False, hidden=True)
+    @commands.group()
     @commands.bot_has_permissions(manage_messages=True)
     @can_manage_messages()
-    async def purge(self, ctx, limit: int=10, target: Union[discord.Member, str]=None):
-        limit = min(limit, 100)
-        if target == 'bot':
-            def check(msg):
-                return msg.author.bot
-        elif isinstance(target, discord.Member):
-            def check(msg):
-                return msg.author.id == target.id
-        elif target is None:
-            def check(msg):
-                return True
-        else:
-            return await ctx.send('Invalid parameter, please specify a person or "bot"')
+    @commands.guild_only()
+    async def purge(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
 
-        await ctx.channel.purge(limit=limit, check=check, before=ctx.message)
+    async def purge_messages(self, ctx, limit, check):
+        if limit > 200:
+            return await ctx.send('Limit too high! Max: 200')
+
+        try:
+            deleted = await ctx.channel.purge(limit=limit, before=ctx.message, check=check)
+        except discord.Forbidden as e:
+            return await ctx.send('I do not have permissions to delete messages.')
+        except discord.HTTPException as e:
+            return await ctx.send(f'Error: {e}')
+
+        authors = Counter(str(msg.author) for msg in deleted)
+        deleted = len(deleted)
+        messages = [f'{deleted} message{" was" if deleted == 1 else "s were"} removed.']
+
+        if deleted:
+            messages.append('')
+            spammers = sorted(authors.items(), key=lambda t: t[1], reverse=True)
+            messages.extend(f'**{name}**: {count}' for name, count in spammers)
+
+        await ctx.send('\n'.join(messages), delete_after=15)
+
+    @purge.command(aliases=['member'])
+    async def user(self, ctx, member: discord.Member, limit=20):
+        await self.purge_messages(ctx, limit, lambda m: m.author == member)
+        await ctx.message.add_reaction('\U00002705')  # React with checkmark
+
+
+    @purge.command(name='bot', aliases=['bots'])
+    async def bots(self, ctx, limit=20, prefix=None):
+        def check(m):
+            return (m.author.bot and m.webhook_id is not None) or (prefix and m.content.startswith(prefix))
+        await self.purge_messages(ctx, limit, check)
+        await ctx.message.add_reaction('\U00002705')  # React with checkmark
+
+
+    @purge.command(name='all')
+    async def everything(self, ctx, limit=20):
+        if not await confirm_prompt(ctx, f'Delete {limit} messages?'):
+            return
+        await self.purge_messages(ctx, limit, lambda m: True)
+        await ctx.message.add_reaction('\U00002705')  # React with checkmark
+
 
 def setup(bot):
     bot.add_cog(ModCog(bot))

@@ -67,8 +67,8 @@ class CommandErrorHandler(commands.Cog):
             err_msg = err[0].strip("!\n")
 
             if len(err_msg) > 1000:
-                return await ctx.send('Rendering failed. Check your code.')
-            return await ctx.send(f'Rendering failed. Check your code.\n```{err_msg}```')
+                return await ctx.send('Rendering failed. Please check your code.')
+            return await ctx.send(f'Rendering failed.\n```{err_msg}```')
 
         # Unhandled error, so just return the traceback
         tb = traceback.format_exception(type(error), error, error.__traceback__)
