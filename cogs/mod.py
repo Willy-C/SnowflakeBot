@@ -90,7 +90,7 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.command(name='delmsg', hidden=True)
     @commands.bot_has_permissions(manage_messages=True)
     @can_manage_messages()
-    async def del_msg(self, ctx, message: commands.Greedy[discord.Message]):
+    async def del_msg(self, ctx, message: discord.Message):
         """Deletes a specific message"""
         try:
             await message.delete()
