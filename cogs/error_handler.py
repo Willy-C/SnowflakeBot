@@ -20,8 +20,8 @@ class CommandErrorHandler(commands.Cog):
         ctx   : Context
         error : Exception"""
 
-        # if hasattr(ctx.command, 'on_error'):
-        #     return
+        if hasattr(ctx.command, 'on_error'):
+            return
 
         ignored = (commands.CommandNotFound)  # Tuple of errors to ignore
         error = getattr(error, 'original', error)
