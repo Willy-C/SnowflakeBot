@@ -9,6 +9,7 @@ from async_timeout import timeout
 from functools import partial
 from youtube_dl import YoutubeDL, utils
 from random import shuffle
+from typing import Optional
 
 ytdlopts = {
     'format': 'bestaudio/best',
@@ -16,7 +17,7 @@ ytdlopts = {
     'restrictfilenames': True,
     'noplaylist': True,
     'nocheckcertificate': True,
-    'ignoreerrors': False,
+    'ignoreerrors': True,
     'logtostderr': False,
     'quiet': True,
     'no_warnings': True,
@@ -97,7 +98,7 @@ class MusicPlayer:
     When the bot disconnects from the Voice it's instance will be destroyed.
     """
 
-    __slots__ = ('bot', '_guild', '_channel', '_cog', 'queue', 'next', 'current', 'np', 'volume')
+    __slots__ = ('bot', '_guild', '_channel', '_cog', 'queue', 'next', 'current', 'np', 'volume', 'loop')
 
     def __init__(self, ctx):
         self.bot = ctx.bot
@@ -111,6 +112,7 @@ class MusicPlayer:
         self.np = None  # Now playing message
         self.volume = .5
         self.current = None
+        self.loop = False
 
         ctx.bot.loop.create_task(self.player_loop())
 
@@ -127,6 +129,10 @@ class MusicPlayer:
                     source = await self.queue.get()
             except asyncio.TimeoutError:
                 return self.destroy(self._guild)
+
+            if self.loop:
+                await self.queue.put(source) # If looping, put it back into the queue
+
 
             if not isinstance(source, YTDLSource):
                 # Source was probably a stream (not downloaded)
@@ -338,7 +344,7 @@ class Music(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(name='now_playing', aliases=['np', 'current', 'currentsong', 'playing'])
+    @commands.command(name='np', aliases=['nowplaying', 'current', 'currentsong', 'playing'])
     async def now_playing_(self, ctx):
         """Display information about the currently playing song."""
         vc = ctx.voice_client
@@ -409,9 +415,30 @@ class Music(commands.Cog):
         except:
             await ctx.send('An error occurred ')
 
+    @commands.command(name='loop')
+    async def toggle_loop(self, ctx, toggle:Optional[bool]):
+        """Toggles looping"""
+        vc = ctx.voice_client
+        if not vc or not vc.is_connected():
+            return await ctx.send('I am not currently connected to voice!', delete_after=15)
+
+        player = self.get_player(ctx)
+        if toggle:
+            player.loop = toggle
+        else:
+            player.loop = not player.loop
+
+        if player.loop and player.current:
+            print(player.current)
+            await player.queue.put(player.current)
+
+        await ctx.send(f'Looping is now {"on" if player.loop else "off"}!', delete_after=15)
+        await ctx.message.add_reaction("\u2705")
+
     @play_.error
     async def get_avatar_handler(self, ctx, error):
         if isinstance(error, utils.DownloadError):
+            ctx.local_handled = True
             await ctx.send('Error: This video is unavailable. Please try again or another video.', delete_after=15)
 
 
