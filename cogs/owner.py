@@ -12,7 +12,7 @@ from typing import Optional, Union
 from contextlib import redirect_stdout
 
 from utils.errors import NoBlacklist
-from utils.global_utils import copy_context, confirm_prompt, cleanup_code
+from utils.global_utils import confirm_prompt, cleanup_code , bright_color
 
 
 class OwnerCog(commands.Cog, name='Owner'):
@@ -183,7 +183,7 @@ class OwnerCog(commands.Cog, name='Owner'):
     async def add_blacklist(self, ctx, user: Union[int, discord.User]):
         if isinstance(user, int):
             self.bot.blacklist.append(user)
-            user = self.bot.fetch_user(user) or user
+            user = await self.bot.fetch_user(user) or user
         elif isinstance(user, discord.User):
             self.bot.blacklist.append(user.id)
         await ctx.send(f'Blacklisted {user}')
@@ -192,7 +192,7 @@ class OwnerCog(commands.Cog, name='Owner'):
     async def remove_blacklist(self, ctx, user: Union[int, discord.User]):
         if isinstance(user, int):
             self.bot.blacklist.remove(user)
-            user = self.bot.fetch_user(user) or user
+            user = await self.bot.fetch_user(user) or user
         elif isinstance(user, discord.User):
             self.bot.blacklist.remove(user.id)
         await ctx.send(f'Unblacklisted {user}')

@@ -25,6 +25,7 @@ class AvatarCog(commands.Cog, name='General'):
     @get_avatar.error
     async def get_avatar_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
+            ctx.local_handled = True
             return await ctx.send('```No user found on this server matching that name.\n'
                                   'I will search in this order: \n'
                                   '1. By ID                     (ex. 5429519026699)\n'

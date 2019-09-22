@@ -115,6 +115,7 @@ class ModCog(commands.Cog, name='Mod'):
     @suppress_embed.error
     async def msg_convert_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
+            ctx.local_handled = True
             return await ctx.send('```I am unable to find the specified message.\n'
                                   'I will search in the following order:\n\n'
                                   '1. By {channel ID}-{message ID}\n'
@@ -478,7 +479,7 @@ class ModCog(commands.Cog, name='Mod'):
             spammers = sorted(authors.items(), key=lambda t: t[1], reverse=True)
             messages.extend(f'**{name}**: {count}' for name, count in spammers)
 
-        await ctx.send('\n'.join(messages), delete_after=15)
+        await ctx.send('\n'.join(messages), delete_after=10)
 
     @purge.command(aliases=['member'])
     async def user(self, ctx, member: discord.Member, limit=20):

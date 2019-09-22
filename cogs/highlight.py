@@ -131,7 +131,9 @@ class HighlightCog(commands.Cog, name='Highlight'):
         except:
             return await ctx.send('An error has occurred.')
         else:
-            return await ctx.send(f'Successfully added highlight key: {key}')
+            await ctx.message.add_reaction('\U00002705')  # React with checkmark
+            return await ctx.send(f'Successfully added highlight key: {key}', delete_after=10)
+
 
     @highlight.command()
     async def remove(self, ctx, *, key):
@@ -146,7 +148,8 @@ class HighlightCog(commands.Cog, name='Highlight'):
         except:
             return await ctx.send('An error has occurred.')
         else:
-            return await ctx.send(f'Successfully removed  highlight key: {key}')
+            await ctx.message.add_reaction('\U00002705')  # React with checkmark
+            return await ctx.send(f'Successfully removed  highlight key: {key}', delete_after=10)
 
     @highlight.command()
     async def list(self, ctx):
@@ -165,7 +168,8 @@ class HighlightCog(commands.Cog, name='Highlight'):
         e.add_field(name='Mentions', value=target in self.mentions)
         e.set_author(name=user, icon_url=user.avatar_url)
 
-        await ctx.send(embed=e)
+        await ctx.message.add_reaction('\U00002705')  # React with checkmark
+        await ctx.send(embed=e, delete_after=15)
 
     @highlight.command()
     async def mention(self, ctx):

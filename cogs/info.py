@@ -55,5 +55,11 @@ class InfoCog(commands.Cog):
 
         await ctx.send(embed=e)
 
+    @userinfo.error
+    async def userinfo_error(self, ctx, error):
+        if isinstance(error, commands.errors.BadUnionArgument):
+            ctx.local_handled = True
+            return await ctx.send('Unable to find that person')
+
 def setup(bot):
     bot.add_cog(InfoCog(bot))
