@@ -1,15 +1,19 @@
 import discord
 from discord.ext import commands, tasks
 
+
 import asyncio
 import itertools
 import json
 import traceback
+import youtube_dl
 from async_timeout import timeout
 from functools import partial
 from youtube_dl import YoutubeDL, utils
 from random import shuffle
 from typing import Optional
+
+youtube_dl.utils.bug_reports_message = lambda: ''
 
 ytdlopts = {
     'format': 'bestaudio/best',
@@ -67,7 +71,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
             data = await loop.run_in_executor(None, to_run)
         # data is a dict, but entries is a list of dicts
         if 'entries' in data:
-            # take first item from a playlist
             out = []
             async with ctx.channel.typing():
                 for vid in data['entries']:
@@ -281,7 +284,7 @@ class Music(commands.Cog):
             await ctx.invoke(self.connect_)
 
         player = self.get_player(ctx)
-
+        await ctx.send('Very long playlist may take a minute to ready', delete_after=5)
         # If download is False, source will be a dict which will be used later to regather the stream.
         # If download is True, source will be a discord.FFmpegPCMAudio with a VolumeTransformer.
         source = await YTDLSource.create_source(ctx, search, loop=self.bot.loop, download=False)
@@ -305,6 +308,7 @@ class Music(commands.Cog):
         if name in self._playlists:
             url = self._playlists[name]
             await ctx.send(f'Playing playlist: `{name}`\n', delete_after=20)
+            await ctx.send('Very long playlist may take a minute to ready', delete_after=5)
             source = await YTDLSource.create_source(ctx, url, loop=self.bot.loop, download=False)
             if isinstance(source, dict):
                 await player.queue.put(source)
@@ -510,7 +514,7 @@ class Music(commands.Cog):
 
         formatted = '\n'.join([f'[{k}]({v})' for k, v in self._playlists.items()])
 
-        e = discord.Embed(title="Video Links for all Voice Channels",
+        e = discord.Embed(title="Saved Playlists",
                           colour=discord.Color.red(),
                           description=formatted)
 
