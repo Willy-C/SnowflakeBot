@@ -98,7 +98,7 @@ class MusicPlayer:
     When the bot disconnects from the Voice it's instance will be destroyed.
     """
 
-    __slots__ = ('bot', '_guild', '_channel', '_cog', 'queue', 'next', 'current', 'np', 'volume', 'loop')
+    __slots__ = ('bot', '_guild', '_channel', '_cog', 'queue', 'next', 'current', 'np', 'volume', 'loop', '_curr')
 
     def __init__(self, ctx):
         self.bot = ctx.bot
@@ -112,7 +112,9 @@ class MusicPlayer:
         self.np = None  # Now playing message
         self.volume = .5
         self.current = None
+
         self.loop = False
+        self._curr = None
 
         ctx.bot.loop.create_task(self.player_loop())
 
@@ -132,6 +134,8 @@ class MusicPlayer:
 
             if self.loop:
                 await self.queue.put(source) # If looping, put it back into the queue
+            else:
+                self._curr = source
 
 
             if not isinstance(source, YTDLSource):
@@ -429,8 +433,7 @@ class Music(commands.Cog):
             player.loop = not player.loop
 
         if player.loop and player.current:
-            print(player.current)
-            await player.queue.put(player.current)
+            await player.queue.put(player._curr)
 
         await ctx.send(f'Looping is now {"on" if player.loop else "off"}!', delete_after=15)
         await ctx.message.add_reaction("\u2705")
