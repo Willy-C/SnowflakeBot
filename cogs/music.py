@@ -1,9 +1,9 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import asyncio
 import itertools
-import sys
+import json
 import traceback
 from async_timeout import timeout
 from functools import partial
@@ -62,15 +62,21 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def create_source(cls, ctx, search: str, *, loop, download=False):
         loop = loop or asyncio.get_event_loop()
-
-        to_run = partial(ytdl.extract_info, url=search, download=download)
-        data = await loop.run_in_executor(None, to_run)
+        async with ctx.channel.typing():
+            to_run = partial(ytdl.extract_info, url=search, download=download)
+            data = await loop.run_in_executor(None, to_run)
         # data is a dict, but entries is a list of dicts
         if 'entries' in data:
             # take first item from a playlist
-            data = data['entries'][0]
-        await ctx.send(f'```ini\n[Added {data["title"]} to the Queue.]\n```', delete_after=15)
+            out = []
+            async with ctx.channel.typing():
+                for vid in data['entries']:
+                    if vid is not None:
+                        out.append({'webpage_url': vid['webpage_url'], 'requester': ctx.author, 'title': vid['title']})
+                await ctx.send(f'Adding {len(out)} to queue...')
+            return out
 
+        await ctx.send(f'```ini\n[Added {data["title"]} to the Queue.]\n```', delete_after=15)
         if download:
             source = ytdl.prepare_filename(data)
         else:
@@ -127,7 +133,7 @@ class MusicPlayer:
 
             try:
                 # Wait for the next song. If we timeout cancel the player and disconnect...
-                async with timeout(300):  # 5 minutes...
+                async with timeout(900):  # 15 minutes...
                     source = await self.queue.get()
             except asyncio.TimeoutError:
                 return self.destroy(self._guild)
@@ -179,6 +185,9 @@ class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.players = {}
+        with open('data/playlists.json') as f:
+            self._playlists = json.load(f)
+        self.save_playlists.start()
 
     async def cleanup(self, guild):
         try:
@@ -254,7 +263,7 @@ class Music(commands.Cog):
 
         await ctx.send(f'Connected to: **{channel}**', delete_after=20)
 
-    @commands.command(name='play', aliases=['sing'])
+    @commands.group(name='play', aliases=['sing'], invoke_without_command=True)
     async def play_(self, ctx, *, search: str):
         """Request a song and add it to the queue.
         This command attempts to join a valid voice channel if the bot is not already in one.
@@ -270,21 +279,40 @@ class Music(commands.Cog):
 
         if not vc:
             await ctx.invoke(self.connect_)
-        # special = {'star': 'https://www.youtube.com/playlist?list=PLszZ0xXW9BjoX6r2ZRqPwF9wAlcxZSvgI',
-        #            'xih': 'https://www.youtube.com/playlist?list=PLszZ0xXW9BjqGuovNjdnMsM7xcNxOut23',
-        #            'piano': 'https://www.youtube.com/playlist?list=PLszZ0xXW9BjpSwpNLmRJ7dtOlf-qLDP0g'
-        #            }
-        # if search in special:
-        #     search = special[search]
-        #     await ctx.send('Special keyword entered. Playing predefined playlist..\n', delete_after=20)
-        await ctx.send('I am currently in the process of improving this, if something is broken please let me know', delete_after=30)
+
         player = self.get_player(ctx)
 
         # If download is False, source will be a dict which will be used later to regather the stream.
         # If download is True, source will be a discord.FFmpegPCMAudio with a VolumeTransformer.
         source = await YTDLSource.create_source(ctx, search, loop=self.bot.loop, download=False)
-        # Source is a dict^
-        await player.queue.put(source)
+
+        if isinstance(source, dict):
+            await player.queue.put(source)
+        else:
+            for src in source:
+                await player.queue.put(src)
+
+    @play_.command()
+    async def playlist(self, ctx, *, name: str):
+        """Plays special predefined playlist instead of youtube search"""
+        await ctx.trigger_typing()
+
+        vc = ctx.voice_client
+        if not vc:
+            await ctx.invoke(self.connect_)
+        player = self.get_player(ctx)
+
+        if name in self._playlists:
+            url = self._playlists[name]
+            await ctx.send(f'Playing playlist: `{name}`\n', delete_after=20)
+            source = await YTDLSource.create_source(ctx, url, loop=self.bot.loop, download=False)
+            if isinstance(source, dict):
+                await player.queue.put(source)
+            else:
+                for src in source:
+                    await player.queue.put(src)
+        else:
+            return await ctx.send(f'Unable to find that playlist. Please see `{ctx.prefix}playlist list`')
 
     @commands.command(name='pause', aliases=['ll', '||'])
     async def pause_(self, ctx):
@@ -328,7 +356,7 @@ class Music(commands.Cog):
         vc.stop()
         await ctx.send(f'**`{ctx.author}`**: Skipped the song!')
 
-    @commands.command(name='queue', aliases=['q', 'playlist'])
+    @commands.command(name='queue', aliases=['q'])
     async def queue_info(self, ctx):
         """Retrieve a basic queue of upcoming songs."""
         vc = ctx.voice_client
@@ -441,11 +469,62 @@ class Music(commands.Cog):
         await ctx.message.add_reaction("\u2705")
 
     @play_.error
-    async def get_avatar_handler(self, ctx, error):
+    async def play_handler(self, ctx, error):
         if isinstance(error, utils.DownloadError):
             ctx.local_handled = True
             await ctx.send('Error: This video is unavailable. Please try again or another video.', delete_after=15)
 
+    @commands.group(name='playlist')
+    async def _playlist(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @_playlist.command()
+    async def add(self, ctx, name, link):
+        name = name.lower()
+        if name in self._playlists:
+            return await ctx.send('Sorry that name is already taken, please try again with a different name')
+        else:
+            try:
+                self._playlists[name] = link
+            except:
+                return await ctx.send('An error has occurred.')
+            else:
+                await ctx.message.add_reaction('\U00002705')  # React with checkmark
+                await ctx.send(f'Added playlist `{name}`, with link: `{link}`')
+
+    @_playlist.command()
+    async def remove(self, ctx, name):
+        if name not in self._playlists:
+            return await ctx.send('Sorry, I am unable to find the playlist with that name.')
+        try:
+            del self._playlists[name]
+        except:
+            await ctx.send('An error has occurred.')
+        else:
+            await ctx.message.add_reaction('\U00002705')  # React with checkmark
+            await ctx.send(f'Removed playlist `{name}`')
+
+    @_playlist.command()
+    async def list(self, ctx):
+
+        formatted = '\n'.join([f'[{k}]({v})' for k, v in self._playlists.items()])
+
+        e = discord.Embed(title="Video Links for all Voice Channels",
+                          colour=discord.Color.red(),
+                          description=formatted)
+
+        await ctx.send(embed=e)
+
+    @_playlist.command(name='play')
+    async def _play(self, ctx, *, name: str):
+        await ctx.invoke(self.bot.get_command('play playlist'), name=name)
+
+    # noinspection PyCallingNonCallable
+    @tasks.loop(hours=6)
+    async def save_playlists(self):
+        with open('data/playlists.json', 'w') as f:
+            json.dump(self._playlists, f, indent=2)
 
 def setup(bot):
     bot.add_cog(Music(bot))
