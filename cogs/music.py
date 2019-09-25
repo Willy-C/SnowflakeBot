@@ -70,16 +70,19 @@ class YTDLSource(discord.PCMVolumeTransformer):
             to_run = partial(ytdl.extract_info, url=search, download=download)
             data = await loop.run_in_executor(None, to_run)
         # data is a dict, but entries is a list of dicts
-        if 'entries' in data:
+
+        if 'entries' in data and len(data['entries']) == 1:
+            data = data['entries'][0]
+        elif 'entries' in data:
             out = []
             async with ctx.channel.typing():
                 for vid in data['entries']:
                     if vid is not None:
                         out.append({'webpage_url': vid['webpage_url'], 'requester': ctx.author, 'title': vid['title']})
-                await ctx.send(f'Adding {len(out)} to queue...')
+                await ctx.send(f'Adding {len(out)} songs to queue...')
             return out
 
-        await ctx.send(f'```ini\n[Added {data["title"]} to the Queue.]\n```', delete_after=15)
+        await ctx.send(f'```ini\n[Added {data["title"]} to the Queue.]\n```')
         if download:
             source = ytdl.prepare_filename(data)
         else:
@@ -307,7 +310,7 @@ class Music(commands.Cog):
 
         if name in self._playlists:
             url = self._playlists[name]
-            await ctx.send(f'Playing playlist: `{name}`\n', delete_after=20)
+            await ctx.send(f'Playing playlist: `{name}`\n')
             await ctx.send('Very long playlist may take a minute to ready', delete_after=3)
             source = await YTDLSource.create_source(ctx, url, loop=self.bot.loop, download=False)
             if isinstance(source, dict):
@@ -324,7 +327,7 @@ class Music(commands.Cog):
         vc = ctx.voice_client
 
         if not vc or not vc.is_playing():
-            return await ctx.send('I am not currently playing anything!', delete_after=20)
+            return await ctx.send('I am not currently playing anything!')
         elif vc.is_paused():
             return
 
@@ -337,7 +340,7 @@ class Music(commands.Cog):
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently playing anything!', delete_after=20)
+            return await ctx.send('I am not currently playing anything!')
         elif not vc.is_paused():
             return
 
@@ -350,7 +353,7 @@ class Music(commands.Cog):
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently playing anything!', delete_after=20)
+            return await ctx.send('I am not currently playing anything!')
 
         if vc.is_paused():
             pass
@@ -366,7 +369,7 @@ class Music(commands.Cog):
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently connected to voice!', delete_after=20)
+            return await ctx.send('I am not currently connected to voice!')
 
         player = self.get_player(ctx)
         if player.queue.empty():
@@ -388,7 +391,7 @@ class Music(commands.Cog):
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently connected to voice!', delete_after=20)
+            return await ctx.send('I am not currently connected to voice!')
 
         player = self.get_player(ctx)
         if not player.current:
@@ -414,7 +417,7 @@ class Music(commands.Cog):
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently connected to voice!', delete_after=20)
+            return await ctx.send('I am not currently connected to voice!')
 
         if (not 0 <= vol <= 200) and vol is not None :
             return await ctx.send('Please enter a value between 0 and 200.')
@@ -439,7 +442,7 @@ class Music(commands.Cog):
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently playing anything!', delete_after=20)
+            return await ctx.send('I am not currently playing anything!')
 
         await self.cleanup(ctx.guild)
 
@@ -449,7 +452,7 @@ class Music(commands.Cog):
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently connected to voice!', delete_after=15)
+            return await ctx.send('I am not currently connected to voice!')
         try:
             shuffle(self.get_player(ctx).queue._queue)
             await ctx.message.add_reaction("\u2705")
@@ -461,7 +464,7 @@ class Music(commands.Cog):
         """Toggles looping"""
         vc = ctx.voice_client
         if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently connected to voice!', delete_after=15)
+            return await ctx.send('I am not currently connected to voice!')
 
         player = self.get_player(ctx)
         if toggle:
@@ -472,7 +475,7 @@ class Music(commands.Cog):
         if player.loop and player.current:
             await player.queue.put(player._curr)
 
-        await ctx.send(f'Looping is now {"on" if player.loop else "off"}!', delete_after=15)
+        await ctx.send(f'Looping is now {"on" if player.loop else "off"}!')
         await ctx.message.add_reaction("\u2705")
 
     @commands.command(name='clear')
@@ -481,7 +484,7 @@ class Music(commands.Cog):
         vc = ctx.voice_client
 
         if not vc or not vc.is_connected():
-            return await ctx.send('I am not currently connected to voice!', delete_after=20)
+            return await ctx.send('I am not currently connected to voice!')
         amount = max(amount, 0)
         player = self.get_player(ctx)
         new = asyncio.Queue()
@@ -496,7 +499,7 @@ class Music(commands.Cog):
     async def play_handler(self, ctx, error):
         if isinstance(error, utils.DownloadError):
             ctx.local_handled = True
-            await ctx.send('Error: This video is unavailable. Please try again or another video.', delete_after=15)
+            await ctx.send('Error: This video is unavailable. Please try again or use another video.', delete_after=10)
 
     @commands.group(name='playlist')
     async def _playlist(self, ctx):
