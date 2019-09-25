@@ -264,7 +264,7 @@ class Music(commands.Cog):
             except asyncio.TimeoutError:
                 raise VoiceConnectionError(f'Connecting to channel: <{channel}> timed out.')
 
-        await ctx.send(f'Connected to: **{channel}**', delete_after=20)
+        await ctx.send(f'Connected to: **{channel}**', delete_after=5)
 
     @commands.group(name='play', aliases=['sing'], invoke_without_command=True)
     async def play_(self, ctx, *, search: str):
@@ -284,7 +284,7 @@ class Music(commands.Cog):
             await ctx.invoke(self.connect_)
 
         player = self.get_player(ctx)
-        await ctx.send('Very long playlist may take a minute to ready', delete_after=5)
+        await ctx.send('Very long playlist may take a minute to ready', delete_after=3)
         # If download is False, source will be a dict which will be used later to regather the stream.
         # If download is True, source will be a discord.FFmpegPCMAudio with a VolumeTransformer.
         source = await YTDLSource.create_source(ctx, search, loop=self.bot.loop, download=False)
@@ -308,7 +308,7 @@ class Music(commands.Cog):
         if name in self._playlists:
             url = self._playlists[name]
             await ctx.send(f'Playing playlist: `{name}`\n', delete_after=20)
-            await ctx.send('Very long playlist may take a minute to ready', delete_after=5)
+            await ctx.send('Very long playlist may take a minute to ready', delete_after=3)
             source = await YTDLSource.create_source(ctx, url, loop=self.bot.loop, download=False)
             if isinstance(source, dict):
                 await player.queue.put(source)
@@ -404,7 +404,7 @@ class Music(commands.Cog):
                                    f'requested by `{vc.source.requester}`')
 
     @commands.command(name='volume', aliases=['vol'])
-    async def change_volume(self, ctx, *, vol: float):
+    async def change_volume(self, ctx, *, vol: float = None):
         """Change the player volume.
         Parameters
         ------------
@@ -416,10 +416,13 @@ class Music(commands.Cog):
         if not vc or not vc.is_connected():
             return await ctx.send('I am not currently connected to voice!', delete_after=20)
 
-        if not 0 < vol < 201:
+        if (not 0 <= vol <= 200) and vol is not None :
             return await ctx.send('Please enter a value between 0 and 200.')
 
         player = self.get_player(ctx)
+
+        if vol is None:
+            return await ctx.send(f'The current volume is: **{vc.source.volume*100}%**')
 
         if vc.source:
             vc.source.volume = vol / 100
@@ -470,6 +473,23 @@ class Music(commands.Cog):
             await player.queue.put(player._curr)
 
         await ctx.send(f'Looping is now {"on" if player.loop else "off"}!', delete_after=15)
+        await ctx.message.add_reaction("\u2705")
+
+    @commands.command(name='clear')
+    async def purge_queue(self, ctx, amount:int=0):
+        """Removes everything after the first `amount` items in queue"""
+        vc = ctx.voice_client
+
+        if not vc or not vc.is_connected():
+            return await ctx.send('I am not currently connected to voice!', delete_after=20)
+        amount = max(amount, 0)
+        player = self.get_player(ctx)
+        new = asyncio.Queue()
+        for _ in range(amount):
+            if player.queue.empty():
+                break
+            await new.put(await player.queue.get())
+        player.queue = new
         await ctx.message.add_reaction("\u2705")
 
     @play_.error
