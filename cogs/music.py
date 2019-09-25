@@ -348,7 +348,7 @@ class Music(commands.Cog):
         await ctx.send(f'**`{ctx.author}`**: Resumed the song!')
 
     @commands.command(name='skip')
-    async def skip_(self, ctx):
+    async def skip_(self, ctx, amount: int = 1):
         """Skip the song."""
         vc = ctx.voice_client
 
@@ -359,6 +359,11 @@ class Music(commands.Cog):
             pass
         elif not vc.is_playing():
             return
+
+        player = self.get_player(ctx)
+        amount = max(amount, 1)
+        for _ in range(amount-1):
+            __ = await player.queue.get()
 
         vc.stop()
         await ctx.send(f'**`{ctx.author}`**: Skipped the song!')
@@ -377,9 +382,10 @@ class Music(commands.Cog):
 
         # Grab up to 15 entries from the queue...
         upcoming = list(itertools.islice(player.queue._queue, 0, 15))
-
-        fmt = '\n'.join(f'**`{_["title"]}`**' for _ in upcoming)
-        embed = discord.Embed(title=f'Upcoming - Next {len(upcoming)}', description=fmt)
+        numbered = [f'{i+1}. **`{_["title"]}`**' for i, _ in enumerate(upcoming)]
+        # fmt = '\n'.join(f'**`{_["title"]}`**' for _ in upcoming)
+        fmt = '\n'.join(numbered)
+        embed = discord.Embed(title=f'Upcoming - Next {len(upcoming)} (out of {player.queue.qsize()} total)', description=fmt)
         if player.loop:
             embed.set_footer(text='Looping: ON')
 
