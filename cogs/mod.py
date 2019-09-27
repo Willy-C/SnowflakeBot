@@ -490,7 +490,7 @@ class ModCog(commands.Cog, name='Mod'):
     @purge.command(name='bot', aliases=['bots'])
     async def bots(self, ctx, limit=20, prefix=None):
         def check(m):
-            return (m.author.bot and m.webhook_id is not None) or (prefix and m.content.startswith(prefix))
+            return (m.author.bot and m.webhook_id is None) or (prefix and m.content.startswith(prefix))
         await self.purge_messages(ctx, limit, check)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
