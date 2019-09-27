@@ -193,7 +193,7 @@ class Music(commands.Cog):
         self.players = {}
         with open('data/playlists.json') as f:
             self._playlists = json.load(f)
-        self.save_playlists.start()
+        self.save_playlists_to_json.start()
 
     async def cleanup(self, guild):
         try:
@@ -508,12 +508,17 @@ class Music(commands.Cog):
             await ctx.send('Error: This video is unavailable. Please try again or use another video.', delete_after=10)
 
     @commands.group(name='playlist')
-    async def _playlist(self, ctx):
+    async def _playlist(self, ctx, name=None):
         if ctx.invoked_subcommand is None:
+            if name and name in self._playlists:
+                await ctx.invoke(self.bot.get_command('play playlist'), name=name)
+                return
             await ctx.send_help(ctx.command)
 
     @_playlist.command()
     async def add(self, ctx, name, link):
+        """Add a new playlist/song to save.
+        Names with multiple words must be quoted ex. add 'cool playlist' youtube.com/..."""
         name = name.lower()
         if name in self._playlists:
             return await ctx.send('Sorry that name is already taken, please try again with a different name')
@@ -528,6 +533,7 @@ class Music(commands.Cog):
 
     @_playlist.command()
     async def remove(self, ctx, name):
+        """Remove a saved playlist/song by name"""
         if name not in self._playlists:
             return await ctx.send('Sorry, I am unable to find the playlist with that name.')
         try:
@@ -540,7 +546,7 @@ class Music(commands.Cog):
 
     @_playlist.command()
     async def list(self, ctx):
-
+        """List all saved playlists/songs"""
         formatted = '\n'.join([f'[{k}]({v})' for k, v in self._playlists.items()])
 
         e = discord.Embed(title="Saved Playlists",
@@ -553,11 +559,28 @@ class Music(commands.Cog):
     async def _play(self, ctx, *, name: str):
         await ctx.invoke(self.bot.get_command('play playlist'), name=name)
 
-    # noinspection PyCallingNonCallable
-    @tasks.loop(hours=6)
-    async def save_playlists(self):
+    @_playlist.command()
+    @commands.is_owner()
+    async def save(self, ctx):
+        try:
+            self.save_playlists()
+        except:
+            await ctx.send('An error has occurred ')
+        else:
+            await ctx.message.add_reaction('\U00002705')
+
+    def save_playlists(self):
         with open('data/playlists.json', 'w') as f:
             json.dump(self._playlists, f, indent=2)
+
+    # noinspection PyCallingNonCallable
+    @tasks.loop(hours=6)
+    async def save_playlists_to_json(self):
+        self.save_playlists()
+
+    def cog_unload(self):
+        self.save_playlists_to_json.cancel()
+        self.save_playlists()
 
 def setup(bot):
     bot.add_cog(Music(bot))
