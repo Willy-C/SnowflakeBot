@@ -74,6 +74,10 @@ class HighlightCog(commands.Cog, name='Highlight'):
         if message.author.id == target_id:
             return
 
+        member = message.guild.get_member(target_id)
+        if (member is None or not member.permissions_in(message.channel).read_messages) and target_id != self.bot.owner_id:
+            return
+
         context = await self._get_msg_context(message, key)
 
         if context is None:  # target recently messaged, no need to DM
