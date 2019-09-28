@@ -169,7 +169,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         else:
             e = discord.Embed(color=discord.Color.dark_orange(),
                               description='You do not have any highlight keys')
-        e.add_field(name='Mentions', value=target in self.mentions)
+        e.add_field(name='Mentions', value="ON" if target in self.mentions else "OFF")
         e.set_author(name=user, icon_url=user.avatar_url)
 
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
