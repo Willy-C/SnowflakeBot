@@ -70,13 +70,17 @@ class YTDLSource(discord.PCMVolumeTransformer):
             to_run = partial(ytdl.extract_info, url=search, download=download)
             data = await loop.run_in_executor(None, to_run)
         # data is a dict, but entries is a list of dicts
-
+        print(data)
         if data is None:
+            print('here1')
             return await ctx.send('A fatal error has occurred.')
 
         if 'entries' in data and len(data['entries']) == 1:
+            print('134')
             data = data['entries'][0]
         elif 'entries' in data:
+            print('2')
+
             out = []
             async with ctx.channel.typing():
                 for vid in data['entries']:
@@ -84,7 +88,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
                         out.append({'webpage_url': vid['webpage_url'], 'requester': ctx.author, 'title': vid['title']})
                 await ctx.send(f'Adding {len(out)} songs to queue...')
             return out
-
+        print('3')
         await ctx.send(f'```ini\n[Added {data["title"]} to the Queue.]\n```')
         if download:
             source = ytdl.prepare_filename(data)
