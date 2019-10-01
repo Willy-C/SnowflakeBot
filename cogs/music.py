@@ -71,6 +71,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
             data = await loop.run_in_executor(None, to_run)
         # data is a dict, but entries is a list of dicts
 
+        if data is None:
+            return await ctx.send('A fatal error has occurred.')
+
         if 'entries' in data and len(data['entries']) == 1:
             data = data['entries'][0]
         elif 'entries' in data:
@@ -291,6 +294,9 @@ class Music(commands.Cog):
         # If download is False, source will be a dict which will be used later to regather the stream.
         # If download is True, source will be a discord.FFmpegPCMAudio with a VolumeTransformer.
         source = await YTDLSource.create_source(ctx, search, loop=self.bot.loop, download=False)
+
+        if source is None:
+            return
 
         if isinstance(source, dict):
             await player.queue.put(source)
