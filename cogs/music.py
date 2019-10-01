@@ -508,11 +508,8 @@ class Music(commands.Cog):
             await ctx.send('Error: This video is unavailable. Please try again or use another video.', delete_after=10)
 
     @commands.group(name='playlist')
-    async def _playlist(self, ctx, name=None):
+    async def _playlist(self, ctx):
         if ctx.invoked_subcommand is None:
-            if name and name in self._playlists:
-                await ctx.invoke(self.bot.get_command('play playlist'), name=name)
-                return
             await ctx.send_help(ctx.command)
 
     @_playlist.command()
