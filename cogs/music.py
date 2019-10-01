@@ -292,6 +292,9 @@ class Music(commands.Cog):
         # If download is True, source will be a discord.FFmpegPCMAudio with a VolumeTransformer.
         source = await YTDLSource.create_source(ctx, search, loop=self.bot.loop, download=False)
 
+        if source is None:
+            return
+
         if isinstance(source, dict):
             await player.queue.put(source)
         else:
@@ -313,6 +316,8 @@ class Music(commands.Cog):
             await ctx.send(f'Playing playlist: `{name}`\n')
             await ctx.send('Very long playlist may take a minute to ready', delete_after=3)
             source = await YTDLSource.create_source(ctx, url, loop=self.bot.loop, download=False)
+            if source is None:
+                return
             if isinstance(source, dict):
                 await player.queue.put(source)
             else:
