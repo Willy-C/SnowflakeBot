@@ -286,11 +286,16 @@ class Music(commands.Cog):
         bot.loop.create_task(self.initiate_nodes())
 
     def cog_unload(self):
-        for player in self.bot.wavelink.players.values():
-            self.bot.loop.create_task(player.destroy())
-        self.bot.loop.create_task(self.bot.wavelink.destroy_node(identifier='MAIN'))
+        if not any([player.is_playing for player in self.bot.wavelink.players.values()]):
+            for player in self.bot.wavelink.players.values():
+                self.bot.loop.create_task(player.destroy())
+            self.bot.loop.create_task(self.bot.wavelink.destroy_node(identifier='MAIN'))
 
     async def initiate_nodes(self):
+        _main = self.bot.wavelink.get_node('MAIN')
+        if _main:
+            return _main.set_hook(self.event_hook)
+
         nodes = {'MAIN': {'host': '127.0.0.1',
                           'port': 2333,
                           'rest_url': 'http://127.0.0.1:2333',
