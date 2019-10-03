@@ -65,7 +65,7 @@ class Player(wavelink.Player):
                          '⏭': 'skip',
                          '🔀': 'shuffle',
                          '🔂': 'repeat',
-                         '🔁': 'loop',
+                         # '🔁': 'loop',
                          '➖': 'vol_down',
                          '➕': 'vol_up',
                          'ℹ': 'queue'}
