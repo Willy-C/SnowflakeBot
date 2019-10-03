@@ -58,12 +58,14 @@ class Player(wavelink.Player):
         self.update = False
         self.updating = False
         self.inactive = False
+        self.looping = False
 
         self.controls = {'⏯': 'rp',
                          '⏹': 'stop',
                          '⏭': 'skip',
                          '🔀': 'shuffle',
                          '🔂': 'repeat',
+                         '🔁': 'loop',
                          '➖': 'vol_down',
                          '➕': 'vol_up',
                          'ℹ': 'queue'}
@@ -111,6 +113,9 @@ class Player(wavelink.Player):
             self.current = song
             self.paused = False
 
+            if self.looping:
+                await self.queue.put(song)
+
             await self.play(song)
 
             # Invoke our controller if we aren't already...
@@ -137,8 +142,7 @@ class Player(wavelink.Player):
 
         embed = discord.Embed(title='Music Controller',
                               description=f'<a:eq:628825184941637652>Now Playing:```ini\n{track.title}\n\n'
-                                          f'[EQ]: {self.eq}\n'
-                                          f'[Presets]: Flat/Boost/Piano/Metal```',
+                                          f'[EQ]: {self.eq}```',
                               colour=0xffb347)
         embed.set_thumbnail(url=track.thumb)
 
@@ -150,6 +154,7 @@ class Player(wavelink.Player):
         embed.add_field(name='Requested By', value=track.requester.mention)
         embed.add_field(name='Queue Length', value=str(len(self.entries)))
         embed.add_field(name='Volume', value=f'**`{self.volume}%`**')
+        embed.add_field(name='Looping', value='ON' if self.looping else 'OFF')
 
         if len(self.entries) > 0:
             data = '\n'.join(f'**-** `{t.title[0:45]}{"..." if len(t.title) > 45 else ""}`\n{"-"*10}'
@@ -680,6 +685,26 @@ class Music(commands.Cog):
             player.queue._queue.appendleft(player.current)
 
         player.update = True
+
+    @commands.command(name='loop')
+    async def loop_(self, ctx, toggle:bool=None):
+        """Toggles repeat for whole queue
+        Examples
+        ---------
+        <prefix>loop (will toggle)
+        <prefix>loop on/off
+        """
+        player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
+
+        if toggle:
+            player.looping = toggle
+        else:
+            player.looping = not player.looping
+
+        if player.looping and player.is_playing:
+            await player.queue.put(player.current)
+
+        await ctx.send(f'Looping is now {"on" if player.loop else "off"}!')
 
     @commands.command(name='vol_up', hidden=True)
     async def volume_up(self, ctx):
