@@ -25,7 +25,7 @@ class VoiceConnectionError(commands.CommandError):
     """Custom Exception class for connection errors."""
 
 
-class NoVoiceChannel(VoiceConnectionError):
+class InvalidVoiceChannel(VoiceConnectionError):
     """Exception for cases of invalid Voice Channels."""
 
 
@@ -405,7 +405,7 @@ class Music(commands.Cog):
             try:
                 channel = ctx.author.voice.channel
             except AttributeError:
-                raise NoVoiceChannel('No channel to join. Please either specify a valid channel or join one.')
+                raise InvalidVoiceChannel('No channel to join. Please either specify a valid channel or join one.')
 
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
