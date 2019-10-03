@@ -65,7 +65,7 @@ class Player(wavelink.Player):
                          '⏭': 'skip',
                          '🔀': 'shuffle',
                          '🔂': 'repeat',
-                         # '🔁': 'loop',
+                         '🔁': 'loop',
                          '➖': 'vol_down',
                          '➕': 'vol_up',
                          'ℹ': 'queue'}
@@ -140,8 +140,12 @@ class Player(wavelink.Player):
 
         self.updating = True
 
+
+        descr = f'{"<a:eq:628825184941637652>Now Playing" if self.is_playing and not self.paused else "⏸ PAUSED"}:```ini\n{track.title}\n\n' \
+                f'[EQ]: {self.eq}```'
+
         embed = discord.Embed(title='Music Controller',
-                              description=f'<a:eq:628825184941637652>Now Playing:```ini\n{track.title}\n\n'
+                              description=f'{"<a:eq:628825184941637652>Now Playing" if self.is_playing and not self.paused else "⏸ PAUSED"}:```ini\n{track.title}\n\n'
                                           f'[EQ]: {self.eq}```',
                               colour=0xffb347)
         embed.set_thumbnail(url=track.thumb)
@@ -516,6 +520,9 @@ class Music(commands.Cog):
         player.paused = True
         await player.set_pause(True)
 
+        if not player.updating and not player.update:
+            await player.invoke_controller()
+
     @commands.command(name='resume')
     async def resume_(self, ctx):
         """Resume a currently paused song.
@@ -537,6 +544,9 @@ class Music(commands.Cog):
     async def do_resume(self, ctx):
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
         await player.set_pause(False)
+
+        if not player.updating and not player.update:
+            await player.invoke_controller()
 
     @commands.command(name='skip')
     async def skip_(self, ctx):
@@ -704,7 +714,7 @@ class Music(commands.Cog):
         if player.looping and player.is_playing:
             await player.queue.put(player.current)
 
-        await ctx.send(f'Looping is now {"on" if player.loop else "off"}!')
+        await ctx.send(f'Looping is now {"on" if player.looping else "off"}!')
 
     @commands.command(name='vol_up', hidden=True)
     async def volume_up(self, ctx):
