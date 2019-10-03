@@ -669,7 +669,9 @@ class Music(commands.Cog):
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
         random.shuffle(player.queue._queue)
 
-        player.update = True
+        await ctx.send('Shuffling..', delete_after=5)
+        if not player.updating and not player.update:
+            await player.invoke_controller()
 
     @commands.command(name='repeat')
     async def repeat_(self, ctx):
@@ -694,7 +696,8 @@ class Music(commands.Cog):
         else:
             player.queue._queue.appendleft(player.current)
 
-        player.update = True
+        if not player.updating and not player.update:
+            await player.invoke_controller()
 
     @commands.command(name='loop')
     async def loop_(self, ctx, toggle:bool=None):
@@ -714,7 +717,7 @@ class Music(commands.Cog):
         if player.looping and player.is_playing:
             await player.queue.put(player.current)
 
-        await ctx.send(f'Looping is now {"on" if player.looping else "off"}!')
+        await ctx.send(f'Looping is now {"on" if player.looping else "off"}!', delete_after=5)
 
     @commands.command(name='vol_up', hidden=True)
     async def volume_up(self, ctx):
@@ -730,7 +733,8 @@ class Music(commands.Cog):
             await ctx.send('Maximum volume reached', delete_after=7)
 
         await player.set_volume(vol)
-        player.update = True
+        if not player.updating and not player.update:
+            await player.invoke_controller()
 
     @commands.command(name='vol_down', hidden=True)
     async def volume_down(self, ctx):
@@ -746,7 +750,8 @@ class Music(commands.Cog):
             await ctx.send('Player is currently muted', delete_after=10)
 
         await player.set_volume(vol)
-        player.update = True
+        if not player.updating and not player.update:
+            await player.invoke_controller()
 
     @commands.command(name='seteq')
     async def set_eq(self, ctx, *, eq: str):
