@@ -137,15 +137,12 @@ class Player(wavelink.Player):
         """Invoke our controller message, and spawn a reaction controller if one isn't alive."""
         if not track:
             track = self.current
-
+        if track is None:
+            return
         self.updating = True
 
-
-        descr = f'{"<a:eq:628825184941637652>Now Playing" if self.is_playing and not self.paused else "⏸ PAUSED"}:```ini\n{track.title}\n\n' \
-                f'[EQ]: {self.eq}```'
-
         embed = discord.Embed(title='Music Controller',
-                              description=f'{"<a:eq:628825184941637652>Now Playing" if self.is_playing and not self.paused else "⏸ PAUSED"}:```ini\n{track.title}\n\n'
+                              description=f'{"<a:eq:628825184941637652> Now Playing:" if self.is_playing and not self.paused else "⏸ PAUSED"}```ini\n{track.title}\n\n'
                                           f'[EQ]: {self.eq}```',
                               colour=0xffb347)
         embed.set_thumbnail(url=track.thumb)
@@ -462,7 +459,7 @@ class Music(commands.Cog):
                            f' with {len(tracks.tracks)} songs to the queue.\n```')
         else:
             track = tracks[0]
-            await ctx.send(f'```ini\nAdded {track.title} to the Queue\n```', delete_after=15)
+            await ctx.send(f'```ini\nAdded {track.title} to the Queue\n```')
             await player.queue.put(Track(track.id, track.info, ctx=ctx))
 
         if player.controller_message and player.is_playing:
@@ -609,11 +606,11 @@ class Music(commands.Cog):
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
 
-        if not 0 < value < 101:
+        if not 0 <= value <= 100:
             return await ctx.send('Please enter a value between 1 and 100.')
 
         await player.set_volume(value)
-        await ctx.send(f'Set the volume to **{value}**%', delete_after=7)
+        await ctx.send(f'Set the volume to **{value}**%')
 
         if not player.updating and not player.update:
             await player.invoke_controller()
@@ -753,7 +750,7 @@ class Music(commands.Cog):
         if not player.updating and not player.update:
             await player.invoke_controller()
 
-    @commands.command(name='seteq')
+    @commands.command(name='eq')
     async def set_eq(self, ctx, *, eq: str):
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
@@ -765,7 +762,7 @@ class Music(commands.Cog):
         await ctx.send(f'The player Equalizer was set to - {eq.capitalize()}')
 
     @commands.command()
-    async def info(self, ctx):
+    async def wlinfo(self, ctx):
         """Retrieve various Node/Server/Player information."""
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
         node = player.node
