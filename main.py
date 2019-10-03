@@ -21,12 +21,12 @@ startup_extensions = ['jishaku',
                       'cogs.random',
                       'cogs.googleimage',
                       'cogs.general',
-                      'cogs.music',
                       'cogs.highlight',
                       'cogs.mod',
                       'cogs.prefix',
                       'cogs.latex',
-                      'cogs.info']
+                      'cogs.info',
+                      'cogs.wavelink']
 
 
 def get_prefix(bot, message):
