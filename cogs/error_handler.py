@@ -6,6 +6,7 @@ import discord
 import re
 
 from .music import InvalidVoiceChannel, VoiceConnectionError
+from .wavelink import NoVoiceChannel
 from utils.errors import NoBlacklist
 from .latex import TexRenderError
 
@@ -54,7 +55,7 @@ class CommandErrorHandler(commands.Cog):
         elif isinstance(error, commands.BotMissingPermissions):
             return await ctx.send(f'I cannot complete this command, I am missing the following permission{"" if len(error.missing_perms) == 1 else "s"}: {", ".join(error.missing_perms)}')
 
-        elif isinstance(error, InvalidVoiceChannel):
+        elif isinstance(error, InvalidVoiceChannel) or isinstance(error, NoVoiceChannel):
             return await ctx.send('No channel to join. Please either specify a valid channel or join one.')
 
         elif isinstance(error, NoBlacklist):
