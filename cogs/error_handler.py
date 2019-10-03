@@ -5,7 +5,6 @@ import discord
 
 import re
 
-from .music import InvalidVoiceChannel, VoiceConnectionError
 from .wavelink import NoVoiceChannel
 from utils.errors import NoBlacklist
 from .latex import TexRenderError
