@@ -16,6 +16,7 @@ import random
 import re
 import wavelink
 from collections import deque
+from async_timeout import timeout
 from discord.ext import commands
 
 RURL = re.compile(r'https?:\/\/(?:www\.)?.+')
@@ -105,7 +106,14 @@ class Player(wavelink.Player):
 
             self.inactive = False
 
-            song = await self.queue.get()
+            try:
+                async with timeout(300):
+                    song = await self.queue.get()
+            except asyncio.TimeoutError:
+                await self.destroy_controller()
+                await self.destroy()
+                return
+
             if not song:
                 continue
 
