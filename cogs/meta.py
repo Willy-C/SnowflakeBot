@@ -136,5 +136,6 @@ class MetaCog(commands.Cog, name='Meta'):
         final_url = f'<{url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
         await ctx.send(final_url)
 
+
 def setup(bot):
     bot.add_cog(MetaCog(bot))

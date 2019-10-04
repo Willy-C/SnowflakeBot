@@ -17,7 +17,6 @@ import re
 import wavelink
 from collections import deque
 from discord.ext import commands
-from typing import Union
 
 RURL = re.compile(r'https?:\/\/(?:www\.)?.+')
 
@@ -46,7 +45,7 @@ class Track(wavelink.Track):
 
 class Player(wavelink.Player):
 
-    def __init__(self, bot: Union[commands.Bot, commands.AutoShardedBot], guild_id: int, node: wavelink.Node):
+    def __init__(self, bot: commands.Bot, guild_id: int, node: wavelink.Node):
         super(Player, self).__init__(bot, guild_id, node)
 
         self.queue = asyncio.Queue()
@@ -283,7 +282,7 @@ class Player(wavelink.Player):
 class Music(commands.Cog):
     """Our main Music Cog."""
 
-    def __init__(self, bot: Union[commands.Bot, commands.AutoShardedBot]):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
         if not hasattr(bot, 'wavelink'):
@@ -296,6 +295,10 @@ class Music(commands.Cog):
             for player in self.bot.wavelink.players.values():
                 self.bot.loop.create_task(player.destroy())
             self.bot.loop.create_task(self.bot.wavelink.destroy_node(identifier='MAIN'))
+        else:
+            for player in self.bot.wavelink.players.values():
+                if not player.is_connected:
+                    self.bot.loop.create_task(player.destroy())
 
     async def initiate_nodes(self):
         _main = self.bot.wavelink.get_node('MAIN')
@@ -372,15 +375,15 @@ class Music(commands.Cog):
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
         if ctx.author.id in attr:
-            await ctx.send(f'{ctx.author.mention}, you have already voted to {command}!', delete_after=15)
+            await ctx.send(f'{ctx.author.mention}, you have already voted to {command}!', delete_after=5)
         elif await self.vote_check(ctx, command):
-            await ctx.send(f'Vote request for {command} passed!', delete_after=20)
+            await ctx.send(f'Vote request for {command} passed!', delete_after=10)
             to_do = getattr(self, f'do_{command}')
             await to_do(ctx)
         else:
             await ctx.send(f'{ctx.author.mention}, has voted to {command} the song!'
                            f' **{self.required(player, ctx.invoked_with) - len(attr)}** more votes needed!',
-                           delete_after=45)
+                           delete_after=5)
 
     @commands.command(name='reactcontrol', hidden=True)
     async def react_control(self, ctx):
@@ -441,8 +444,6 @@ class Music(commands.Cog):
 
         if not player.is_connected or (player.is_connected and ctx.author.voice and ctx.author.voice.channel != ctx.guild.me.voice.channel):
             await ctx.invoke(self.connect_)
-            # return await ctx.send('Bot is not connected to voice. Please join a voice channel to play music.')
-
 
         if not RURL.match(query):
             query = f'ytsearch:{query}'
@@ -509,8 +510,9 @@ class Music(commands.Cog):
         if player.paused:
             return
 
-        return await self.do_pause(ctx)
+        await ctx.send(f'{ctx.author} has paused the music!', delete_after=5)
 
+        return await self.do_pause(ctx)
 
     async def do_pause(self, ctx):
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
@@ -536,6 +538,8 @@ class Music(commands.Cog):
         if not player.paused:
             return
 
+        await ctx.send(f'{ctx.author} has resumed the music!', delete_after=5)
+
         return await self.do_resume(ctx)
 
     async def do_resume(self, ctx):
@@ -558,6 +562,8 @@ class Music(commands.Cog):
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
 
+        await ctx.send(f'{ctx.author} has skipped the song!', delete_after=5)
+
         return await self.do_skip(ctx)
 
     async def do_skip(self, ctx):
@@ -577,6 +583,8 @@ class Music(commands.Cog):
 
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
+
+        await ctx.send(f'{ctx.author} has stopped the music!', delete_after=5)
 
         return await self.do_stop(ctx)
 
@@ -660,6 +668,8 @@ class Music(commands.Cog):
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
 
+        await ctx.send(f'{ctx.author} has shuffled the queue!', delete_after=5)
+
         return await self.do_shuffle(ctx)
 
     async def do_shuffle(self, ctx):
@@ -682,6 +692,8 @@ class Music(commands.Cog):
 
         if not player.is_connected:
             return
+
+        await ctx.send(f'{ctx.author} repeated the current song!', delete_after=5)
 
         return await self.do_repeat(ctx)
 
@@ -715,6 +727,8 @@ class Music(commands.Cog):
             await player.queue.put(player.current)
 
         await ctx.send(f'Looping is now {"on" if player.looping else "off"}!', delete_after=5)
+        if not player.updating and not player.update:
+            await player.invoke_controller()
 
     @commands.command(name='vol_up', hidden=True)
     async def volume_up(self, ctx):
@@ -728,6 +742,8 @@ class Music(commands.Cog):
         if vol > 100:
             vol = 100
             await ctx.send('Maximum volume reached', delete_after=7)
+
+        await ctx.send(f'{ctx.author} has raised the volume!', delete_after=5)
 
         await player.set_volume(vol)
         if not player.updating and not player.update:
@@ -746,6 +762,8 @@ class Music(commands.Cog):
             vol = 0
             await ctx.send('Player is currently muted', delete_after=10)
 
+        await ctx.send(f'{ctx.author} has lowered the volume!', delete_after=5)
+
         await player.set_volume(vol)
         if not player.updating and not player.update:
             await player.invoke_controller()
@@ -759,7 +777,7 @@ class Music(commands.Cog):
 
         await player.set_preq(eq)
         player.eq = eq.capitalize()
-        await ctx.send(f'The player Equalizer was set to - {eq.capitalize()}')
+        await ctx.send(f'The player Equalizer was set to - {eq.capitalize()} - {ctx.author}')
 
     @commands.command()
     async def wlinfo(self, ctx):
