@@ -465,14 +465,17 @@ class Music(commands.Cog):
                 await player.queue.put(Track(t.id, t.info, ctx=ctx))
 
             await ctx.send(f'```ini\nAdded the playlist {tracks.data["playlistInfo"]["name"]}'
-                           f' with {len(tracks.tracks)} songs to the queue.\n```')
+                           f' with {len(tracks.tracks)} songs to the queue.\n```',delete_after=15)
         else:
             track = tracks[0]
-            await ctx.send(f'```ini\nAdded {track.title} to the Queue\n```')
+            await ctx.send(f'```ini\nAdded {track.title} to the Queue\n```',delete_after=8)
             await player.queue.put(Track(track.id, track.info, ctx=ctx))
 
         if player.controller_message and player.is_playing:
             await player.invoke_controller()
+
+        await asyncio.sleep(5)
+        await ctx.message.delete()
 
     @commands.command(name='now_playing', aliases=['np', 'current', 'currentsong'])
     async def now_playing(self, ctx):
