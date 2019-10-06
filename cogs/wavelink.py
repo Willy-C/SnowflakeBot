@@ -649,13 +649,13 @@ class Music(commands.Cog):
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
 
-        upcoming = list(itertools.islice(player.entries, 0, 10))
+        upcoming = list(itertools.islice(player.entries, 0, 15))
 
         if not upcoming:
             return await ctx.send('```\nNo more songs in the Queue!\n```', delete_after=15)
-
-        fmt = '\n'.join(f'**`{str(song)}`**' for song in upcoming)
-        embed = discord.Embed(title=f'Upcoming - Next {len(upcoming)}', description=fmt)
+        numbered = [f'{i+1}. **`{str(song)}`**' for i, song in enumerate(upcoming)]
+        # fmt = '\n'.join(f'**`{str(song)}`**' for song in upcoming)
+        embed = discord.Embed(title=f'Upcoming - Next {len(upcoming)}', description=numbered)
 
         await ctx.send(embed=embed)
 
