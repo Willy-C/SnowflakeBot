@@ -652,10 +652,11 @@ class Music(commands.Cog):
         upcoming = list(itertools.islice(player.entries, 0, 15))
 
         if not upcoming:
-            return await ctx.send('```\nNo more songs in the Queue!\n```', delete_after=15)
+            return await ctx.send('```\nNo more songs in the Queue!\n```')
         numbered = [f'{i+1}. **`{str(song)}`**' for i, song in enumerate(upcoming)]
+        fmt = '\n'.join(numbered)
         # fmt = '\n'.join(f'**`{str(song)}`**' for song in upcoming)
-        embed = discord.Embed(title=f'Upcoming - Next {len(upcoming)}', description=numbered)
+        embed = discord.Embed(title=f'Upcoming - Next {len(upcoming)}', description=fmt)
 
         await ctx.send(embed=embed)
 
