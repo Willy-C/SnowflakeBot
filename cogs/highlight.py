@@ -116,7 +116,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
                 await self._dm_highlight(message, key)
 
         for user in message.mentions:
-            if user.id in self.mentions:
+            if user.id in self.mentions and user != message.author:
                 await self._dm_mention(message, user.id)
 
     @commands.group()

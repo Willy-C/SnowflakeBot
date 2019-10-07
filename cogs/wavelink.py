@@ -22,13 +22,6 @@ from discord.ext import commands, tasks
 
 RURL = re.compile(r'https?:\/\/(?:www\.)?.+')
 
-class VoiceConnectionError(commands.CommandError):
-    """Custom Exception class for connection errors."""
-
-
-class InvalidVoiceChannel(VoiceConnectionError):
-    """Exception for cases of invalid Voice Channels."""
-
 
 class Track(wavelink.Track):
     __slots__ = ('requester', 'channel', 'message')
@@ -424,7 +417,7 @@ class Music(commands.Cog):
             try:
                 channel = ctx.author.voice.channel
             except AttributeError:
-                raise InvalidVoiceChannel('No channel to join. Please either specify a valid channel or join one.')
+                return await ctx.send('No channel to join. Please either specify a valid channel or join one.')
 
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
@@ -473,10 +466,10 @@ class Music(commands.Cog):
                 await player.queue.put(Track(t.id, t.info, ctx=ctx))
 
             await ctx.send(f'```ini\nAdded the playlist {tracks.data["playlistInfo"]["name"]}'
-                           f' with {len(tracks.tracks)} songs to the queue.\n```',delete_after=15)
+                           f' with {len(tracks.tracks)} songs to the queue.\n```', delete_after=15)
         else:
             track = tracks[0]
-            await ctx.send(f'```ini\nAdded {track.title} to the Queue\n```',delete_after=8)
+            await ctx.send(f'```ini\nAdded {track.title} to the Queue\n```', delete_after=8)
             await player.queue.put(Track(track.id, track.info, ctx=ctx))
 
         if player.controller_message and player.is_playing:
@@ -732,7 +725,7 @@ class Music(commands.Cog):
             await player.invoke_controller()
 
     @commands.command(name='loop')
-    async def loop_(self, ctx, toggle:bool=None):
+    async def loop_(self, ctx, toggle: bool=None):
         """Toggles repeat for whole queue
         Examples
         ---------
@@ -824,6 +817,43 @@ class Music(commands.Cog):
               f'Server Uptime: `{datetime.timedelta(milliseconds=node.stats.uptime)}`'
         await ctx.send(fmt)
 
+    @commands.command()
+    async def seek(self, ctx, time):
+        """Jump to a certain time of the song
+        ex. seek 0 (jump to 0s - beginning)
+            seek 4:30 (jump to 4m30s)
+            seek 1:15:10 (jump to 1h15m10s)"""
+        player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
+
+        if not player.is_connected:
+            return await ctx.send('I am not currently connected to voice!')
+        if not player.is_playing:
+            return await ctx.send('I am not currently playing anything!')
+
+        *_, h, m, s = f"::{time}".split(':')
+        if all([not t.isdigit() for t in [h, m, s]]):
+            return await ctx.send('Invalid time inputted! Ex:\n'
+                                  'seek 0 (jump to 0s - beginning)\n'
+                                  'seek 4:30 (jump to 4m30s)\n'
+                                  'seek 1:15:10 (jump to 1h15m10s)')
+
+        h = 0 if not h.isdigit() else int(h)
+        m = 0 if not m.isdigit() else int(m)
+        s = 0 if not s.isdigit() else int(s)
+
+        ms = h*60*60*1000 + m*60*1000 + s*1000
+
+        if ms == 0:
+            await ctx.send(f'{ctx.author} moved the song to the beginning', delete_after=10)
+        elif ms > player.current.length:
+            return await ctx.send('The inputted time is longer than the song!')
+        else:
+            await ctx.send(f'{ctx.author} skipped the song to {f"{h}h" if h else ""}{f"{m}m" if m else ""}{f"{s}s" if s else ""}', delete_after=10)
+
+        await player.seek(ms)
+
+    # Custom playlist stuff:
+
     @commands.group(invoke_without_command=True)
     async def playlist(self, ctx, *, name):
         url = self._playlists.get(name)
@@ -891,6 +921,7 @@ class Music(commands.Cog):
     @tasks.loop(hours=6)
     async def save_playlists_to_json(self):
         self.save_playlists()
+
 
 def setup(bot):
     bot.add_cog(Music(bot))
