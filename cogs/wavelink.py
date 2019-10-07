@@ -14,10 +14,11 @@ import itertools
 import math
 import random
 import re
+import json
 import wavelink
 from collections import deque
 from async_timeout import timeout
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 RURL = re.compile(r'https?:\/\/(?:www\.)?.+')
 
@@ -292,6 +293,10 @@ class Music(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.players = {}
+        with open('data/playlists.json') as f:
+            self._playlists = json.load(f)
+        self.save_playlists_to_json.start()
 
         if not hasattr(bot, 'wavelink'):
             self.bot.wavelink = wavelink.Client(bot)
@@ -307,6 +312,9 @@ class Music(commands.Cog):
             for player in self.bot.wavelink.players.values():
                 if not player.is_connected:
                     self.bot.loop.create_task(player.destroy())
+
+        self.save_playlists_to_json.cancel()
+        self.save_playlists()
 
     async def initiate_nodes(self):
         _main = self.bot.wavelink.get_node('MAIN')
@@ -426,7 +434,7 @@ class Music(commands.Cog):
 
         await player.connect(channel.id)
 
-    @commands.command(name='play', aliases=['sing'])
+    @commands.command(name='play', aliases=['p'])
     async def play_(self, ctx, *, query: str):
         """Queue a song or playlist for playback.
         Aliases
@@ -475,7 +483,10 @@ class Music(commands.Cog):
             await player.invoke_controller()
 
         await asyncio.sleep(5)
-        await ctx.message.delete()
+        try:
+            await ctx.message.delete()
+        except discord.HTTPException:
+            pass
 
     @commands.command(name='now_playing', aliases=['np', 'current', 'currentsong'])
     async def now_playing(self, ctx):
@@ -813,6 +824,73 @@ class Music(commands.Cog):
               f'Server Uptime: `{datetime.timedelta(milliseconds=node.stats.uptime)}`'
         await ctx.send(fmt)
 
+    @commands.group(invoke_without_command=True)
+    async def playlist(self, ctx, *, name):
+        url = self._playlists.get(name)
+        if url:
+            await ctx.invoke(self.play_(), query=url)
+        else:
+            await ctx.send(f'Unable to find a saved playlist/song with that name. All saved playlists are listed here:')
+            await ctx.invoke(self.list)
+
+    @playlist.command()
+    async def add(self, ctx, name, link):
+        """Add a new playlist/song to save.
+        Names with multiple words must be quoted ex. add "cool playlist" youtube.com/..."""
+        name = name.lower()
+        if name in self._playlists:
+            return await ctx.send('Sorry that name is already taken, please try again with a different name')
+        else:
+            try:
+                self._playlists[name] = link
+            except:
+                return await ctx.send('An error has occurred.')
+            else:
+                await ctx.message.add_reaction('\U00002705')  # React with checkmark
+                await ctx.send(f'Added playlist `{name}`, with link: `{link}`')
+
+    @playlist.command()
+    async def remove(self, ctx, *, name):
+        """Remove a saved playlist/song by name"""
+        if name not in self._playlists:
+            return await ctx.send('Sorry, I am unable to find the playlist with that name.')
+        try:
+            del self._playlists[name]
+        except:
+            await ctx.send('An error has occurred.')
+        else:
+            await ctx.message.add_reaction('\U00002705')  # React with checkmark
+            await ctx.send(f'Removed playlist `{name}`')
+
+    @playlist.command()
+    async def list(self, ctx):
+        """List all saved playlists/songs"""
+        formatted = '\n'.join([f'[{k}]({v})' for k, v in self._playlists.items()])
+
+        e = discord.Embed(title="Saved Playlists",
+                          colour=discord.Color.red(),
+                          description=formatted)
+
+        await ctx.send(embed=e)
+
+    @playlist.command()
+    @commands.is_owner()
+    async def save(self, ctx):
+        try:
+            self.save_playlists()
+        except Exception as e:
+            await ctx.send(f'An error has occurred: `{e}` ')
+        else:
+            await ctx.message.add_reaction('\U00002705')
+
+    def save_playlists(self):
+        with open('data/playlists.json', 'w') as f:
+            json.dump(self._playlists, f, indent=2)
+
+    # noinspection PyCallingNonCallable
+    @tasks.loop(hours=6)
+    async def save_playlists_to_json(self):
+        self.save_playlists()
 
 def setup(bot):
     bot.add_cog(Music(bot))
