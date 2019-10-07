@@ -828,7 +828,7 @@ class Music(commands.Cog):
     async def playlist(self, ctx, *, name):
         url = self._playlists.get(name)
         if url:
-            await ctx.invoke(self.play_(), query=url)
+            await ctx.invoke(self.play_, query=url)
         else:
             await ctx.send(f'Unable to find a saved playlist/song with that name. All saved playlists are listed here:')
             await ctx.invoke(self.list)
