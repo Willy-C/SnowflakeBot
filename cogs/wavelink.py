@@ -481,7 +481,7 @@ class Music(commands.Cog):
         except discord.HTTPException:
             pass
 
-    @commands.command(name='now_playing', aliases=['np', 'current', 'currentsong'])
+    @commands.command(name='np', aliases=['current'])
     async def now_playing(self, ctx):
         """Invoke the player controller.
         Aliases
@@ -667,7 +667,7 @@ class Music(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(name='shuffle', aliases=['mix'])
+    @commands.command(name='shuffle')
     async def shuffle_(self, ctx):
         """Shuffle the current queue.
         Aliases
@@ -820,8 +820,8 @@ class Music(commands.Cog):
     @commands.command()
     async def seek(self, ctx, time):
         """Jump to a certain time of the song
-        ex. seek 0 (jump to 0s - beginning)
-            seek 4:30 (jump to 4m30s)
+        ex. seek 0       (jump to 0s - beginning)
+            seek 4:30    (jump to 4m30s)
             seek 1:15:10 (jump to 1h15m10s)"""
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
@@ -833,8 +833,8 @@ class Music(commands.Cog):
         *_, h, m, s = f"::{time}".split(':')
         if all([not t.isdigit() for t in [h, m, s]]):
             return await ctx.send('Invalid time inputted! Ex:\n'
-                                  'seek 0 (jump to 0s - beginning)\n'
-                                  'seek 4:30 (jump to 4m30s)\n'
+                                  'seek 0       (jump to 0s - beginning)\n'
+                                  'seek 4:30    (jump to 4m30s)\n'
                                   'seek 1:15:10 (jump to 1h15m10s)')
 
         h = 0 if not h.isdigit() else int(h)
@@ -844,7 +844,7 @@ class Music(commands.Cog):
         ms = h*60*60*1000 + m*60*1000 + s*1000
 
         if ms == 0:
-            await ctx.send(f'{ctx.author} moved the song to the beginning', delete_after=10)
+            await ctx.send(f'{ctx.author} restarted the song from the beginning', delete_after=10)
         elif ms > player.current.length:
             return await ctx.send('The inputted time is longer than the song!')
         else:
