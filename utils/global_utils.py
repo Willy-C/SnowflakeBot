@@ -57,6 +57,8 @@ async def confirm_prompt(ctx: commands.Context, msg):
     except TimeoutError:
         await ctx.send('1 minute has passed. Aborting...', delete_after=5)
         return False
+    except discord.HTTPException:
+        pass
     finally:
         await prompt.delete()
 
