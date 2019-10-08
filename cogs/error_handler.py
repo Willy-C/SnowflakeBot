@@ -21,7 +21,7 @@ class CommandErrorHandler(commands.Cog):
 
         # if hasattr(ctx.command, 'on_error'):
         #     return
-
+        await self.bot.wait_until_ready()
         if hasattr(ctx, 'local_handled'):
             if ctx.local_handled:
                 return
@@ -73,7 +73,6 @@ class CommandErrorHandler(commands.Cog):
                        f'If you really want to know what went wrong:\n'
                        f'||```py\n{tb[-1]}```||')
 
-        await self.bot.wait_until_read()
         me = self.bot.get_user(self.bot.owner_id)
         e = discord.Embed(title=f'An unhandled error occurred in {ctx.guild} | #{ctx.channel}',
                           description=f'Invocation message: {ctx.message.content}\n'
