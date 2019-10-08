@@ -47,8 +47,8 @@ class MetaCog(commands.Cog, name='Meta'):
                           description=f'[Click here to invite me](https://discordapp.com/oauth2/authorize?client_id={self.bot.user.id}&permissions=8&scope=bot)')
         await ctx.send(embed=e)
 
-    @commands.command(name='allemojis', hidden=True)
-    async def guild_emojis(self, ctx, codepoint: bool = False):
+    @commands.command(name='allemojis', aliases=['allemotes'], hidden=True)
+    async def all_guild_emojis(self, ctx, codepoint: bool = False):
         """
         Returns all emojis from every guild the bot can see
         Pass in True as a parameter to get codepoints"""

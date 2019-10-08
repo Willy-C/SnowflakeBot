@@ -112,13 +112,13 @@ class GuildCog(commands.Cog, name='Guild'):
         await ctx.send(embed=e)
         await ctx.send(f'You can use {ctx.prefix}share to get the link for a single voice channel or your current voice channel', delete_after=5)
 
-    @commands.command(name='emojis')
+    @commands.command(name='emojis', aliases=['emotes'])
     async def guild_emojis(self, ctx, codepoint: bool = False):
         """Returns all emojis in the guild sorted by name
         Pass in True as a parameter to get codepoints"""
         emojis = sorted(ctx.guild.emojis, key=lambda e: e.name)
         paginator = commands.Paginator(suffix='', prefix='')
-        paginator.add_line(f'Emojis of {ctx.guild.name}:')
+        paginator.add_line(f'{ctx.invoked_with.capitalize()} of {ctx.guild.name}:')
         if codepoint:
             for emoji in emojis:
                 paginator.add_line(f'{emoji} -- {emoji.name} -- `{emoji}`')
