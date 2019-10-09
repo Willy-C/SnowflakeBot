@@ -23,6 +23,20 @@ from discord.ext import commands, tasks
 RURL = re.compile(r'https?:\/\/(?:www\.)?.+')
 
 
+class SongTime(commands.Converter):
+    async def convert(self, ctx, argument):
+        *_, h, m, s = f"::{argument}".split(':')
+        if all([not t.isdigit() for t in [h, m, s]]):
+            return
+
+        h = 0 if not h.isdigit() else int(h)
+        m = 0 if not m.isdigit() else int(m)
+        s = 0 if not s.isdigit() else int(s)
+
+        td = datetime.timedelta(hours=h, minutes=m, seconds=s)
+        return td
+
+
 class Track(wavelink.Track):
     __slots__ = ('requester', 'channel', 'message')
 
@@ -46,7 +60,7 @@ class Player(wavelink.Player):
         self.queue = asyncio.Queue()
         self.next_event = asyncio.Event()
 
-        self.volume = 40
+        self.volume = 50
         self.controller_message = None
         self.reaction_task = None
         self.update = False
@@ -273,7 +287,7 @@ class Player(wavelink.Player):
     async def is_current_fresh(self, chan):
         """Check whether our controller is fresh in message history."""
         try:
-            async for m in chan.history(limit=8):
+            async for m in chan.history(limit=5):
                 if m.id == self.controller_message.id:
                     return True
         except (discord.HTTPException, AttributeError):
@@ -525,7 +539,7 @@ class Music(commands.Cog):
         if player.paused:
             return
 
-        await ctx.send(f'{ctx.author} has paused the music!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} has paused the music!', delete_after=5)
 
         return await self.do_pause(ctx)
 
@@ -553,7 +567,7 @@ class Music(commands.Cog):
         if not player.paused:
             return
 
-        await ctx.send(f'{ctx.author} has resumed the music!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} has resumed the music!', delete_after=5)
 
         return await self.do_resume(ctx)
 
@@ -577,7 +591,7 @@ class Music(commands.Cog):
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
 
-        await ctx.send(f'{ctx.author} has skipped the song!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} has skipped the song!', delete_after=5)
 
         return await self.do_skip(ctx)
 
@@ -599,7 +613,7 @@ class Music(commands.Cog):
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
 
-        await ctx.send(f'{ctx.author} has stopped the music!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} has stopped the music!', delete_after=5)
 
         return await self.do_stop(ctx)
 
@@ -684,7 +698,7 @@ class Music(commands.Cog):
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
 
-        await ctx.send(f'{ctx.author} has shuffled the queue!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} has shuffled the queue!', delete_after=5)
 
         return await self.do_shuffle(ctx)
 
@@ -709,7 +723,7 @@ class Music(commands.Cog):
         if not player.is_connected:
             return
 
-        await ctx.send(f'{ctx.author} repeated the current song!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} repeated the current song!', delete_after=5)
 
         return await self.do_repeat(ctx)
 
@@ -759,7 +773,7 @@ class Music(commands.Cog):
             vol = 100
             await ctx.send('Maximum volume reached', delete_after=7)
 
-        await ctx.send(f'{ctx.author} has raised the volume!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} has raised the volume!', delete_after=5)
 
         await player.set_volume(vol)
         if not player.updating and not player.update:
@@ -778,7 +792,7 @@ class Music(commands.Cog):
             vol = 0
             await ctx.send('Player is currently muted', delete_after=10)
 
-        await ctx.send(f'{ctx.author} has lowered the volume!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} has lowered the volume!', delete_after=5)
 
         await player.set_volume(vol)
         if not player.updating and not player.update:
@@ -793,7 +807,7 @@ class Music(commands.Cog):
 
         await player.set_preq(eq)
         player.eq = eq.capitalize()
-        await ctx.send(f'The player Equalizer was set to - {eq.capitalize()} - {ctx.author}')
+        await ctx.send(f'The player Equalizer was set to - {eq.capitalize()} - {ctx.author.mention}')
 
     @commands.command()
     async def wlinfo(self, ctx):
@@ -818,7 +832,7 @@ class Music(commands.Cog):
         await ctx.send(fmt)
 
     @commands.command()
-    async def seek(self, ctx, time):
+    async def seek(self, ctx, time: SongTime):
         """Jump to a certain time of the song
         ex. seek 0       (jump to 0s - beginning)
             seek 4:30    (jump to 4m30s)
@@ -828,29 +842,106 @@ class Music(commands.Cog):
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
         if not player.is_playing:
-            return await ctx.send('I am not currently playing anything!')
-
-        *_, h, m, s = f"::{time}".split(':')
-        if all([not t.isdigit() for t in [h, m, s]]):
-            return await ctx.send('Invalid time inputted! Ex:\n'
+            return await ctx.send('I am currently not playing anything!')
+        if time is None:
+            return await ctx.send('Invalid time inputted!\n'
+                                  '```Try:\n'
                                   'seek 0       (jump to 0s - beginning)\n'
                                   'seek 4:30    (jump to 4m30s)\n'
-                                  'seek 1:15:10 (jump to 1h15m10s)')
+                                  'seek 1:15:10 (jump to 1h15m10s)```')
 
-        h = 0 if not h.isdigit() else int(h)
-        m = 0 if not m.isdigit() else int(m)
-        s = 0 if not s.isdigit() else int(s)
-
-        ms = h*60*60*1000 + m*60*1000 + s*1000
+        ms = time.seconds*1000
 
         if ms == 0:
-            await ctx.send(f'{ctx.author} restarted the song from the beginning', delete_after=10)
+            await ctx.send(f'{ctx.author.mention} restarted the song from the beginning', delete_after=10)
         elif ms > player.current.length:
             return await ctx.send('The inputted time is longer than the song!')
         else:
-            await ctx.send(f'{ctx.author} skipped the song to {f"{h}h" if h else ""}{f"{m}m" if m else ""}{f"{s}s" if s else ""}', delete_after=10)
+            await ctx.send(f'{ctx.author.mention} skipped the song to {time}', delete_after=10)
 
         await player.seek(ms)
+        await asyncio.sleep(5)
+        try:
+            await ctx.message.delete()
+        except discord.HTTPException:
+            pass
+
+    @commands.command(name='ff', aliases=['fastforward'])
+    async def fast_forward(self, ctx, time: SongTime):
+        """Fast forward a certain amount of time
+        ex. ff 10      (fast forwards 10s)
+            ff 4:30    (fast forwards 4m30s)
+            ff 1:15:10 (fast forwards 1h15m10s)"""
+        player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
+
+        if not player.is_connected:
+            return await ctx.send('I am not currently connected to voice!')
+        if not player.is_playing:
+            return await ctx.send('I am currently not playing anything!')
+        if time is None:
+            return await ctx.send('Invalid time inputted!\n'
+                                  '```Try:\n'
+                                  'ff 10      (fast forwards 10s)\n'
+                                  'ff 4:30    (fast forwards 4m30s)\n'
+                                  'ff 1:15:10 (fast forwards 1h15m10s)```')
+
+        ms = time.seconds*1000
+        curr = player.position
+
+        if ms == 0:
+            return await ctx.send(f'Please enter a time that is at least 1 second', delete_after=10)
+        elif ms + curr > player.current.length:
+            remaining = str(datetime.timedelta(milliseconds=player.current.length - curr))
+            return await ctx.send(f'{ctx.author.mention} Not enough of the song is left to fast forward to! ({remaining} remaining)', delete_after=10)
+        else:
+            current = str(datetime.timedelta(milliseconds=curr + ms))
+            await ctx.send(f'{ctx.author} fast forwarded the song by: {time} - now at: {current}', delete_after=10)
+
+        await player.seek(curr+ms)
+        await asyncio.sleep(5)
+        try:
+            await ctx.message.delete()
+        except discord.HTTPException:
+            pass
+
+    @commands.command(name='rewind', aliases=['rwd'])
+    async def rewind(self, ctx, time: SongTime):
+        """Fast forward a certain amount of time
+        ex. rwd 10      (rewinds 10s)
+            rwd 4:30    (rewinds 4m30s)
+            rwd 1:15:10 (rewinds 1h15m10s)"""
+        player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
+
+        if not player.is_connected:
+            return await ctx.send('I am not currently connected to voice!')
+        if not player.is_playing:
+            return await ctx.send('I am currently not playing anything!')
+        if time is None:
+            return await ctx.send('Invalid time inputted!\n'
+                                  '```Try:\n'
+                                  'rwd 10      (rewinds 10s)\n'
+                                  'rwd 4:30    (rewinds 4m30s)\n'
+                                  'rwd 1:15:10 (rewinds 1h15m10s)```')
+
+        ms = time.seconds*1000
+        curr = player.position
+
+        if ms == 0:
+            return await ctx.send(f'Please enter a time that is at least 1 second', delete_after=10)
+        elif curr-ms <= 0:
+            await ctx.send(f'{ctx.author.mention} restarted the song from the beginning', delete_after=10)
+            new_position = 0
+        else:
+            new_position = curr - ms
+            current = str(datetime.timedelta(milliseconds=new_position))
+            await ctx.send(f'{ctx.author} rewinded the song by: {time} - now at: {current}', delete_after=10)
+
+        await player.seek(new_position)
+        await asyncio.sleep(5)
+        try:
+            await ctx.message.delete()
+        except discord.HTTPException:
+            pass
 
     # Custom playlist stuff:
 
