@@ -421,6 +421,10 @@ class Music(commands.Cog):
         channel: discord.VoiceChannel [Optional]
             The channel to connect to. If a channel is not specified, an attempt to join the voice channel you are in
             will be made.
+        Examples
+        ------------
+        %join   (joins your current voice channel if you are in one)
+        %join cool vc
         """
         # try:
         #     await ctx.message.delete()
@@ -606,10 +610,9 @@ class Music(commands.Cog):
     @commands.command(name='stop')
     async def stop_(self, ctx):
         """Stop the player, disconnect and clear the queue.
-        Examples
+        Example
         ----------
-        <prefix>stop
-            {ctx.prefix}stop
+        %stop
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
@@ -634,12 +637,11 @@ class Music(commands.Cog):
             vol
         Parameters
         ------------
-        value: [Required]
+        value:
             The volume level you would like to set. This can be a number between 1 and 100.
-        Examples
+        Example
         ----------
-        <prefix>volume <value>
-            {ctx.prefix}volume 50
+        %volume 50
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
@@ -664,9 +666,8 @@ class Music(commands.Cog):
             q
         Examples
         ----------
-        <prefix>queue
-            {ctx.prefix}queue
-            {ctx.prefix}q
+        %queue
+        %q
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
@@ -687,14 +688,9 @@ class Music(commands.Cog):
     @commands.command(name='shuffle')
     async def shuffle_(self, ctx):
         """Shuffle the current queue.
-        Aliases
-        ---------
-            mix
         Examples
         ----------
-        <prefix>shuffle
-            {ctx.prefix}shuffle
-            {ctx.prefix}mix
+        %shuffle
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
@@ -718,8 +714,7 @@ class Music(commands.Cog):
         """Repeat the currently playing song.
         Examples
         ----------
-        <prefix>repeat
-            {ctx.prefix}repeat
+        %repeat
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
@@ -746,8 +741,8 @@ class Music(commands.Cog):
         """Toggles repeat for whole queue
         Examples
         ---------
-        <prefix>loop (will toggle)
-        <prefix>loop on/off
+        %loop (will toggle)
+        %loop on/off
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
@@ -818,6 +813,8 @@ class Music(commands.Cog):
 
     @commands.command(name='eq')
     async def set_eq(self, ctx, *, eq: str):
+        """Set the eq of the player.
+        Can be [Flat, Boost, Metal, Piano]"""
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
         if eq.upper() not in player.equalizers:
@@ -951,6 +948,7 @@ class Music(commands.Cog):
 
     @commands.group(invoke_without_command=True)
     async def playlist(self, ctx, *, name):
+        """Play/Add/Remove custom playlists"""
         url = self._playlists.get(name)
         if url:
             await ctx.invoke(self.play_, query=url)
@@ -961,7 +959,10 @@ class Music(commands.Cog):
     @playlist.command()
     async def add(self, ctx, name, link):
         """Add a new playlist/song to save.
-        Names with multiple words must be quoted ex. add "cool playlist" youtube.com/..."""
+        Names with multiple words must be quoted ex. add "cool playlist" youtube.com/...
+        Example
+        ------------
+        %playlist add star youtube.com/..."""
         name = name.lower()
         if name in self._playlists:
             return await ctx.send('Sorry that name is already taken, please try again with a different name')
@@ -976,7 +977,10 @@ class Music(commands.Cog):
 
     @playlist.command()
     async def remove(self, ctx, *, name):
-        """Remove a saved playlist/song by name"""
+        """Remove a saved playlist/song by name
+        Example
+        ------------
+        %playlist remove star"""
         if name not in self._playlists:
             return await ctx.send('Sorry, I am unable to find the playlist with that name.')
         try:
