@@ -451,12 +451,11 @@ class Music(commands.Cog):
         ------------
         query: simple, URL [Required]
             The query to search for a song. This could be a simple search term or a valid URL.
-            e.g Youtube URL or Spotify Playlist URL.
+            e.g Youtube URL or Song Name
         Examples
         ----------
-        <prefix>play <query>
-            {ctx.prefix}play What is love?
-            {ctx.prefix}play https://www.youtube.com/watch?v=XfR9iY5y94s
+        %play What is love?
+        %play https://www.youtube.com/watch?v=XfR9iY5y94s
         """
         await ctx.trigger_typing()
 
@@ -505,8 +504,8 @@ class Music(commands.Cog):
             currentsong
         Examples
         ----------
-        <prefix>now_playing
-            {ctx.prefix}np
+        %now_playing
+        %np
         The player controller contains various information about the current and upcoming songs.
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
@@ -526,8 +525,7 @@ class Music(commands.Cog):
         """Pause the currently playing song.
         Examples
         ----------
-        <prefix>pause
-            {ctx.prefix}pause
+        %pause
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
         if not player:
@@ -556,8 +554,7 @@ class Music(commands.Cog):
         """Resume a currently paused song.
         Examples
         ----------
-        <prefix>resume
-            {ctx.prefix}resume
+        %resume
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
@@ -579,19 +576,25 @@ class Music(commands.Cog):
             await player.invoke_controller()
 
     @commands.command(name='skip')
-    async def skip_(self, ctx):
+    async def skip_(self, ctx, amount = 1):
         """Skip the current song.
         Examples
         ----------
-        <prefix>skip
-            {ctx.prefix}skip
+        %skip
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
 
-        await ctx.send(f'{ctx.author.mention} has skipped the song!', delete_after=5)
+        amount = max(amount, 1)
+        for _ in range(amount-1):
+            __ = await player.queue.get()
+
+        if amount == 1:
+            await ctx.send(f'{ctx.author.mention} has skipped the song!', delete_after=5)
+        else:
+            await ctx.send(f'{ctx.author.mention} has skipped {amount-1} songs!', delete_after=5)
 
         return await self.do_skip(ctx)
 
@@ -797,6 +800,21 @@ class Music(commands.Cog):
         await player.set_volume(vol)
         if not player.updating and not player.update:
             await player.invoke_controller()
+
+    @commands.command(name='clear')
+    async def clear_queue(self, ctx, amount = 0):
+        """Removes everything after the first `amount` items in queue"""
+        player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
+
+        if not player.is_connected:
+            return await ctx.send('I am not currently connected to voice!')
+        new = asyncio.Queue()
+        for _ in range(amount):
+            if player.queue.empty():
+                break
+            await new.put(await player.queue.get())
+        player.queue = new
+        await ctx.message.add_reaction("\u2705")
 
     @commands.command(name='eq')
     async def set_eq(self, ctx, *, eq: str):
