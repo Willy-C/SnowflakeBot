@@ -878,11 +878,6 @@ class Music(commands.Cog):
             await ctx.send(f'{ctx.author.mention} skipped the song to `{time}`', delete_after=10)
 
         await player.seek(ms)
-        await asyncio.sleep(5)
-        try:
-            await ctx.message.delete()
-        except discord.HTTPException:
-            pass
 
     @commands.command(name='ff', aliases=['fastforward'])
     async def fast_forward(self, ctx, time: SongTime):
@@ -916,11 +911,6 @@ class Music(commands.Cog):
             await ctx.send(f'{ctx.author} fast forwarded the song by: `{time}` (now at: `{current}`)', delete_after=10)
 
         await player.seek(curr+ms)
-        await asyncio.sleep(5)
-        try:
-            await ctx.message.delete()
-        except discord.HTTPException:
-            pass
 
     @commands.command(name='rewind', aliases=['rwd'])
     async def rewind(self, ctx, time: SongTime):
@@ -956,10 +946,6 @@ class Music(commands.Cog):
 
         await player.seek(new_position)
         await asyncio.sleep(5)
-        try:
-            await ctx.message.delete()
-        except discord.HTTPException:
-            pass
 
     # Custom playlist stuff:
 
