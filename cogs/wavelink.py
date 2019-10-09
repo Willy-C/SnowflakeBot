@@ -857,7 +857,7 @@ class Music(commands.Cog):
         elif ms > player.current.length:
             return await ctx.send('The inputted time is longer than the song!')
         else:
-            await ctx.send(f'{ctx.author.mention} skipped the song to {time}', delete_after=10)
+            await ctx.send(f'{ctx.author.mention} skipped the song to `{time}`', delete_after=10)
 
         await player.seek(ms)
         await asyncio.sleep(5)
@@ -895,7 +895,7 @@ class Music(commands.Cog):
             return await ctx.send(f'{ctx.author.mention} Not enough of the song is left to fast forward to! ({remaining} remaining)', delete_after=10)
         else:
             current = str(datetime.timedelta(milliseconds=curr + ms))
-            await ctx.send(f'{ctx.author} fast forwarded the song by: {time} - now at: {current}', delete_after=10)
+            await ctx.send(f'{ctx.author} fast forwarded the song by: `{time}` (now at: `{current}`)', delete_after=10)
 
         await player.seek(curr+ms)
         await asyncio.sleep(5)
@@ -934,7 +934,7 @@ class Music(commands.Cog):
         else:
             new_position = curr - ms
             current = str(datetime.timedelta(milliseconds=new_position))
-            await ctx.send(f'{ctx.author} rewinded the song by: {time} - now at: {current}', delete_after=10)
+            await ctx.send(f'{ctx.author} rewinded the song by: `{time}` (now at: `{current}`)', delete_after=10)
 
         await player.seek(new_position)
         await asyncio.sleep(5)
