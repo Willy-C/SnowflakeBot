@@ -594,7 +594,7 @@ class Music(commands.Cog):
         if amount == 1:
             await ctx.send(f'{ctx.author.mention} has skipped the song!', delete_after=5)
         else:
-            await ctx.send(f'{ctx.author.mention} has skipped {amount-1} songs!', delete_after=5)
+            await ctx.send(f'{ctx.author.mention} has skipped {amount} songs!', delete_after=5)
 
         return await self.do_skip(ctx)
 
