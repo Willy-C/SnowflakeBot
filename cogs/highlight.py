@@ -227,14 +227,15 @@ class HighlightCog(commands.Cog, name='Highlight'):
         if ctx.author.id in self.mentions:
             self.mentions.remove(ctx.author.id)
             await ctx.send('You will no longer get a DM when I see you mentioned', delete_after=10)
-            await ctx.message.add_reaction('\U00002796')  # React with heavy plus sign
+            await ctx.message.add_reaction('\U00002796')  # React with heavy minus sign
         else:
             self.mentions.add(ctx.author.id)
             await ctx.send('You will now get a DM when I see you mentioned', delete_after=10)
-            await ctx.message.add_reaction('\U00002795')  # React with heavy minus sign
+            await ctx.message.add_reaction('\U00002795')  # React with heavy plus sign
 
     @highlight.command()
     async def clear(self, ctx):
+        """Remove all highlight keys and stop highlights for mentions"""
         for val in self.highlights.values():
             try:
                 val.remove(ctx.author.id)
@@ -259,22 +260,28 @@ class HighlightCog(commands.Cog, name='Highlight'):
             if target.id not in users:
                 users.append(target.id)
                 await ctx.send(f'Ignoring highlights from {target}', delete_after=10)
+                await ctx.message.add_reaction('\U00002795')  # React with heavy plus sign
             else:
                 users.remove(target.id)
                 await ctx.send(f'No longer ignoring highlights from {target}', delete_after=8)
                 if not _ignore['users']:
                     del _ignore['users']
+                await ctx.message.add_reaction('\U00002796')  # React with heavy minus sign
+            await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
         elif isinstance(target, discord.TextChannel):
             channels = _ignore.setdefault('channels', [])
             if target.id not in channels:
                 channels.append(target.id)
                 await ctx.send(f'Ignoring highlights from {target}', delete_after=10)
+                await ctx.message.add_reaction('\U00002795')  # React with heavy plus sign
             else:
                 channels.remove(target.id)
                 await ctx.send(f'No longer ignoring highlights from {target}!', delete_after=8)
                 if not _ignore['channels']:
                     del _ignore['channels']
+                await ctx.message.add_reaction('\U00002796')  # React with heavy minus sign
+            await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
         elif isinstance(target, str) and target == 'GUILD':
             if ctx.guild is None:
@@ -283,15 +290,21 @@ class HighlightCog(commands.Cog, name='Highlight'):
             if ctx.guild.id not in guilds:
                 guilds.append(ctx.guild.id)
                 await ctx.send(f'Ignoring highlights from {ctx.guild}', delete_after=10)
+                await ctx.message.add_reaction('\U00002795')  # React with heavy plus sign
             else:
                 guilds.remove(ctx.guild.id)
                 await ctx.send(f'No longer ignoring highlights from {ctx.guild}!', delete_after=8)
                 if not _ignore['guilds']:
                     del _ignore['guilds']
+                await ctx.message.add_reaction('\U00002796')  # React with heavy minus sign
+            await ctx.message.add_reaction('\U00002705')  # React with checkmark
+
         elif target == 'CLEAR':
             if ctx.author.id in self.ignores:
                 del self.ignores[ctx.author.id]
             await ctx.send('Clearing all ignores', delete_after=5)
+            await ctx.message.add_reaction('\U00002705')  # React with checkmark
+
         else:
             await ctx.send('Unable to find target to ignore, please try again', delete_after=5)
 
@@ -300,6 +313,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     @highlight.command(name='ignores', aliases=['listignores'])
     async def list_ignores(self, ctx):
+        """List all your current ignores"""
         _ignores = self.ignores.get(ctx.author.id)
         if _ignores:
             e = discord.Embed(color=discord.Color.dark_blue(),
