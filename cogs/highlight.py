@@ -4,9 +4,7 @@ from discord.ext import commands, tasks
 import json
 from datetime import datetime, timedelta
 from asyncio import TimeoutError
-
-
-EDT_diff = timedelta(hours=-4)
+from typing import Union
 
 
 class HighlightCog(commands.Cog, name='Highlight'):
@@ -17,6 +15,8 @@ class HighlightCog(commands.Cog, name='Highlight'):
             self.highlights = json.load(f)
         with open('data/mentions.json') as f:
             self.mentions = set(json.load(f))
+        with open('data/highlightignores.json') as f:
+            self.ignores = {int(k): v for k, v in json.load(f).items()}
         self.save_to_json.start()
 
         # maybe str -> [UserIDs] to support same keyword for multiple people
@@ -33,30 +33,29 @@ class HighlightCog(commands.Cog, name='Highlight'):
         with open('data/mentions.json', 'w') as f:
             json.dump(list(self.mentions), f, indent=2)
 
+    def save_ignores(self):
+        with open('data/highlightignores.json', 'w') as f:
+            json.dump(self.ignores, f, indent=2)
+
     async def _get_msg_context(self, message: discord.Message, key: str, mention=False):
+
         prev_msgs = await message.channel.history(after=(datetime.utcnow()-timedelta(minutes=5))).flatten()  # Grabs all messages from the last 5 minutes
         msg_context = []
-        dateformat = '%m-%d %H:%M:%S'
+        now = datetime.utcnow()
 
         if not mention:
-            if any([msg.author.id == self.highlights[key] for msg in prev_msgs[:-1]]):  # If target recently spoke, no DM
-                return  # TODO: will have to redo this if decide to support multiple users for  1 keyword - make a list of users that need to be DM'ed
-
-            if any([key.lower() in msg.content.lower() for msg in prev_msgs[:-1]]):  # No need to spam highlights
-                return
-
             for msg in prev_msgs[-4:-1]:
-                msg_context.append(f'[{(msg.created_at + EDT_diff).strftime(dateformat)}] {msg.author}: {msg.content}')
+                msg_context.append(f'[-{str(now-msg.created_at).split(".")[0][3:]}] {msg.author}: {msg.content}')
 
-            msg = prev_msgs[-1]  # this is just so I can copy and paste the line above
-            msg_context.append(f'[{(msg.created_at + EDT_diff).strftime(dateformat)}] {msg.author}: {msg.content.replace(key, f"**{key}**")}')
+            msg = prev_msgs[-1]
+            msg_context.append(f'**[NOW]** {msg.author}: {msg.content.replace(key, f"**{key}**")}')
 
         else:
-            if any([user.id == key for msg in prev_msgs[:-1] for user in msg.mentions]):
-                return
+            for msg in prev_msgs[-4:-1]:
+                msg_context.append(f'[-{str(now-msg.created_at).split(".")[0][3:]}] {msg.author}: {msg.content}')
 
-            for msg in prev_msgs[-4:]:
-                msg_context.append(f'[{(msg.created_at + EDT_diff).strftime(dateformat)}] {msg.author}: {msg.content}')
+            msg = prev_msgs[-1]
+            msg_context.append(f'**[NOW]** {msg.author}: {msg.content}')
 
         for _ in range(2):  # Get next 2 messages within 10s
             try:
@@ -64,37 +63,66 @@ class HighlightCog(commands.Cog, name='Highlight'):
             except TimeoutError:
                 pass
             else:
-                msg_context.append(f'[{(next_msg.created_at + EDT_diff).strftime(dateformat)}] {next_msg.author}: {next_msg.content}')
-
-        return '\n'.join(msg_context)
+                if next_msg.author.id == id:
+                    return
+                msg_context.append(f'[+{str(now-next_msg.created_at).split(".")[0][3:]}] {next_msg.author}: {next_msg.content}')
+        return ('\n'.join(msg_context), prev_msgs)
 
     async def _dm_highlight(self, message: discord.Message, key: str):
-        target_id = self.highlights[key]
 
-        if message.author.id == target_id:
-            return
+        target_ids = self.highlights.get(key)
+        context, prev = await self._get_msg_context(message, key)
 
-        member = message.guild.get_member(target_id)
-        if (member is None or not member.permissions_in(message.channel).read_messages) and target_id != self.bot.owner_id:
-            return
+        for id in target_ids:
+            if message.author.id == id:
+                continue
 
-        context = await self._get_msg_context(message, key)
+            member = message.guild.get_member(id)
 
-        if context is None:  # target recently messaged, no need to DM
-            return
+            if (member is None or not member.permissions_in(message.channel).read_messages) and id != self.bot.owner_id:
+                continue
 
-        e = discord.Embed(title=f'You were mentioned in {message.guild} | #{message.channel}',
-                          description=f'{context}\n'
-                                      f'[Jump to message]({message.jump_url})',
-                          color=discord.Color(0x00B0F4))
-        e.set_footer(text=f'Highlight word: {key}')
-        target = self.bot.get_user(target_id)
-        await target.send(embed=e)
+            ignore = self.ignores.get(id)
+
+            if ignore:
+                if message.guild.id in ignore.get('guilds', []):
+                    continue
+                if message.channel.id in ignore.get('channels', []):
+                    continue
+                users_to_ignore = ignore.get('users', [])
+                if message.author.id in users_to_ignore:
+                    continue
+
+            else:
+                users_to_ignore = []
+
+            if any([msg.author.id == id for msg in prev[:-1]]):  # If target recently spoke, no DM
+                continue
+
+            if any([(key.lower() in msg.content.lower() and msg.author.id not in users_to_ignore) for msg in prev[:-1]]):  # No need to spam highlights
+                continue
+
+            e = discord.Embed(title=f'You were mentioned in {message.guild} | #{message.channel}',
+                              description=f'{context}\n'
+                                          f'[Jump to message]({message.jump_url})',
+                              color=discord.Color(0x00B0F4),
+                              timestamp=datetime.utcnow())
+            e.set_footer(text=f'Highlight word: {key}')
+            try:
+                await member.send(embed=e)
+            except discord.Forbidden as err:
+                if 'Cannot send messages to this user' in err.text:
+                    await self.bot.get_user(self.bot.owner_id).send(f'Missing permission highlight to {member}, removing...\n```{err}```')
+                    for val in self.highlights.values():
+                        try:
+                            val.remove(id)
+                        except ValueError:
+                            pass
 
     async def _dm_mention(self, message, _id):
-        context = await self._get_msg_context(message, _id, True)
+        context, prev = await self._get_msg_context(message, _id, True)
 
-        if context is None:  # target recently messaged, no need to DM
+        if any([user.id == _id for msg in prev[:-1] for user in msg.mentions]):
             return
 
         e = discord.Embed(title=f'You were mentioned in {message.guild} | #{message.channel}',
@@ -103,8 +131,14 @@ class HighlightCog(commands.Cog, name='Highlight'):
                           color=discord.Color(0xFAA61A))
 
         target = self.bot.get_user(_id)
-        await target.send(embed=e)
-        await message.add_reaction('\U0001f440')  # eyes
+        try:
+            await target.send(embed=e)
+        except discord.Forbidden as err:
+            if 'Cannot send messages to this user' in err.text:
+                await self.bot.get_user(self.bot.owner_id).send(f'Missing permission highlight to {target}, removing...\n```{err}```')
+                self.mentions.remove(_id)
+        else:
+            await message.add_reaction('\U0001f440')  # eyes
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -128,15 +162,13 @@ class HighlightCog(commands.Cog, name='Highlight'):
     async def add(self, ctx, *, key):
         """Add a highlight keyword"""
         key = key.lower()
-        if key in self.highlights:
-            return await ctx.send('This key is already registered to someone. Sharing highlight keys currently not supported but is planned, sorry.')
-        try:
-            self.highlights[key] = ctx.author.id
-        except:
-            return await ctx.send('An error has occurred.')
+        users = self.highlights.setdefault(key, [])
+        if ctx.author.id in users:
+            return await ctx.send('You already have this key registered!', delete_after=10)
         else:
+            users.append(ctx.author.id)
             await ctx.message.add_reaction('\U00002705')  # React with checkmark
-            return await ctx.send(f'Successfully added highlight key: {key}', delete_after=10)
+            await ctx.send(f'Successfully added highlight key: {key}', delete_after=10)
 
 
     @highlight.command()
@@ -145,10 +177,10 @@ class HighlightCog(commands.Cog, name='Highlight'):
         key = key.lower()
         if key not in self.highlights:
             return await ctx.send('Sorry, I cannot find this key')
-        if self.highlights[key] != ctx.author.id:
-            return await ctx.send('Sorry, you do not seem to own this key')
+        if ctx.author.id not in self.highlights[key]:
+            return await ctx.send('Sorry, you do not seem to have this key registered.', delete_after=5)
         try:
-            self.highlights.pop(key)
+            self.highlights[key].remove(ctx.author.id)
         except:
             return await ctx.send('An error has occurred.')
         else:
@@ -161,7 +193,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         target = ctx.author.id
         user = ctx.author
 
-        keys = '\n'.join([k for k, v in self.highlights.items() if v == target])
+        keys = '\n'.join([k for k, v in self.highlights.items() if target in v])
         if keys:
             e = discord.Embed(color=discord.Color.dark_orange(),
                               description=keys,
@@ -188,11 +220,95 @@ class HighlightCog(commands.Cog, name='Highlight'):
             await ctx.message.add_reaction('\U00002795')  # React with heavy minus sign
 
     @highlight.command()
+    async def clear(self, ctx):
+        for val in self.highlights.values():
+            try:
+                val.remove(ctx.author.id)
+            except ValueError:
+                pass
+        if ctx.author.id in self.mentions:
+            self.mentions.remove(ctx.author.id)
+
+        await ctx.message.add_reaction('\U00002705')  # React with checkmark
+
+
+    @highlight.command(name='ignore')
+    async def toggle_ignore(self, ctx, target: Union[discord.User, discord.TextChannel, str]):
+        """Toggle ignores for highlight"""
+
+        _ignore = self.ignores.setdefault(ctx.author.id, {})
+        if isinstance(target, discord.User):
+            users = _ignore.setdefault('users', [])
+            if target.id not in users:
+                users.append(target.id)
+                await ctx.send(f'Ignoring highlights from {target}', delete_after=10)
+            else:
+                users.remove(target.id)
+                await ctx.send(f'No longer ignoring highlights from {target}', delete_after=8)
+                if not _ignore['users']:
+                    del _ignore['users']
+
+        elif isinstance(target, discord.TextChannel):
+            channels = _ignore.setdefault('channels', [])
+            if target.id not in channels:
+                channels.append(target.id)
+                await ctx.send(f'Ignoring highlights from {target}', delete_after=10)
+            else:
+                channels.remove(target.id)
+                await ctx.send(f'No longer ignoring highlights from {target}!', delete_after=8)
+                if not _ignore['channels']:
+                    del _ignore['channels']
+
+        elif isinstance(target, str) and target == 'GUILD':
+            if ctx.guild is None:
+                return await ctx.send('This can only be used in a guild!', delete_after=7)
+            guilds = _ignore.setdefault('guilds', [])
+            if ctx.guild.id not in guilds:
+                guilds.append(ctx.guild.id)
+                await ctx.send(f'Ignoring highlights from {ctx.guild}', delete_after=10)
+            else:
+                guilds.remove(ctx.guild.id)
+                await ctx.send(f'No longer ignoring highlights from {ctx.guild}!', delete_after=8)
+                if not _ignore['guilds']:
+                    del _ignore['guilds']
+        elif target == 'CLEAR':
+            if ctx.author.id in self.ignores:
+                del self.ignores[ctx.author.id]
+            await ctx.send('Clearing all ignores', delete_after=5)
+        else:
+            await ctx.send('Unable to find target to ignore, please try again', delete_after=5)
+
+        if target != 'CLEAR' and not _ignore:
+            del self.ignores[ctx.author.id]
+
+    @highlight.command(name='ignores', aliases=['listignores'])
+    async def list_ignores(self, ctx):
+        _ignores = self.ignores.get(ctx.author.id)
+        if _ignores:
+            e = discord.Embed(color=discord.Color.dark_blue(),
+                              title='Highlight ignores')
+            if 'guilds' in _ignores:
+                guilds = '\n'.join([str(self.bot.get_guild(gid)) for gid in _ignores['guilds']])
+                e.add_field(name='Guilds', value=guilds)
+            if 'channels' in _ignores:
+                channels = '\n'.join([str(self.bot.get_channel(cid)) for cid in _ignores['channels']])
+                e.add_field(name='Channels', value=channels)
+            if 'users' in _ignores:
+                users = '\n'.join([str(self.bot.get_user(uid)) for uid in _ignores['users'] if self.bot.get_user(uid)])
+                e.add_field(name='Users', value=users)
+            await ctx.send(embed=e, delete_after=15)
+
+        else:
+            await ctx.send('You do not have ignores set!', delete_after=5)
+
+
+    @highlight.command()
     @commands.is_owner()
     async def save(self, ctx):
         try:
             self.save_highlights()
             self.save_mentions()
+            self.save_ignores()
         except:
             await ctx.send('An error has occurred ')
         else:
@@ -203,11 +319,13 @@ class HighlightCog(commands.Cog, name='Highlight'):
     async def save_to_json(self):
         self.save_highlights()
         self.save_mentions()
+        self.save_ignores()
 
     def cog_unload(self):
         self.save_to_json.cancel()
         self.save_highlights()
         self.save_mentions()
+        self.save_ignores()
 
 
 def setup(bot):
