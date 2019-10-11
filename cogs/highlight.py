@@ -137,7 +137,8 @@ class HighlightCog(commands.Cog, name='Highlight'):
         e = discord.Embed(title=f'You were mentioned in {message.guild} | #{message.channel}',
                           description=f'{context}\n'
                                       f'[Jump to message]({message.jump_url})',
-                          color=discord.Color(0xFAA61A))
+                          color=discord.Color(0xFAA61A),
+                          timestamp=datetime.utcnow())
 
         target = self.bot.get_user(_id)
         try:
