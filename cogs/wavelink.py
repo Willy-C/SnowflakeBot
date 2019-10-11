@@ -97,15 +97,15 @@ class Player(wavelink.Player):
         return list(self.queue._queue)
 
     async def updater(self):
-        every_second_iter = False
+        every_second_iter = True
         while not self.bot.is_closed():
-
             if self.update and not self.updating:
                 self.update = False
                 await self.invoke_controller()
-            if every_second_iter:
-                every_second_iter = not every_second_iter
-                self.update = True
+
+            if not every_second_iter:
+                await self.invoke_controller()
+            every_second_iter = not every_second_iter
             await asyncio.sleep(10)
 
     async def player_loop(self):
@@ -171,13 +171,12 @@ class Player(wavelink.Player):
         if track.is_stream:
             embed.add_field(name='Duration', value='🔴`Streaming`')
         else:
-            embed.add_field(name='Duration', value=str(datetime.timedelta(milliseconds=int(track.length))))
+            embed.add_field(name='Duration', value=f'{str(datetime.timedelta(milliseconds=int(self.position))).split(".")[0]}/{str(datetime.timedelta(milliseconds=int(track.length)))}')
         embed.add_field(name='Video URL', value=f'[Click Here!]({track.uri})')
         embed.add_field(name='Requested By', value=track.requester.mention)
         embed.add_field(name='Queue Length', value=str(len(self.entries)))
         embed.add_field(name='Volume', value=f'**`{self.volume}%`**')
         embed.add_field(name='Looping', value='ON' if self.looping else 'OFF')
-        embed.add_field(name='Current', value=str(datetime.timedelta(milliseconds=self.position)))
 
         if len(self.entries) > 0:
             data = '\n'.join(f'**-** `{t.title[0:45]}{"..." if len(t.title) > 45 else ""}`\n{"-"*10}'
@@ -656,7 +655,7 @@ class Music(commands.Cog):
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
 
-        if not ctx.channel.permissions_for(ctx.author).manage_guild and (len(player.connected_channel.members) - 1) > 2 and ctx.author.id != self.bot.owner_id:
+        if not ctx.channel.permissions_for(ctx.author).manage_guild and (len(self.bot.get_channel(int(player.channel_id)).members) - 1) > 2 and ctx.author.id != self.bot.owner_id:
                 if not 0 <= value <= 100:
                     return await ctx.send('Please enter a value between 0 and 100.')
 
@@ -917,10 +916,10 @@ class Music(commands.Cog):
         if ms == 0:
             return await ctx.send(f'Please enter a time that is at least 1 second', delete_after=10)
         elif ms + curr > player.current.length:
-            remaining = str(datetime.timedelta(milliseconds=player.current.length - curr))
+            remaining = str(datetime.timedelta(milliseconds=player.current.length - curr)).split('.')[0]
             return await ctx.send(f'{ctx.author.mention} Not enough of the song is left to fast forward to! ({remaining} remaining)', delete_after=10)
         else:
-            current = str(datetime.timedelta(milliseconds=curr + ms))
+            current = str(datetime.timedelta(milliseconds=curr + ms)).split('.')[0]
             await ctx.send(f'{ctx.author} fast forwarded the song by: `{time}` (now at: `{current}`)', delete_after=10)
 
         await player.seek(curr+ms)
