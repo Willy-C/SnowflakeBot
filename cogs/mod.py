@@ -252,6 +252,7 @@ class ModCog(commands.Cog, name='Mod'):
             if my_perms.manage_channels:
                 ow = channel.overwrites_for(role)
                 ow.send_messages = False
+                ow.add_reactions = False
                 try:
                     await channel.set_permissions(role, overwrite=ow, reason=reason)
                 except discord.HTTPException:
@@ -406,6 +407,7 @@ class ModCog(commands.Cog, name='Mod'):
         try:
             ow = ctx.channel.overwrites_for(member)
             ow.send_messages = False
+            ow.add_reactions = False
             await ctx.channel.set_permissions(member, overwrite=ow, reason=reason)
         except:
             await ctx.send('\U0001f44e') # Thumbs Down
@@ -427,6 +429,7 @@ class ModCog(commands.Cog, name='Mod'):
         try:
             ow = ctx.channel.overwrites_for(member)
             ow.send_messages = None
+            ow.add_reactions = None
             await ctx.channel.set_permissions(member, overwrite=ow, reason=reason) # Doing this first instead of just deleting when empty so it shows up on audit logs
             if ow.is_empty():
                 await ctx.channel.set_permissions(member, overwrite=None) # reason does not work here
