@@ -97,15 +97,11 @@ class Player(wavelink.Player):
         return list(self.queue._queue)
 
     async def updater(self):
-        every_second_iter = True
         while not self.bot.is_closed():
             if self.update and not self.updating:
                 self.update = False
                 await self.invoke_controller()
 
-            if not every_second_iter and self.is_playing:
-                await self.invoke_controller()
-            every_second_iter = not every_second_iter
             await asyncio.sleep(10)
 
     async def player_loop(self):
