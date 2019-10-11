@@ -664,7 +664,7 @@ class Music(commands.Cog):
             return await ctx.send('Please enter a value that is at least 0!')
 
         if value > 100:
-            if not confirm_prompt(ctx, f'Set the volume to **{value}**%? High volumes can damage people\'s hearing!'):
+            if not await confirm_prompt(ctx, f'Set the volume to **{value}**%? High volumes can damage people\'s hearing!'):
                 return
 
         await player.set_volume(value)
