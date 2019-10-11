@@ -20,6 +20,8 @@ from collections import deque
 from async_timeout import timeout
 from discord.ext import commands, tasks
 
+from utils.global_utils import confirm_prompt
+
 RURL = re.compile(r'https?:\/\/(?:www\.)?.+')
 
 
@@ -95,11 +97,15 @@ class Player(wavelink.Player):
         return list(self.queue._queue)
 
     async def updater(self):
+        every_second_iter = False
         while not self.bot.is_closed():
+
             if self.update and not self.updating:
                 self.update = False
                 await self.invoke_controller()
-
+            if every_second_iter:
+                every_second_iter = not every_second_iter
+                self.update = True
             await asyncio.sleep(10)
 
     async def player_loop(self):
@@ -171,6 +177,7 @@ class Player(wavelink.Player):
         embed.add_field(name='Queue Length', value=str(len(self.entries)))
         embed.add_field(name='Volume', value=f'**`{self.volume}%`**')
         embed.add_field(name='Looping', value='ON' if self.looping else 'OFF')
+        embed.add_field(name='Current', value=str(datetime.timedelta(milliseconds=self.position)))
 
         if len(self.entries) > 0:
             data = '\n'.join(f'**-** `{t.title[0:45]}{"..." if len(t.title) > 45 else ""}`\n{"-"*10}'
@@ -287,7 +294,7 @@ class Player(wavelink.Player):
     async def is_current_fresh(self, chan):
         """Check whether our controller is fresh in message history."""
         try:
-            async for m in chan.history(limit=5):
+            async for m in chan.history(limit=7):
                 if m.id == self.controller_message.id:
                     return True
         except (discord.HTTPException, AttributeError):
@@ -630,7 +637,7 @@ class Music(commands.Cog):
         await player.destroy()
 
     @commands.command(name='volume', aliases=['vol'])
-    async def volume_(self, ctx, *, value: int):
+    async def volume_(self, ctx, *, value: float):
         """Change the player volume.
         Aliases
         ---------
@@ -639,6 +646,7 @@ class Music(commands.Cog):
         ------------
         value:
             The volume level you would like to set. This can be a number between 1 and 100.
+            Members with manage guild can override it to be value over 100
         Example
         ----------
         %volume 50
@@ -648,11 +656,19 @@ class Music(commands.Cog):
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
 
-        if not 0 <= value <= 100:
-            return await ctx.send('Please enter a value between 1 and 100.')
+        if not ctx.channel.permissions_for(ctx.author).manage_guild and (len(player.connected_channel.members) - 1) > 2 and ctx.author.id != self.bot.owner_id:
+                if not 0 <= value <= 100:
+                    return await ctx.send('Please enter a value between 0 and 100.')
+
+        if value < 0:
+            return await ctx.send('Please enter a value that is at least 0!')
+
+        if value > 100:
+            if not confirm_prompt(ctx, f'Set the volume to **{value}**%? High volumes can damage people\'s hearing!'):
+                return
 
         await player.set_volume(value)
-        await ctx.send(f'Set the volume to **{value}**%')
+        await ctx.send(f'{ctx.author.mention}: Set the volume to **{value}**%', delete_after=10)
 
         if not player.updating and not player.update:
             await player.invoke_controller()
