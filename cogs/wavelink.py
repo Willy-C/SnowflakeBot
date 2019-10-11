@@ -652,7 +652,7 @@ class Music(commands.Cog):
             return await ctx.send('I am not currently connected to voice!')
 
         current_channel_members = self.bot.get_channel(int(player.channel_id)).members
-        if ctx.author not in current_channel_members:
+        if ctx.author not in current_channel_members and not ctx.channel.permissions_for(ctx.author).manage_guild and ctx.author.id != self.bot.owner_id:
             return await ctx.send('You are not in my voice channel!')
         if not ctx.channel.permissions_for(ctx.author).manage_guild and (len(current_channel_members) - 1) > 1 and ctx.author.id != self.bot.owner_id:
                 if not 0 <= value <= 100:
