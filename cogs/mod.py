@@ -172,8 +172,12 @@ class ModCog(commands.Cog, name='Mod'):
         else:
             reason = f'{ctx.author} ({ctx.author.id}): {reason}'
 
-        await member.kick(reason=reason)
-        await ctx.send('\U0001f44c')  # OK
+        try:
+            await member.kick(reason=reason)
+        except discord.HTTPException:
+            await ctx.send('\U0001f44e')  # Thumbs down
+        else:
+            await ctx.send('\U0001f44d')  # Thumbs up
 
     @commands.command()
     @commands.bot_has_permissions(ban_members=True)
@@ -188,8 +192,12 @@ class ModCog(commands.Cog, name='Mod'):
         else:
             reason = f'{ctx.author} ({ctx.author.id}): {reason}'
 
-        await ctx.guild.ban(member, reason=reason, delete_message_days=0)
-        await ctx.send('\U0001f44c')  # OK
+        try:
+            await ctx.guild.ban(member, reason=reason, delete_message_days=0)
+        except discord.HTTPException:
+            await ctx.send('\U0001f44e')
+        else:
+            await ctx.send('\U0001f44d')
 
     @commands.command()
     @commands.bot_has_permissions(ban_members=True)
@@ -205,9 +213,9 @@ class ModCog(commands.Cog, name='Mod'):
         try:
             await ctx.guild.unban(discord.Object(id=id), reason=reason)
         except discord.HTTPException:
-            await ctx.send('Unban failed')
+            await ctx.send('\U0001f44e')
         else:
-            await ctx.send('\U0001f44c')  # OK
+            await ctx.send('\U0001f44d')
 
 
     @commands.command()
@@ -224,9 +232,13 @@ class ModCog(commands.Cog, name='Mod'):
         else:
             reason = f'{ctx.author} ({ctx.author.id}): {reason}'
 
-        await ctx.guild.ban(member, reason=reason, delete_message_days=7)
-        await ctx.guild.unban(member, reason=reason)
-        await ctx.send('\U0001f44c')  # OK
+        try:
+            await ctx.guild.ban(member, reason=reason, delete_message_days=7)
+            await ctx.guild.unban(member, reason=reason)
+        except discord.HTTPException:
+            await ctx.send('\U0001f44e')
+        else:
+            await ctx.send('\U0001f44d')
 
 
     async def set_muterole_perms(self, ctx, role):
@@ -339,8 +351,12 @@ class ModCog(commands.Cog, name='Mod'):
             reason = f'Muted. Done by: {ctx.author} ({ctx.author.id})'
         else:
             reason = f'{ctx.author} ({ctx.author.id}): {reason}'
-
-        await member.add_roles(role, reason=reason)
+        try:
+            await member.add_roles(role, reason=reason)
+        except discord.HTTPException:
+            await ctx.send('\U0001f44e')
+        else:
+            await ctx.send('\U0001f44d')
 
     @commands.command()
     @commands.bot_has_permissions(manage_roles=True)
@@ -367,7 +383,12 @@ class ModCog(commands.Cog, name='Mod'):
         else:
             reason = f'{ctx.author} ({ctx.author.id}): {reason}'
 
-        await member.remove_roles(role, reason=reason)
+        try:
+            await member.remove_roles(role, reason=reason)
+        except discord.HTTPException:
+            await ctx.send('\U0001f44e')
+        else:
+            await ctx.send('\U0001f44d')
 
     @commands.command()
     @commands.bot_has_permissions(manage_channels=True)
@@ -450,6 +471,12 @@ class ModCog(commands.Cog, name='Mod'):
         """
         await member.move_to(channel)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        pass
+
+    # Purge group:
 
     @commands.group()
     @commands.bot_has_permissions(manage_messages=True)
