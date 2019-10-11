@@ -103,7 +103,7 @@ class Player(wavelink.Player):
                 self.update = False
                 await self.invoke_controller()
 
-            if not every_second_iter:
+            if not every_second_iter and self.is_playing:
                 await self.invoke_controller()
             every_second_iter = not every_second_iter
             await asyncio.sleep(10)
