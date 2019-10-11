@@ -471,15 +471,10 @@ class Music(commands.Cog):
         if not player.is_connected or (player.is_connected and ctx.author.voice and ctx.author.voice.channel != ctx.guild.me.voice.channel):
             await ctx.invoke(self.connect_)
 
-        # if not RURL.match(query):
-        #     query = f'ytsearch:{query}'
-
-        tracks = await self.bot.wavelink.get_tracks(query)
-        if not tracks:
+        if not RURL.match(query):
             query = f'ytsearch:{query}'
 
-            tracks = await self.bot.wavelink.get_tracks(query)
-
+        tracks = await self.bot.wavelink.get_tracks(query)
         if not tracks:
             return await ctx.send('No songs were found with that query. Please try again.')
 
