@@ -98,12 +98,9 @@ class GuildCog(commands.Cog, name='Guild'):
     async def sharescreen_all(self, ctx):
         """Returns all voice channel's video links"""
 
-        _vc = [vc for vc in ctx.guild.voice_channels]
-        guild_id = ctx.guild.id
-        template = f'https://discordapp.com/channels/{guild_id}/'
-        links = [f'[{vc.name}]({template}{vc.id})' for vc in _vc]
-        combined = '\n'.join(links)
-        formatted = discord.utils.escape_markdown(combined)  # because some ppl like to have ||name|| for some reason
+        template = f'https://discordapp.com/channels/{ctx.guild.id}/'
+        links = [f'[{vc.name}]({template}{vc.id})' for vc in ctx.guild.voice_channels]
+        formatted = discord.utils.escape_markdown('\n'.join(links))  # because some ppl like to have ||name|| for some reason
 
         e = discord.Embed(title="Video Links for all Voice Channels",
                           colour=6430916,
