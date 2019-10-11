@@ -655,7 +655,7 @@ class Music(commands.Cog):
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
 
-        if not ctx.channel.permissions_for(ctx.author).manage_guild and (len(self.bot.get_channel(int(player.channel_id)).members) - 1) > 2 and ctx.author.id != self.bot.owner_id:
+        if not ctx.channel.permissions_for(ctx.author).manage_guild and (len(self.bot.get_channel(int(player.channel_id)).members) - 1) > 1 and ctx.author.id != self.bot.owner_id:
                 if not 0 <= value <= 100:
                     return await ctx.send('Please enter a value between 0 and 100.')
 
