@@ -168,6 +168,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     @commands.group(aliases=['hl'])
     async def highlight(self, ctx):
+        """Get DMs for keywords and mentions!"""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 

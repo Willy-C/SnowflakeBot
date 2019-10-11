@@ -34,6 +34,7 @@ def bright_color():
 
 
 async def confirm_prompt(ctx: commands.Context, msg):
+    """Asks author for confirmation, returns True if confirmed, False if user typed abort or timed out"""
     cont = False
 
     def confirm(msg):
