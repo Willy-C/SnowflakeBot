@@ -125,7 +125,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
     async def _dm_mention(self, message, _id):
         context, prev, after = await self._get_msg_context(message, _id, True)
 
-        if any([user.id == _id for msg in prev for user in msg.mentions]):
+        if any([user.id == _id for msg in prev[:-1] for user in msg.mentions]):
             return
 
         if not self.ignore_check(message, _id):

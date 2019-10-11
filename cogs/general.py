@@ -8,12 +8,16 @@ class GeneralCog(commands.Cog, name='General'):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(aliases=['msg'])
+    @commands.command()
     async def quote(self, ctx, user: discord.Member, *, message: commands.clean_content()):
         """Send a message as someone else"""
-        hook = await ctx.channel.create_webhook(name=user.display_name)
-        await hook.send(message, avatar_url=user.avatar_url_as(format='png'))
-        await hook.delete()
+        webhook = await ctx.channel.create_webhook(name=user.display_name)
+        await webhook.send(message, avatar_url=user.avatar_url_as(format='png'))
+        await webhook.delete()
+        try:
+            await ctx.message.delete()
+        except discord.HTTPException:
+            pass
 
     @commands.command(name='poll')
     async def create_poll(self, ctx, *questions_and_choices: str):
