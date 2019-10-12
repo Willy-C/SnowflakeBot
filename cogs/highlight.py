@@ -249,14 +249,14 @@ class HighlightCog(commands.Cog, name='Highlight'):
                 val.remove(ctx.author.id)
             except ValueError:
                 pass
-        for key in self.highlights:
-            if not self.highlights[key]:
-                del self.highlights[key]
+        to_del = [key for key in self.highlights if not self.highlights[key]]  # List of keys that point to an empty list
+        for key in to_del:
+            del self.highlights[key]
+
         if ctx.author.id in self.mentions:
             self.mentions.remove(ctx.author.id)
 
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
-
 
     @highlight.command(name='ignore')
     async def toggle_ignore(self, ctx, target: Union[discord.User, discord.TextChannel, str]):
