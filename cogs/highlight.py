@@ -90,6 +90,9 @@ class HighlightCog(commands.Cog, name='Highlight'):
             if (member is None or not member.permissions_in(message.channel).read_messages) and id != self.bot.owner_id:
                 continue
 
+            if any([msg.author.id == id for msg in after]):
+                continue
+
             if not self.ignore_check(message, id):
                 continue
 
@@ -129,10 +132,10 @@ class HighlightCog(commands.Cog, name='Highlight'):
         if any([user.id == _id for msg in prev[:-1] for user in msg.mentions]):
             return
 
-        if not self.ignore_check(message, _id):
+        if any([msg.author.id == _id for msg in after]):
             return
 
-        if any([msg.author.id == _id for msg in after]):
+        if not self.ignore_check(message, _id):
             return
 
         e = discord.Embed(title=f'You were mentioned in {message.guild} | #{message.channel}',
@@ -142,6 +145,8 @@ class HighlightCog(commands.Cog, name='Highlight'):
                           timestamp=datetime.utcnow())
 
         target = self.bot.get_user(_id)
+        if target is None:
+            return
         try:
             await target.send(embed=e)
         except discord.Forbidden as err:
