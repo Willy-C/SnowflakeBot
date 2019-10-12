@@ -59,7 +59,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             msg_context.append(f'[-{str(abs(now-msg.created_at)).split(".")[0][3:]}] {msg.author}: {msg.content}')
 
         msg = prev_msgs[-1]
-        bolded = re.sub(f'({key})', r'*\1*', msg.content, flags=re.IGNORECASE) # f-string expression part cannot include a backslash
+        bolded = re.sub(f'({key})', r'**\1**', msg.content, flags=re.IGNORECASE) # f-string expression part cannot include a backslash
         if not mention:
             msg_context.append(f'**[NOW]** {msg.author}: {bolded}')
         else:
