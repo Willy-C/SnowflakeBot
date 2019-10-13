@@ -72,7 +72,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             except TimeoutError:
                 pass
             else:
-                msg_context.append(f'[+{str(abs(now-next_msg.created_at)).split(".")[0][3:]}] {next_msg.author}: {next_msg.content}')
+                msg_context.append(f'`[+{str(abs(now-next_msg.created_at)).split(".")[0][3:]}]` {next_msg.author}: {next_msg.content}')
                 after.append(next_msg)
         return ('\n'.join(msg_context), prev_msgs, after)
 
