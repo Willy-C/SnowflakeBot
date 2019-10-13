@@ -779,7 +779,7 @@ class Music(commands.Cog):
         if player.looping and player.is_playing:
             await player.queue.put(player.current)
 
-        await ctx.send(f'Looping is now {"on" if player.looping else "off"}!', delete_after=10)
+        await ctx.send(f'{ctx.author.mention} Looping is now {"on" if player.looping else "off"}!', delete_after=10)
         if not player.updating and not player.update:
             await player.invoke_controller()
         await asyncio.sleep(10)
