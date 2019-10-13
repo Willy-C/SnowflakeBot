@@ -56,14 +56,14 @@ class HighlightCog(commands.Cog, name='Highlight'):
         now = datetime.utcnow()
 
         for msg in prev_msgs[-4:-1]:
-            msg_context.append(f'[-{str(abs(now-msg.created_at)).split(".")[0][3:]}] {msg.author}: {msg.content}')
+            msg_context.append(f'`[-{str(abs(now-msg.created_at)).split(".")[0][3:]}]` {msg.author}: {msg.content}')
 
         msg = prev_msgs[-1]
         bolded = re.sub(f'({key})', r'**\1**', msg.content, flags=re.IGNORECASE) # f-string expression part cannot include a backslash
         if not mention:
-            msg_context.append(f'**[-------]** {msg.author}: {bolded}')
+            msg_context.append(f'**`[-----]`** {msg.author}: {bolded}')
         else:
-            msg_context.append(f'**[-------]** {msg.author}: {msg.content}')
+            msg_context.append(f'**`[-----]`** {msg.author}: {msg.content}')
 
         after = []
         for _ in range(2):  # Get next 2 messages within 10s
