@@ -74,7 +74,9 @@ class HighlightCog(commands.Cog, name='Highlight'):
             else:
                 msg_context.append(f'`[+{str(abs(now-next_msg.created_at)).split(".")[0][3:]}]` {next_msg.author}: {next_msg.content}')
                 after.append(next_msg)
-        return ('\n'.join(msg_context), prev_msgs, after)
+
+        recent_msgs = [msg for msg in prev_msgs if (datetime.utcnow() - msg.created_at).seconds < 120] # List of messages from last 2 minutes
+        return ('\n'.join(msg_context), recent_msgs, after)
 
     async def _dm_highlight(self, message: discord.Message, key: str):
 
