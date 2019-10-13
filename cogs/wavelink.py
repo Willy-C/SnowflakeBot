@@ -97,7 +97,11 @@ class Player(wavelink.Player):
         return list(self.queue._queue)
 
     async def updater(self):
+        _second = False
         while not self.bot.is_closed():
+            if not _second:
+                self.update = True
+            _second = not _second
             if self.update and not self.updating:
                 self.update = False
                 await self.invoke_controller()
@@ -824,6 +828,8 @@ class Music(commands.Cog):
             await new.put(await player.queue.get())
         player.queue = new
         await ctx.message.add_reaction("\u2705")
+        if not player.updating and not player.update:
+            await player.invoke_controller()
 
     @commands.command(name='eq')
     async def set_eq(self, ctx, *, eq: str):
@@ -837,6 +843,8 @@ class Music(commands.Cog):
         await player.set_preq(eq)
         player.eq = eq.capitalize()
         await ctx.send(f'The player Equalizer was set to - {eq.capitalize()} - {ctx.author.mention}')
+        if not player.updating and not player.update:
+            await player.invoke_controller()
 
     @commands.command()
     async def wlinfo(self, ctx):
@@ -889,6 +897,8 @@ class Music(commands.Cog):
             await ctx.send(f'{ctx.author.mention} skipped the song to `{time}`', delete_after=10)
 
         await player.seek(ms)
+        if not player.updating and not player.update:
+            await player.invoke_controller()
 
     @commands.command(name='ff', aliases=['fastforward'])
     async def fast_forward(self, ctx, time: SongTime):
@@ -922,6 +932,8 @@ class Music(commands.Cog):
             await ctx.send(f'{ctx.author} fast forwarded the song by: `{time}` (now at: `{current}`)', delete_after=10)
 
         await player.seek(curr+ms)
+        if not player.updating and not player.update:
+            await player.invoke_controller()
 
     @commands.command(name='rewind', aliases=['rwd'])
     async def rewind(self, ctx, time: SongTime):
@@ -956,7 +968,8 @@ class Music(commands.Cog):
             await ctx.send(f'{ctx.author} rewinded the song by: `{time}` (now at: `{current}`)', delete_after=10)
 
         await player.seek(new_position)
-        await asyncio.sleep(5)
+        if not player.updating and not player.update:
+            await player.invoke_controller()
 
     # Custom playlist stuff:
 
