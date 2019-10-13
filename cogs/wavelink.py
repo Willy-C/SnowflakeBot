@@ -492,13 +492,13 @@ class Music(commands.Cog):
                            f' with {len(tracks.tracks)} songs to the queue.\n```', delete_after=15)
         else:
             track = tracks[0]
-            await ctx.send(f'```ini\nAdded {track.title} to the Queue\n```', delete_after=8)
+            await ctx.send(f'```ini\nAdded {track.title} to the Queue\n```', delete_after=10)
             await player.queue.put(Track(track.id, track.info, ctx=ctx))
 
         if player.controller_message and player.is_playing:
             await player.invoke_controller()
 
-        await asyncio.sleep(5)
+        await asyncio.sleep(10)
         try:
             await ctx.message.delete()
         except discord.HTTPException:
@@ -547,7 +547,7 @@ class Music(commands.Cog):
         if player.paused:
             return
 
-        await ctx.send(f'{ctx.author.mention} has paused the music!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} has paused the music!', delete_after=7)
 
         return await self.do_pause(ctx)
 
@@ -574,7 +574,7 @@ class Music(commands.Cog):
         if not player.paused:
             return
 
-        await ctx.send(f'{ctx.author.mention} has resumed the music!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} has resumed the music!', delete_after=7)
 
         return await self.do_resume(ctx)
 
@@ -602,9 +602,9 @@ class Music(commands.Cog):
             __ = await player.queue.get()
 
         if amount == 1:
-            await ctx.send(f'{ctx.author.mention} has skipped the song!', delete_after=5)
+            await ctx.send(f'{ctx.author.mention} has skipped the song!', delete_after=8)
         else:
-            await ctx.send(f'{ctx.author.mention} has skipped {amount} songs!', delete_after=5)
+            await ctx.send(f'{ctx.author.mention} has skipped {amount} songs!', delete_after=10)
 
         return await self.do_skip(ctx)
 
@@ -612,6 +612,7 @@ class Music(commands.Cog):
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
         await player.stop()
+
 
     @commands.command(name='stop')
     async def stop_(self, ctx):
@@ -675,6 +676,12 @@ class Music(commands.Cog):
         if not player.updating and not player.update:
             await player.invoke_controller()
 
+        await asyncio.sleep(20)
+        try:
+            await ctx.message.delete()
+        except discord.HTTPException:
+            pass
+
     @commands.command(name='queue', aliases=['q', 'que'])
     async def queue_(self, ctx):
         """Retrieve a list of currently queued songs.
@@ -715,7 +722,7 @@ class Music(commands.Cog):
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
 
-        await ctx.send(f'{ctx.author.mention} has shuffled the queue!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} has shuffled the queue!', delete_after=10)
 
         return await self.do_shuffle(ctx)
 
@@ -739,7 +746,7 @@ class Music(commands.Cog):
         if not player.is_connected:
             return
 
-        await ctx.send(f'{ctx.author.mention} repeated the current song!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} repeated the current song!', delete_after=7)
 
         return await self.do_repeat(ctx)
 
@@ -772,9 +779,14 @@ class Music(commands.Cog):
         if player.looping and player.is_playing:
             await player.queue.put(player.current)
 
-        await ctx.send(f'Looping is now {"on" if player.looping else "off"}!', delete_after=5)
+        await ctx.send(f'Looping is now {"on" if player.looping else "off"}!', delete_after=10)
         if not player.updating and not player.update:
             await player.invoke_controller()
+        await asyncio.sleep(10)
+        try:
+            await ctx.message.delete()
+        except discord.HTTPException:
+            pass
 
     @commands.command(name='vol_up', hidden=True)
     async def volume_up(self, ctx):
@@ -789,11 +801,16 @@ class Music(commands.Cog):
             vol = 100
             await ctx.send('Maximum volume reached', delete_after=7)
 
-        await ctx.send(f'{ctx.author.mention} has raised the volume!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} has raised the volume!', delete_after=7)
 
         await player.set_volume(vol)
         if not player.updating and not player.update:
             await player.invoke_controller()
+        await asyncio.sleep(10)
+        try:
+            await ctx.message.delete()
+        except discord.HTTPException:
+            pass
 
     @commands.command(name='vol_down', hidden=True)
     async def volume_down(self, ctx):
@@ -808,11 +825,16 @@ class Music(commands.Cog):
             vol = 0
             await ctx.send('Player is currently muted', delete_after=10)
 
-        await ctx.send(f'{ctx.author.mention} has lowered the volume!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} has lowered the volume!', delete_after=7)
 
         await player.set_volume(vol)
         if not player.updating and not player.update:
             await player.invoke_controller()
+        await asyncio.sleep(10)
+        try:
+            await ctx.message.delete()
+        except discord.HTTPException:
+            pass
 
     @commands.command(name='clear')
     async def clear_queue(self, ctx, amount = 0):
@@ -899,6 +921,11 @@ class Music(commands.Cog):
         await player.seek(ms)
         if not player.updating and not player.update:
             await player.invoke_controller()
+        await asyncio.sleep(10)
+        try:
+            await ctx.message.delete()
+        except discord.HTTPException:
+            pass
 
     @commands.command(name='ff', aliases=['fastforward'])
     async def fast_forward(self, ctx, time: SongTime):
@@ -934,6 +961,11 @@ class Music(commands.Cog):
         await player.seek(curr+ms)
         if not player.updating and not player.update:
             await player.invoke_controller()
+        await asyncio.sleep(10)
+        try:
+            await ctx.message.delete()
+        except discord.HTTPException:
+            pass
 
     @commands.command(name='rewind', aliases=['rwd'])
     async def rewind(self, ctx, time: SongTime):
@@ -970,6 +1002,11 @@ class Music(commands.Cog):
         await player.seek(new_position)
         if not player.updating and not player.update:
             await player.invoke_controller()
+        await asyncio.sleep(10)
+        try:
+            await ctx.message.delete()
+        except discord.HTTPException:
+            pass
 
     # Custom playlist stuff:
 
