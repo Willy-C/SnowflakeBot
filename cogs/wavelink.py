@@ -498,12 +498,12 @@ class Music(commands.Cog):
         if player.controller_message and player.is_playing:
             await player.invoke_controller()
 
-        await asyncio.sleep(10)
-        try:
-            if ctx.message.id != player.controller_message.id:
-                await ctx.message.delete()
-        except (discord.HTTPException, AttributeError):
-            pass
+        # await asyncio.sleep(10)
+        # try:
+        #     if ctx.message.id != player.controller_message.id:
+        #         await ctx.message.delete()
+        # except (discord.HTTPException, AttributeError):
+        #     pass
 
     @commands.command(name='np', aliases=['current'])
     async def now_playing(self, ctx):
