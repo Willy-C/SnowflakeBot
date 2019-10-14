@@ -502,7 +502,7 @@ class Music(commands.Cog):
         try:
             if ctx.message.id != player.controller_message.id:
                 await ctx.message.delete()
-        except discord.HTTPException:
+        except (discord.HTTPException, AttributeError):
             pass
 
     @commands.command(name='np', aliases=['current'])
@@ -788,7 +788,7 @@ class Music(commands.Cog):
         try:
             if ctx.message.id != player.controller_message.id:
                 await ctx.message.delete()
-        except discord.HTTPException:
+        except (discord.HTTPException, AttributeError):
             pass
 
     @commands.command(name='vol_up', hidden=True)
@@ -813,7 +813,7 @@ class Music(commands.Cog):
         try:
             if ctx.message.id != player.controller_message.id:
                 await ctx.message.delete()
-        except discord.HTTPException:
+        except (discord.HTTPException, AttributeError):
             pass
 
     @commands.command(name='vol_down', hidden=True)
@@ -838,7 +838,7 @@ class Music(commands.Cog):
         try:
             if ctx.message.id != player.controller_message.id:
                 await ctx.message.delete()
-        except discord.HTTPException:
+        except (discord.HTTPException, AttributeError):
             pass
 
     @commands.command(name='clear')
