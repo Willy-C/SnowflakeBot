@@ -500,7 +500,8 @@ class Music(commands.Cog):
 
         await asyncio.sleep(10)
         try:
-            await ctx.message.delete()
+            if ctx.message.id != player.controller_message.id:
+                await ctx.message.delete()
         except discord.HTTPException:
             pass
 
@@ -678,8 +679,9 @@ class Music(commands.Cog):
 
         await asyncio.sleep(20)
         try:
-            await ctx.message.delete()
-        except discord.HTTPException:
+            if ctx.message.id != player.controller_message.id:
+                await ctx.message.delete()
+        except (discord.HTTPException, AttributeError):
             pass
 
     @commands.command(name='queue', aliases=['q', 'que'])
@@ -784,7 +786,8 @@ class Music(commands.Cog):
             await player.invoke_controller()
         await asyncio.sleep(10)
         try:
-            await ctx.message.delete()
+            if ctx.message.id != player.controller_message.id:
+                await ctx.message.delete()
         except discord.HTTPException:
             pass
 
@@ -808,7 +811,8 @@ class Music(commands.Cog):
             await player.invoke_controller()
         await asyncio.sleep(10)
         try:
-            await ctx.message.delete()
+            if ctx.message.id != player.controller_message.id:
+                await ctx.message.delete()
         except discord.HTTPException:
             pass
 
@@ -832,7 +836,8 @@ class Music(commands.Cog):
             await player.invoke_controller()
         await asyncio.sleep(10)
         try:
-            await ctx.message.delete()
+            if ctx.message.id != player.controller_message.id:
+                await ctx.message.delete()
         except discord.HTTPException:
             pass
 
