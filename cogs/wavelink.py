@@ -705,7 +705,7 @@ class Music(commands.Cog):
 
         if not upcoming:
             return await ctx.send('```\nNo more songs in the Queue!\n```')
-        numbered = [f'{i+1}. **`{str(song)}`**' for i, song in enumerate(upcoming)]
+        numbered = [f'`{i+1}. [{str(datetime.timedelta(milliseconds=int(song.length)))}] {song.title[0:45]}{"..." if len(song.title) > 45 else ""}`' for i, song in enumerate(upcoming)]
         fmt = '\n'.join(numbered)
         # fmt = '\n'.join(f'**`{str(song)}`**' for song in upcoming)
         embed = discord.Embed(title=f'Upcoming - Next {len(upcoming)}', description=fmt)
