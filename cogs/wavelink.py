@@ -1016,8 +1016,10 @@ class Music(commands.Cog):
     # Custom playlist stuff:
 
     @commands.group(invoke_without_command=True)
-    async def playlist(self, ctx, *, name):
+    async def playlist(self, ctx, *, name=None):
         """Play/Add/Remove custom playlists"""
+        if name is None:
+            return await ctx.invoke(self.list)
         url = self._playlists.get(name)
         if url:
             await ctx.invoke(self.play_, query=url)
