@@ -171,7 +171,7 @@ class Player(wavelink.Player):
         if track.is_stream:
             embed.add_field(name='Duration', value='🔴`Streaming`')
         else:
-            embed.add_field(name='Duration', value=f'{str(datetime.timedelta(milliseconds=int(self.position))).split(".")[0]}/{str(datetime.timedelta(milliseconds=int(track.length)))}')
+            embed.add_field(name='Duration(approx.)', value=f'{str(datetime.timedelta(milliseconds=int(self.position))).split(".")[0]}/{str(datetime.timedelta(milliseconds=int(track.length)))}')
         embed.add_field(name='Video URL', value=f'[Click Here!]({track.uri})')
         embed.add_field(name='Requested By', value=track.requester.mention)
         embed.add_field(name='Queue Length', value=str(len(self.entries)))
@@ -309,6 +309,10 @@ class Music(commands.Cog):
         self.players = {}
         with open('data/playlists.json') as f:
             self._playlists = json.load(f)
+
+        with open('data/noafks.json') as f:
+            self.noafks = set(json.load(f))
+
         self.save_playlists_to_json.start()
 
         if not hasattr(bot, 'wavelink'):
@@ -328,6 +332,7 @@ class Music(commands.Cog):
 
         self.save_playlists_to_json.cancel()
         self.save_playlists()
+        self.save_noafks()
 
     async def initiate_nodes(self):
         _main = self.bot.wavelink.get_node('MAIN')
@@ -1087,10 +1092,56 @@ class Music(commands.Cog):
         with open('data/playlists.json', 'w') as f:
             json.dump(self._playlists, f, indent=2)
 
+    def save_noafks(self):
+        with open('data/noafks.json', 'w') as f:
+            json.dump(list(self.noafks), f, indent=2)
+
     # noinspection PyCallingNonCallable
-    @tasks.loop(hours=6)
+    @tasks.loop(hours=24)
     async def save_playlists_to_json(self):
         self.save_playlists()
+        self.save_noafks()
+
+    # Anti-afk
+
+    @commands.command(name='noafk', hidden=True)
+    async def no_afk_toggle(self, ctx):
+        if ctx.author.id in self.noafks:
+            self.noafks.remove(ctx.author.id)
+            await ctx.send('You will no longer be moved back when you AFK')
+            await ctx.message.add_reaction('\U00002796')  # React with heavy minus sign
+        else:
+            self.noafks.add(ctx.author.id)
+            await ctx.send('You be moved back when you AFK')
+            await ctx.message.add_reaction('\U00002795')  # React with heavy plus sign
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member:discord.Member, before, after):
+        """
+        :param member: Member
+        :param before: VoiceState
+        :param after:  VoiceState
+        """
+        if member.id not in self.noafks:
+            return
+
+        if not member.guild.id in self.bot.wavelink.players:
+            return
+
+        afk_channel = member.guild.afk_channel
+        if afk_channel is None:
+            return
+
+        player = self.bot.wavelink.get_player(member.guild.id, cls=Player)
+
+        if not player.is_connected:
+            return
+
+        if before.channel.id == player.channel_id and after.channel.id == afk_channel.id:
+            try:
+                await member.move_to(member.guild.get_channel(player.channel_id))
+            except discord.HTTPException:
+                pass
 
 
 def setup(bot):
