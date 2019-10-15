@@ -116,7 +116,7 @@ class PrefixCog(commands.Cog, name='Prefix'):
             await message.channel.send(f'My prefix {here} is: {formatted}')
 
     # noinspection PyCallingNonCallable
-    @tasks.loop(hours=6)
+    @tasks.loop(hours=24)
     async def save_prefixes_to_json(self):
         self.save_prefixes()
 

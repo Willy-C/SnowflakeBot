@@ -356,7 +356,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
     # noinspection PyCallingNonCallable
-    @tasks.loop(hours=6)
+    @tasks.loop(hours=24)
     async def save_to_json(self):
         self.save_highlights()
         self.save_mentions()
