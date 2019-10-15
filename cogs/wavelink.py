@@ -1137,10 +1137,10 @@ class Music(commands.Cog):
         if not player.is_connected:
             return
 
-        if before.channel.id == player.channel_id and after.channel.id == afk_channel.id:
+        if before.channel.id == int(player.channel_id) and after.channel.id == afk_channel.id:
             try:
-                await member.move_to(member.guild.get_channel(player.channel_id))
-            except discord.HTTPException:
+                await member.move_to(member.guild.get_channel(int(player.channel_id)))
+            except (discord.HTTPException, AttributeError):
                 pass
 
 
