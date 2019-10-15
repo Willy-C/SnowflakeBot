@@ -1106,6 +1106,7 @@ class Music(commands.Cog):
 
     @commands.command(name='noafk', hidden=True)
     async def no_afk_toggle(self, ctx):
+        """Toggles anti-afk"""
         if ctx.author.id in self.noafks:
             self.noafks.remove(ctx.author.id)
             await ctx.send('You will no longer be moved back when you AFK')
@@ -1139,8 +1140,10 @@ class Music(commands.Cog):
 
         if before.channel.id == int(player.channel_id) and after.channel.id == afk_channel.id:
             try:
-                await member.move_to(member.guild.get_channel(int(player.channel_id)))
-            except (discord.HTTPException, AttributeError):
+                current_channel = member.guild.get_channel(int(player.channel_id))
+                if current_channel is not None:
+                    await member.move_to(current_channel)
+            except discord.HTTPException:
                 pass
 
 
