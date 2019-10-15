@@ -466,14 +466,19 @@ class ModCog(commands.Cog, name='Mod'):
             await ctx.channel.set_permissions(member, overwrite=None)
 
     @commands.command(hidden=True)
-    @commands.bot_has_permissions(move_members=True)
     @can_move_members()
     async def move(self, ctx, member: discord.Member, *, channel: discord.VoiceChannel = None):
         """Move a user to another voice channel.
         Disconnects user if channel is None.
         """
-        await member.move_to(channel)
-        await ctx.message.add_reaction('\U00002705')  # React with checkmark
+        if not ctx.guild.me.guild_permissions.move_members:
+            return
+        try:
+            await member.move_to(channel)
+        except discord.HTTPException as e:
+            await ctx.send(f'Unable to move: `{e}`')
+        else:
+            await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
     @commands.Cog.listener()
     async def on_message(self, message):
