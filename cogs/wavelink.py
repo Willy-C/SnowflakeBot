@@ -639,8 +639,8 @@ class Music(commands.Cog):
     async def do_stop(self, ctx):
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
-        await player.destroy_controller()
         await player.destroy()
+        await player.destroy_controller()
 
     @commands.command(name='volume', aliases=['vol'])
     async def volume_(self, ctx, *, value: float):
