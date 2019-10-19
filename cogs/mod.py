@@ -543,7 +543,7 @@ class ModCog(commands.Cog, name='Mod'):
         Ex. %purge contains hello"""
         await self.purge_messages(ctx, 25, lambda m: substring in m.content)
 
-    @purge.commands(name='content')
+    @purge.command(name='content')
     async def content_equals(self, ctx, *, _content):
         """Deletes messages with content matching exactly with given content
         Will always search within the last 25 messages
