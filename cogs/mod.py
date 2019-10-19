@@ -516,22 +516,44 @@ class ModCog(commands.Cog, name='Mod'):
 
         await ctx.send('\n'.join(messages), delete_after=10)
 
-    @purge.command(aliases=['member'])
+    @purge.command(name='user', aliases=['member'])
     async def user(self, ctx, member: discord.Member, limit=20):
+        """Delete messages from a user.
+        If no search limit is given, defaults to 20
+        Ex. %purge user Snowflake 10"""
         await self.purge_messages(ctx, limit, lambda m: m.author == member)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
 
     @purge.command(name='bot', aliases=['bots'])
     async def bots(self, ctx, limit=20, prefix=None):
+        """Deletes messages from bots and messages that begin with prefix if given
+        If no search limit is given, defaults to 20
+        If no prefix is given, will not delete any non-bot messages
+        Ex. %purge bots 10 $"""
         def check(m):
             return (m.author.bot and m.webhook_id is None) or (prefix and m.content.startswith(prefix))
         await self.purge_messages(ctx, limit, check)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
+    @purge.command(name='contains')
+    async def _contains(self, ctx, *, substring):
+        """Deletes messages that contain a substring
+        Will always search within the last 25 messages
+        Ex. %purge contains hello"""
+        await self.purge_messages(ctx, 25, lambda m: substring in m.content)
+
+    @purge.commands(name='content')
+    async def content_equals(self, ctx, *, _content):
+        """Deletes messages with content matching exactly with given content
+        Will always search within the last 25 messages
+        Ex. %purge content hello there'"""
+        await self.purge_messages(ctx, 25, lambda m: m.content == _content)
 
     @purge.command(name='all')
     async def everything(self, ctx, limit=20):
+        """Deletes the last `limit` messages in the channel
+        If no limit is given, defaults to 20"""
         if not await confirm_prompt(ctx, f'Delete {limit} messages?'):
             return
         await self.purge_messages(ctx, limit, lambda m: True)

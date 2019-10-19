@@ -263,7 +263,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
     @highlight.command(name='ignore')
     async def toggle_ignore(self, ctx, target: Union[discord.User, discord.TextChannel, str]):
         """Toggle ignores for highlight
-        Can enter a User, TextChannel via name, mention or ID
+        Can enter a User, TextChannel via mention, ID or name
         or enter GUILD or CLEAR
         GUILD = the current guild
         CLEAR = remove all ignores"""

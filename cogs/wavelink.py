@@ -1117,7 +1117,7 @@ class Music(commands.Cog):
             await ctx.message.add_reaction('\U00002795')  # React with heavy plus sign
 
     @commands.Cog.listener()
-    async def on_voice_state_update(self, member:discord.Member, before, after):
+    async def on_voice_state_update(self, member, before, after):
         """
         :param member: Member
         :param before: VoiceState
