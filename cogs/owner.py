@@ -12,7 +12,7 @@ from typing import Optional, Union
 from contextlib import redirect_stdout
 
 from utils.errors import NoBlacklist
-from utils.global_utils import confirm_prompt, cleanup_code , bright_color
+from utils.global_utils import confirm_prompt, cleanup_code
 
 
 class OwnerCog(commands.Cog, name='Owner'):
@@ -140,6 +140,7 @@ class OwnerCog(commands.Cog, name='Owner'):
         """
         msg = copy.copy(ctx.message)
         channel = channel or ctx.channel
+        msg.guild = channel.guild
         msg.channel = channel
         msg.author = channel.guild.get_member(target.id) or target
         msg.content = ctx.prefix + command
