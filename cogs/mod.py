@@ -542,6 +542,7 @@ class ModCog(commands.Cog, name='Mod'):
         Will always search within the last 25 messages
         Ex. %purge contains hello"""
         await self.purge_messages(ctx, 25, lambda m: substring in m.content)
+        await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
     @purge.command(name='content')
     async def content_equals(self, ctx, *, _content):
@@ -549,6 +550,7 @@ class ModCog(commands.Cog, name='Mod'):
         Will always search within the last 25 messages
         Ex. %purge content hello there'"""
         await self.purge_messages(ctx, 25, lambda m: m.content == _content)
+        await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
     @purge.command(name='all')
     async def everything(self, ctx, limit=20):

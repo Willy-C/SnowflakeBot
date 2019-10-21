@@ -632,7 +632,7 @@ class Music(commands.Cog):
         if not player.is_connected:
             return await ctx.send('I am not currently connected to voice!')
 
-        await ctx.send(f'{ctx.author.mention} has stopped the music!', delete_after=5)
+        await ctx.send(f'{ctx.author.mention} has stopped the music!')
 
         return await self.do_stop(ctx)
 

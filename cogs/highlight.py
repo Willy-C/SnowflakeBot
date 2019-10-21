@@ -20,12 +20,6 @@ class HighlightCog(commands.Cog, name='Highlight'):
             self.ignores = {int(k): v for k, v in json.load(f).items()}
         self.save_to_json.start()
 
-        # maybe str -> [UserIDs] to support same keyword for multiple people
-
-        # self.ignored_guilds = {} # UserID -> {Guild IDs} | int -> set(int)
-        # self.ignored_channels = {} # UserID -> {Channel IDs} | int -> set(int)
-        # self.ignored_users={} # UserID -> {User IDs} | int -> set(int)
-
     def save_highlights(self):
         with open('data/highlights.json', 'w') as f:
             json.dump(self.highlights, f, indent=2)
