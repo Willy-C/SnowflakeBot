@@ -178,6 +178,8 @@ class HighlightCog(commands.Cog, name='Highlight'):
     async def add(self, ctx, *, key):
         """Add a highlight keyword"""
         key = key.lower()
+        if len(key)<3:
+            return await ctx.send('Keywords must be at least 3 characters!')
         users = self.highlights.setdefault(key, [])
         if ctx.author.id in users:
             return await ctx.send('You already have this key registered!', delete_after=10)

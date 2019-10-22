@@ -456,6 +456,42 @@ class Music(commands.Cog):
 
         await player.connect(channel.id)
 
+    async def _ask_for_selection(self, ctx, tracks):
+        if len(tracks) == 1:
+            return tracks[0]
+
+        songs = []
+        for index, track in enumerate(tracks[:5]):
+            _author = track.info.get('author')
+            length = str(datetime.timedelta(milliseconds=int(track.length)))
+            title = f'`{track.title[0:90]}{"..." if len(track.title) > 90 else ""}`'
+            author = f'`{_author[0:40]}{"..." if len(_author) > 40 else ""}`'
+            songs.append(f'{index+1}\U000020e3 {title} - {author} [{length}] \n{"-"*15}')
+        data = '\n'.join(songs)
+        e = discord.Embed(title='Youtube search',
+                          description=data,
+                          color=0xFF2133)
+        selector = await ctx.send('Please choose your song with a reaction', embed=e)
+
+        _reactions = []
+        for i in range(len(songs)):
+            _reactions.append(f'{i+1}\U000020e3')
+            await selector.add_reaction(f'{i+1}\U000020e3')
+
+        def check(reaction, user):
+            return reaction.message.id == selector.id and str(reaction.emoji) in _reactions and user == ctx.author
+
+        try:
+            reaction, user = await self.bot.wait_for('reaction_add', timeout=90, check=check)
+        except asyncio.TimeoutError:
+            await ctx.send('Took too long... playing first result', delete_after=8)
+        else:
+            player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
+            if player.is_connected:
+                return tracks[int(reaction.emoji[0])-1]
+        finally:
+            await selector.delete()
+
     @commands.command(name='play', aliases=['p'])
     async def play_(self, ctx, *, query: str):
         """Queue a song or playlist for playback.
@@ -482,6 +518,9 @@ class Music(commands.Cog):
         if not player.is_connected or (player.is_connected and ctx.author.voice and ctx.author.voice.channel != ctx.guild.me.voice.channel):
             await ctx.invoke(self.connect_)
 
+        if not player.is_connected:
+            return
+
         if not RURL.match(query):
             query = f'ytsearch:{query}'
 
@@ -496,7 +535,7 @@ class Music(commands.Cog):
             await ctx.send(f'```ini\nAdded the playlist {tracks.data["playlistInfo"]["name"]}'
                            f' with {len(tracks.tracks)} songs to the queue.\n```', delete_after=15)
         else:
-            track = tracks[0]
+            track = await self._ask_for_selection(ctx, tracks) or tracks[0]
             await ctx.send(f'```ini\nAdded {track.title} to the Queue\n```', delete_after=10)
             await player.queue.put(Track(track.id, track.info, ctx=ctx))
 
@@ -618,7 +657,6 @@ class Music(commands.Cog):
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
         await player.stop()
-
 
     @commands.command(name='stop')
     async def stop_(self, ctx):
@@ -1126,7 +1164,7 @@ class Music(commands.Cog):
         if member.id not in self.noafks:
             return
 
-        if not member.guild.id in self.bot.wavelink.players:
+        if member.guild.id not in self.bot.wavelink.players:
             return
 
         afk_channel = member.guild.afk_channel
