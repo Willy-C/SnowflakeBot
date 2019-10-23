@@ -473,10 +473,12 @@ class Music(commands.Cog):
                           color=0xFF2133)
         selector = await ctx.send('Please choose your song with a reaction', embed=e)
 
-        _reactions = []
+        _reactions = ['\U0000274c']
         for i in range(len(songs)):
             _reactions.append(f'{i+1}\U000020e3')
             await selector.add_reaction(f'{i+1}\U000020e3')
+
+        await selector.add_reaction('\U0000274c') # X for cancel
 
         def check(reaction, user):
             return reaction.message.id == selector.id and str(reaction.emoji) in _reactions and user == ctx.author
@@ -485,7 +487,10 @@ class Music(commands.Cog):
             reaction, user = await self.bot.wait_for('reaction_add', timeout=90, check=check)
         except asyncio.TimeoutError:
             await ctx.send('Took too long... playing first result', delete_after=8)
+            return tracks[0]
         else:
+            if reaction.emoji == '❌':
+                return await ctx.send('Aborting...', delete_after=5)
             player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
             if player.is_connected:
                 return tracks[int(reaction.emoji[0])-1]
@@ -535,7 +540,9 @@ class Music(commands.Cog):
             await ctx.send(f'```ini\nAdded the playlist {tracks.data["playlistInfo"]["name"]}'
                            f' with {len(tracks.tracks)} songs to the queue.\n```', delete_after=15)
         else:
-            track = await self._ask_for_selection(ctx, tracks) or tracks[0]
+            track = await self._ask_for_selection(ctx, tracks)
+            if track is None:
+                return
             await ctx.send(f'```ini\nAdded {track.title} to the Queue\n```', delete_after=10)
             await player.queue.put(Track(track.id, track.info, ctx=ctx))
 
