@@ -462,10 +462,9 @@ class Music(commands.Cog):
 
         songs = []
         for index, track in enumerate(tracks[:5]):
-            _author = track.info.get('author')
             length = str(datetime.timedelta(milliseconds=int(track.length)))
             title = f'`{track.title[0:90]}{"..." if len(track.title) > 90 else ""}`'
-            author = f'`{_author[0:40]}{"..." if len(_author) > 40 else ""}`'
+            author = f'`{track.author[0:40]}{"..." if len(track.author) > 40 else ""}`'
             songs.append(f'{index+1}\U000020e3 {title} - {author} [{length}] \n{"-"*15}')
         data = '\n'.join(songs)
         e = discord.Embed(title='Youtube search',
@@ -484,7 +483,7 @@ class Music(commands.Cog):
             return reaction.message.id == selector.id and str(reaction.emoji) in _reactions and user == ctx.author
 
         try:
-            reaction, user = await self.bot.wait_for('reaction_add', timeout=90, check=check)
+            reaction, user = await self.bot.wait_for('reaction_add', timeout=60, check=check)
         except asyncio.TimeoutError:
             await ctx.send('Took too long... aborting', delete_after=8)
             return
