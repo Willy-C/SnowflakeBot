@@ -486,8 +486,8 @@ class Music(commands.Cog):
         try:
             reaction, user = await self.bot.wait_for('reaction_add', timeout=90, check=check)
         except asyncio.TimeoutError:
-            await ctx.send('Took too long... playing first result', delete_after=8)
-            return tracks[0]
+            await ctx.send('Took too long... aborting', delete_after=8)
+            return
         else:
             if reaction.emoji == '❌':
                 await ctx.send('Aborting...', delete_after=5)
