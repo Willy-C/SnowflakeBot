@@ -490,7 +490,8 @@ class Music(commands.Cog):
             return tracks[0]
         else:
             if reaction.emoji == '❌':
-                return await ctx.send('Aborting...', delete_after=5)
+                await ctx.send('Aborting...', delete_after=5)
+                return
             player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
             if player.is_connected:
                 return tracks[int(reaction.emoji[0])-1]
