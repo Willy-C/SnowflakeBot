@@ -10,7 +10,7 @@ from .latex import TexRenderError
 
 
 class CommandErrorHandler(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.Cog.listener()
@@ -73,7 +73,8 @@ class CommandErrorHandler(commands.Cog):
                        f'If you really want to know what went wrong:\n'
                        f'||```py\n{tb[-1]}```||')
 
-        me = self.bot.get_user(self.bot.owner_id)
+        _info = await self.bot.application_info()
+        me =  _info.owner
         e = discord.Embed(title=f'An unhandled error occurred in {ctx.guild} | #{ctx.channel}',
                           description=f'Invocation message: {ctx.message.content}\n'
                                       f'[Jump to message]({ctx.message.jump_url})',
