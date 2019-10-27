@@ -129,6 +129,7 @@ class Player(wavelink.Player):
                 return
 
             if not song:
+                await self.destroy_controller()
                 continue
 
             self.current = song
@@ -1155,11 +1156,11 @@ class Music(commands.Cog):
         if ctx.author.id in self.noafks:
             self.noafks.remove(ctx.author.id)
             await ctx.send('You will no longer be moved back when you AFK')
-            await ctx.message.add_reaction('\U00002796')  # React with heavy minus sign
+            await ctx.message.add_reaction('\U00002796')  # React with minus sign
         else:
             self.noafks.add(ctx.author.id)
             await ctx.send('You be moved back when you AFK')
-            await ctx.message.add_reaction('\U00002795')  # React with heavy plus sign
+            await ctx.message.add_reaction('\U00002795')  # React with plus sign
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -1174,6 +1175,9 @@ class Music(commands.Cog):
         if member.guild.id not in self.bot.wavelink.players:
             return
 
+        if before.channel is None or after.channel is None:
+            return
+
         afk_channel = member.guild.afk_channel
         if afk_channel is None:
             return
@@ -1181,6 +1185,7 @@ class Music(commands.Cog):
         player = self.bot.wavelink.get_player(member.guild.id, cls=Player)
 
         if not player.is_connected:
+            await player.destroy()
             return
 
         if before.channel.id == int(player.channel_id) and after.channel.id == afk_channel.id:
