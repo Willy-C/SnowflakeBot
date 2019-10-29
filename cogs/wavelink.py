@@ -125,7 +125,10 @@ class Player(wavelink.Player):
                     song = await self.queue.get()
             except asyncio.TimeoutError:
                 await self.destroy_controller()
-                await self.destroy()
+                try:
+                    await self.destroy()
+                except  KeyError:
+                    pass
                 return
 
             if not song:
