@@ -502,7 +502,7 @@ class Music(commands.Cog):
             await selector.delete()
 
     @commands.command(name='play', aliases=['p'])
-    async def play_(self, ctx, *, query: str):
+    async def play_(self, ctx, *, query: str = None):
         """Queue a song or playlist for playback.
         Aliases
         ---------
@@ -519,9 +519,6 @@ class Music(commands.Cog):
         """
         await ctx.trigger_typing()
 
-        # await ctx.invoke(self.connect_)
-        query = query.strip('<>')
-
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
         if not player.is_connected or (player.is_connected and ctx.author.voice and ctx.author.voice.channel != ctx.guild.me.voice.channel):
@@ -529,6 +526,11 @@ class Music(commands.Cog):
 
         if not player.is_connected:
             return
+
+        if query is None:
+            return
+
+        query = query.strip('<>')
 
         if not RURL.match(query):
             query = f'ytsearch:{query}'
