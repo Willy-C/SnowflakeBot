@@ -36,7 +36,7 @@ class TexRenderError(commands.CommandError):
         self.logs = logs
 
 
-class LatexCog(commands.Cog):
+class LatexCog(commands.Cog, name='General'):
     def __init__(self, bot):
         self.bot = bot
 

@@ -914,6 +914,53 @@ class Music(commands.Cog):
         if not player.updating and not player.update:
             await player.invoke_controller()
 
+    @commands.command(name='playnext', aliases=['pnext', 'pn'])
+    async def _playnext(self, ctx, *, query: str = None):
+        await ctx.trigger_typing()
+
+        player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
+
+        if not player.is_connected or (player.is_connected and ctx.author.voice and ctx.author.voice.channel != ctx.guild.me.voice.channel):
+            await ctx.invoke(self.connect_)
+
+        if not player.is_connected:
+            return
+
+        if query is None:
+            return
+
+        query = query.strip('<>')
+
+        if not RURL.match(query):
+            query = f'ytsearch:{query}'
+
+        tracks = await self.bot.wavelink.get_tracks(query)
+        if not tracks:
+            return await ctx.send('No songs were found with that query. Please try again.')
+
+        if isinstance(tracks, wavelink.TrackPlaylist):
+            for t in tracks.tracks[::-1]:
+                if not player.entries:
+                    await player.queue.put(Track(t.id, t.info, ctx=ctx))
+                else:
+                    player.queue._queue.appendleft(Track(t.id, t.info, ctx=ctx))
+
+            await ctx.send(f'```ini\nAdded the playlist {tracks.data["playlistInfo"]["name"]}'
+                           f' with {len(tracks.tracks)} songs to the queue.\n```', delete_after=15)
+        else:
+            track = await self._ask_for_selection(ctx, tracks)
+            if track is None:
+                return
+            await ctx.send(f'```ini\nAdded {track.title} to the front of the Queue\n```', delete_after=10)
+
+            if not player.entries:
+                await player.queue.put(Track(track.id, track.info, ctx=ctx))
+            else:
+                player.queue._queue.appendleft(Track(track.id, track.info, ctx=ctx))
+
+        if player.controller_message and player.is_playing:
+            await player.invoke_controller()
+
     @commands.command(name='eq')
     async def set_eq(self, ctx, *, eq: str):
         """Set the eq of the player.
