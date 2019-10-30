@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 
-import datetime
 from datetime import datetime
 
 GUILD_ID = 528403806984077312
@@ -20,7 +19,7 @@ class WASHCog(commands.Cog):
         if message.guild is None or message.guild.id != GUILD_ID or message.channel.id != CHANNEL_ID or message.author.bot:
             return
 
-        if (message.created_at - self.last_msg).seconds > 7200:
+        if (message.created_at - self.last_msg).seconds > 5400:
             await self.send_alert(message.channel)
         self.last_msg = message.created_at
 
