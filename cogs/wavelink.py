@@ -916,6 +916,7 @@ class Music(commands.Cog):
 
     @commands.command(name='playnext', aliases=['pnext', 'pn'])
     async def _playnext(self, ctx, *, query: str = None):
+        """Add a song or playlist to the front of the queue"""
         await ctx.trigger_typing()
 
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
@@ -946,12 +947,12 @@ class Music(commands.Cog):
                     player.queue._queue.appendleft(Track(t.id, t.info, ctx=ctx))
 
             await ctx.send(f'```ini\nAdded the playlist {tracks.data["playlistInfo"]["name"]}'
-                           f' with {len(tracks.tracks)} songs to the queue.\n```', delete_after=15)
+                           f' with {len(tracks.tracks)} songs to the Front of the Queue.\n```', delete_after=15)
         else:
             track = await self._ask_for_selection(ctx, tracks)
             if track is None:
                 return
-            await ctx.send(f'```ini\nAdded {track.title} to the front of the Queue\n```', delete_after=10)
+            await ctx.send(f'```ini\nAdded {track.title} to the Front of the Queue\n```', delete_after=10)
 
             if not player.entries:
                 await player.queue.put(Track(track.id, track.info, ctx=ctx))
