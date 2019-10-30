@@ -17,7 +17,7 @@ class WASHCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if message.guild is None or message.guild.id != GUILD_ID or message.channel != CHANNEL_ID or message.author.bot:
+        if message.guild is None or message.guild.id != GUILD_ID or message.channel.id != CHANNEL_ID or message.author.bot:
             return
 
         if (message.created_at - self.last_msg).seconds > 7200:
