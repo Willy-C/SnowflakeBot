@@ -12,7 +12,7 @@ from typing import Optional, Union
 from contextlib import redirect_stdout
 
 from utils.errors import NoBlacklist
-from utils.global_utils import confirm_prompt, cleanup_code
+from utils.global_utils import confirm_prompt, cleanup_code, copy_context
 
 
 class OwnerCog(commands.Cog, name='Owner'):
@@ -138,13 +138,13 @@ class OwnerCog(commands.Cog, name='Owner'):
         Run a command as someone else.
         Try to resolve to a Member, if possible.
         """
-        msg = copy.copy(ctx.message)
         channel = channel or ctx.channel
-        msg.guild = channel.guild
-        msg.channel = channel
-        msg.author = channel.guild.get_member(target.id) or target
-        msg.content = ctx.prefix + command
-        new_ctx = await self.bot.get_context(msg, cls=type(ctx))
+        author = channel.guild.get_member(target.id) or target
+        content = ctx.prefix + command
+        new_ctx = await copy_context(ctx, author=author, channel=channel, content=content)
+        if new_ctx.command is None:
+            return await ctx.send(f'Command "{new_ctx.invoked_with}" is not found')
+
         await self.bot.invoke(new_ctx)
 
     @commands.command(name="shutdown")
