@@ -27,6 +27,9 @@ class WASHCog(commands.Cog):
     async def send_alert(self, message):
         if message.author.id == HAD_ID:
             return
+        HD = self.bot.get_user(HAD_ID)
+        if HD is not None and HD.mentioned_in(message):
+            return
         await message.channel.send(f'<@{HAD_ID}> A conversation just started!')
 
     # If a new conversation started, then ping

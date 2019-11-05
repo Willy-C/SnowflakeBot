@@ -241,7 +241,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     @highlight.command()
     async def clear(self, ctx):
-        """Remove all highlight keys and stop highlights for mentions"""
+        """Clear all highlights"""
         for val in self.highlights.values():
             try:
                 val.remove(ctx.author.id)
