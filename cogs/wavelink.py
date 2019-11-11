@@ -586,6 +586,11 @@ class Music(commands.Cog):
         if player.updating or player.update:
             return
 
+        try:
+            await player.destroy_controller()
+        except:
+            pass
+
         await player.invoke_controller()
 
     @commands.command(name='pause')
