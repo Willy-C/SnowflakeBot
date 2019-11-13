@@ -521,7 +521,10 @@ class Music(commands.Cog):
 
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
-        if not player.is_connected or (player.is_connected and ctx.author.voice and ctx.author.voice.channel != ctx.guild.me.voice.channel):
+        try:
+            if not player.is_connected or (player.is_connected and ctx.author.voice and ctx.author.voice.channel != ctx.guild.me.voice.channel):
+                await ctx.invoke(self.connect_)
+        except AttributeError: # try-except here because for some reason it can be connected but .voice is None
             await ctx.invoke(self.connect_)
 
         if not player.is_connected:
