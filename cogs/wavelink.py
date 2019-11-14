@@ -481,7 +481,7 @@ class Music(commands.Cog):
                           color=0xFF2133)
         selector = await ctx.send('Please choose your song with a reaction', embed=e)
 
-        self.bot.loop.create_task(self._add_selector_emojis(selector, songs))
+        reaction_task = self.bot.loop.create_task(self._add_selector_emojis(selector, songs))
 
         _reactions = ['\U0000274c']
         for i in range(len(songs)):
@@ -503,6 +503,10 @@ class Music(commands.Cog):
             if player.is_connected:
                 return tracks[int(reaction.emoji[0])-1]
         finally:
+            try:
+                reaction_task.cancel()
+            except:
+                pass
             await selector.delete()
 
     @commands.command(name='play', aliases=['p'])
