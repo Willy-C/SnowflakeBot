@@ -241,7 +241,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     @highlight.command()
     async def clear(self, ctx):
-        """Clear all highlights"""
+        """Clear all highlight keys"""
         for val in self.highlights.values():
             try:
                 val.remove(ctx.author.id)
@@ -323,7 +323,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     @highlight.command(name='ignores', aliases=['listignores'])
     async def list_ignores(self, ctx):
-        """List all your current ignores"""
+        """List your current ignores"""
         _ignores = self.ignores.get(ctx.author.id)
         if _ignores:
             e = discord.Embed(color=discord.Color.dark_blue(),

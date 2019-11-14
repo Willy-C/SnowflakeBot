@@ -460,6 +460,11 @@ class Music(commands.Cog):
 
         await player.connect(channel.id)
 
+    async def _add_selector_emojis(self, selector, songs): # abstracted to put in a task
+        for i in range(len(songs)):
+            await selector.add_reaction(f'{i+1}\U000020e3')
+        await selector.add_reaction('\U0000274c') # X for cancel
+
     async def _ask_for_selection(self, ctx, tracks):
         if len(tracks) == 1:
             return tracks[0]
@@ -476,12 +481,11 @@ class Music(commands.Cog):
                           color=0xFF2133)
         selector = await ctx.send('Please choose your song with a reaction', embed=e)
 
+        self.bot.loop.create_task(self._add_selector_emojis(selector, songs))
+
         _reactions = ['\U0000274c']
         for i in range(len(songs)):
             _reactions.append(f'{i+1}\U000020e3')
-            await selector.add_reaction(f'{i+1}\U000020e3')
-
-        await selector.add_reaction('\U0000274c') # X for cancel
 
         def check(reaction, user):
             return reaction.message.id == selector.id and str(reaction.emoji) in _reactions and user == ctx.author
