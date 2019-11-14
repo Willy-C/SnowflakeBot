@@ -151,7 +151,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
                 self.mentions.remove(_id)
         else:
             try:
-                await message.add_reaction('\U0001f440')  # eyes
+                await message.add_reaction('<:eyes:644633489727291402>')  # eyes
             except discord.HTTPException:
                 pass
 
