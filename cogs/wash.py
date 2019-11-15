@@ -10,10 +10,19 @@ HAD_ID = 299205173878849537
 
 class WASHCog(commands.Cog):
 
-    def __init__(self, bot):
+    def __init__(self, bot:commands.Bot):
         self.bot = bot
-        self.last_msg = datetime.utcnow()
-        self._timeout = 3600
+        self._timeout = 7200
+        bot.loop.create_task(self.set_last_msg())
+
+    async def set_last_msg(self):
+        await self.bot.wait_until_ready()
+        channel = self.bot.get_guild(GUILD_ID).get_channel(CHANNEL_ID)
+        last_msg = await channel.fetch_message(channel.last_message_id)
+        if last_msg is None:
+            self.last_msg = datetime.utcnow() # couldn't get last message, default to utcnow
+        else:
+            self.last_msg = last_msg.created_at
 
     @commands.Cog.listener()
     async def on_message(self, message):
