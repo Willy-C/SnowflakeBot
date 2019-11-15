@@ -10,7 +10,7 @@ HAD_ID = 299205173878849537
 
 class WASHCog(commands.Cog):
 
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot):
         self.bot = bot
         self._timeout = 7200
         bot.loop.create_task(self.set_last_msg())
