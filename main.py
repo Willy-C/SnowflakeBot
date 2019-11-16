@@ -27,7 +27,8 @@ startup_extensions = ['jishaku',
                       'cogs.info',
                       'cogs.wavelink',
                       'cogs.wash',
-                      'cogs.vi']
+                      'cogs.vi',
+                      'cogs.gatekeep']
 
 
 def get_prefix(bot, message):
