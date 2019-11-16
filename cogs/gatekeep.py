@@ -85,7 +85,7 @@ class GatekeepCog(commands.Cog):
         role = discord.Object(id=VERIFIED_ROLE)
         await member.add_roles(role, reason=f'Manual Verification by {ctx.author}')
 
-    @verify.error()
+    @verify.error
     async def verify_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
             ctx.local_handled = True
