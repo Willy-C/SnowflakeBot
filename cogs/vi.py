@@ -16,9 +16,6 @@ class ViCog(commands.Cog):
                            631344051442155520: {'join': None,
                                                 'leave': None}}
 
-    def cog_check(self, ctx):
-        return ctx.guild is not None and ctx.guild.id == GUILD_ID
-
     @commands.Cog.listener()
     async def on_member_join(self, member):
         if member.guild.id != GUILD_ID:
@@ -43,6 +40,8 @@ class ViCog(commands.Cog):
     # noinspection PyTupleAssignmentBalance
     @commands.command()
     async def who(self, ctx, *, voicechannel: discord.VoiceChannel = None):
+        if ctx.guild and ctx.guild.id != GUILD_ID:
+            return
         if voicechannel is None:
             if ctx.author.voice is None:
                 return await ctx.send('Please specify a voice channel')
