@@ -23,7 +23,7 @@ class GatekeepCog(commands.Cog):
 
         join_channel = self.bot.get_channel(JOIN_CHANNEL)
         if member.id in self.verified:
-            role = member.guild.get_role(VERIFIED_ROLE)
+            role = discord.Object(id=VERIFIED_ROLE)
             try:
                 await member.add_roles(role, reason='Automatic verification')
             except (discord.HTTPException, AttributeError) as err:
