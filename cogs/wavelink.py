@@ -566,12 +566,11 @@ class Music(commands.Cog):
         if player.controller_message and player.is_playing:
             await player.invoke_controller()
 
-        # await asyncio.sleep(10)
-        # try:
-        #     if ctx.message.id != player.controller_message.id:
-        #         await ctx.message.delete()
-        # except (discord.HTTPException, AttributeError):
-        #     pass
+        try:
+            if ctx.message.id != player.controller_message.id:
+                await ctx.message.edit(suppress=True)
+        except (discord.HTTPException, AttributeError):
+            pass
 
     @commands.command(name='np', aliases=['current'])
     async def now_playing(self, ctx):
@@ -914,7 +913,7 @@ class Music(commands.Cog):
             pass
 
     @commands.command(name='clear')
-    async def clear_queue(self, ctx, amount = 0):
+    async def clear_queue(self, ctx, amount=0):
         """Removes everything after the first `amount` items in queue"""
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
