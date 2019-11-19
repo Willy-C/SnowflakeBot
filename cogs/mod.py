@@ -99,7 +99,7 @@ class ModCog(commands.Cog, name='Mod'):
         else:
             await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
-    @commands.command(name='suppress', enabled=False, hidden=True)  # disable because suppress not supported yet
+    @commands.command(name='suppress', hidden=True)
     @commands.bot_has_permissions(manage_messages=True)
     @can_manage_messages()
     async def suppress_embed(self, ctx, message: discord.Message, toggle: bool=True):
