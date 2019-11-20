@@ -82,6 +82,11 @@ class GeneralCog(commands.Cog, name='General'):
         else:
             await ctx.send('<:eyes:644633489727291402>')
 
+        try:
+            await ctx.message.delete()
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
 
 def to_emoji(c):
     base = 0x1f1e6
