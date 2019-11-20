@@ -3,6 +3,7 @@ from discord.ext import commands
 
 import datetime
 import unicodedata
+from typing import Optional
 
 class GeneralCog(commands.Cog, name='General'):
     def __init__(self, bot):
@@ -68,6 +69,18 @@ class GeneralCog(commands.Cog, name='General'):
             await ctx.send('Up to 25 characters at a time and no custom emojis!', delete_after=5)
             return await ctx.send('Output too long to display.')
         await ctx.send(msg)
+
+    @commands.command(hidden=True)
+    async def eyes(self, ctx, msg: Optional[discord.Message]):
+        """Send old eyes emoji (twemoji v2.2)
+        or give a message ID to add reaction instead"""
+        if msg:
+            try:
+                await msg.add_reaction('<:eyes:644633489727291402>')
+            except discord.HTTPException:
+                pass
+        else:
+            await ctx.send('<:eyes:644633489727291402>')
 
 
 def to_emoji(c):
