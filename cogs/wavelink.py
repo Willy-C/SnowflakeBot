@@ -569,7 +569,7 @@ class Music(commands.Cog):
         try:
             if ctx.message.id != player.controller_message.id:
                 await ctx.message.edit(suppress=True)
-        except (discord.HTTPException, AttributeError):
+        except (discord.HTTPException, discord.Forbidden, AttributeError):
             pass
 
     @commands.command(name='np', aliases=['current'])

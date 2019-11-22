@@ -106,7 +106,7 @@ class ModCog(commands.Cog, name='Mod'):
         """Suppresses embeds in a given message. Can pass in False to bring embeds back"""
         try:
             await message.edit(suppress=toggle)
-        except discord.HTTPException as e:
+        except (discord.HTTPException, discord.Forbidden) as e:
             await ctx.send(f'An error has occurred: `{e}`')
         else:
             await ctx.message.add_reaction('\U00002705')  # React with checkmark
