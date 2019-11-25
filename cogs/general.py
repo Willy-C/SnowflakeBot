@@ -3,7 +3,8 @@ from discord.ext import commands
 
 import datetime
 import unicodedata
-from typing import Optional
+from typing import Optional, Union
+
 
 class GeneralCog(commands.Cog, name='General'):
     def __init__(self, bot):
@@ -58,7 +59,6 @@ class GeneralCog(commands.Cog, name='General'):
         """Gives you information about character(s).
         Only up to 25 characters at a time.
         """
-
         def to_string(c):
             digit = f'{ord(c):x}'
             name = unicodedata.name(c, 'Name not found.')
@@ -86,6 +86,13 @@ class GeneralCog(commands.Cog, name='General'):
             await ctx.message.delete()
         except (discord.Forbidden, discord.HTTPException):
             pass
+
+    @commands.command(name='bigemoji')
+    async def _get_emoji_info(self, ctx, emoji: Union[discord.Emoji, discord.PartialEmoji, str]):
+        if isinstance(emoji, (discord.Emoji, discord.PartialEmoji)):
+            await ctx.send(str(emoji.url))
+        else:
+            await ctx.send(emoji)
 
 
 def to_emoji(c):
