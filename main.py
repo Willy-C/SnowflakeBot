@@ -28,18 +28,19 @@ startup_extensions = ['jishaku',
                       'cogs.wavelink',
                       'cogs.wash',
                       'cogs.vi',
-                      'cogs.gatekeep']
+                      'cogs.gatekeep',
+                      'cogs.reddit']
 
 
 def get_prefix(bot, message):
     """A callable prefix for our bot. Returns a list of valid prefixes for the guild"""
     bot_id = bot.user.id
-    default = [f'<@{bot_id}> ', f'<@!{bot_id}> ']  # Accept mentioning the bot as prefix
+    prefixes = [f'<@{bot_id}> ', f'<@!{bot_id}> ']  # Accept mentioning the bot as prefix
     if message.guild is None:
-        default.append('%')
+        prefixes.append('%')
     else:
-        default.extend(bot.prefixes.get(message.guild.id, '%'))
-    return default
+        prefixes.extend(bot.prefixes.get(message.guild.id, '%'))
+    return prefixes
 
 
 class SnowflakeBot(commands.Bot):
