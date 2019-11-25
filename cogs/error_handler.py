@@ -12,6 +12,7 @@ from .latex import TexRenderError
 class CommandErrorHandler(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        bot.on_error = self.on_error
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
@@ -84,6 +85,12 @@ class CommandErrorHandler(commands.Cog):
         await me.send(embed=e)
         await me.send(f'```py\n{"".join(tb)}```')
 
+    async def on_error(self, event, *args, **kwargs):
+        await self.bot.wait_until_ready()
+        _info = await self.bot.application_info()
+        me =  _info.owner
+        await me.send(f'An error occurred in event `{event}`')
+        await me.send(f'```py\n{"".join(traceback.format_exc())}```')
 
 def setup(bot):
     bot.add_cog(CommandErrorHandler(bot))
