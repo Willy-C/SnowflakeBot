@@ -18,7 +18,7 @@ class GeneralCog(commands.Cog, name='General'):
         await webhook.delete()
         try:
             await ctx.message.delete()
-        except discord.HTTPException:
+        except (discord.Forbidden, discord.HTTPException):
             pass
 
     @commands.command(name='poll')
@@ -42,7 +42,7 @@ class GeneralCog(commands.Cog, name='General'):
 
         try:
             await ctx.message.delete()
-        except:
+        except (discord.Forbidden, discord.HTTPException):
             pass
 
         body = "\n".join(f"{key}: {c}" for key, c in choices)
