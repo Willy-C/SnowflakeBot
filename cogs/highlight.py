@@ -111,6 +111,8 @@ class HighlightCog(commands.Cog, name='Highlight'):
                               color=discord.Color(0x00B0F4),
                               timestamp=datetime.utcnow())
             e.set_footer(text=f'Highlight word: {key}')
+
+            member = member or self.bot.get_user(id)
             try:
                 await member.send(embed=e)
             except discord.Forbidden as err:

@@ -38,13 +38,30 @@ class MetaCog(commands.Cog, name='Meta'):
                                f'Response time: `{(end - start)*1000:.2f}ms`')
 
     @commands.command()
-    async def invite(self, ctx):
+    async def invite(self, ctx, _id: int = None):
         """
         The invite link to add me to your server.
         """
-        e = discord.Embed(title='Invite me to your server!',
+        if not _id:
+            user = 'me'
+            url = f'https://discordapp.com/oauth2/authorize?client_id={self.bot.user.id}&permissions=8&scope=bot'
+        else:
+            try:
+                fetch = await self.bot.fetch_user(_id)
+                if not fetch.bot:
+                    return await ctx.send('That ID is not a bot!')
+            except discord.NotFound:
+                return await ctx.send('Invalid ID! Please try again')
+            except discord.DiscordException as e:
+                return await ctx.send(f'An error occurred\n```{e}```')
+            else:
+                user = str(fetch)
+
+            url = f'https://discordapp.com/oauth2/authorize?client_id={_id}&permissions=1024&guild_id={ctx.guild.id}&scope=bot'
+
+        e = discord.Embed(title=f'Invite {user} to your server!',
                           color=discord.Colour(0x00FFFF),
-                          description=f'[Click here to invite me](https://discordapp.com/oauth2/authorize?client_id={self.bot.user.id}&permissions=8&scope=bot)')
+                          description=f'[Click here to invite {user}]({url})')
         await ctx.send(embed=e)
 
     @commands.command(name='allemojis', aliases=['allemotes'], hidden=True)
