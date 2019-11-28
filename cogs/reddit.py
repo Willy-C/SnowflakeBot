@@ -16,10 +16,8 @@ class RedditCog(commands.Cog):
         match = self.subreddit.search(message.content)
         if match is not None:
             url = f'https://www.reddit.com/r/{match.group("sub")}'
-            session = aiohttp.ClientSession()
-            async with session.get(f'{url}.json') as r:
+            async with self.bot.session.get(f'{url}.json') as r:
                 results = await r.json()
-            await session.close()
             try:
                 if results['data']['children']:
                     await message.channel.send(url)

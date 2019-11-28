@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 
 import json
+import aiohttp
 import traceback, platform
 from datetime import datetime
 
@@ -49,11 +50,15 @@ class SnowflakeBot(commands.Bot):
                          activity=discord.Activity(type=discord.ActivityType.listening, name='you :)'))
 
         self.starttime = datetime.utcnow()
-
         self.blacklist = blacklist
+        self.session = aiohttp.ClientSession(loop=self.loop)
 
         with open('data/prefixes.json') as f:
             self.prefixes = {int(k): v for k, v in json.load(f).items()}
+
+    async def close(self):
+        await super().close()
+        await self.session.close()
 
 
 bot = SnowflakeBot()

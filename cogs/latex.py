@@ -50,18 +50,17 @@ class LatexCog(commands.Cog, name='General'):
     async def render(self, ctx, latex):
         try:
             payload = {'code': latex, 'format': 'png'}
-            async with aiohttp.ClientSession() as session:
-                async with session.post(TEX_API, data=payload) as r:
-                    r.raise_for_status()
-                    jdata = await r.json()
-                    if jdata['status'] != 'success':
-                        raise TexRenderError(jdata.get('log'))
-                    file_url = TEX_API + '/' + jdata['filename']
+            async with self.bot.session.post(TEX_API, data=payload) as r:
+                r.raise_for_status()
+                jdata = await r.json()
+                if jdata['status'] != 'success':
+                    raise TexRenderError(jdata.get('log'))
+                file_url = TEX_API + '/' + jdata['filename']
 
-                async with session.get(file_url) as fr:
-                    fr.raise_for_status()
-                    data = io.BytesIO(await fr.read())
-                    await ctx.send(file=discord.File(data, 'latex.png'))
+            async with self.bot.session.get(file_url) as fr:
+                fr.raise_for_status()
+                data = io.BytesIO(await fr.read())
+                await ctx.send(file=discord.File(data, 'latex.png'))
 
         except aiohttp.client_exceptions.ClientResponseError:
             raise TexRenderError(None)
