@@ -13,6 +13,11 @@ class CommandErrorHandler(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         bot.on_error = self.on_error
+        bot.loop.create_task(self.set_owner_info())
+
+    async def set_owner_info(self):
+        await self.bot.wait_until_ready()
+        self.owner = (await self.bot.application_info()).owner
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
@@ -34,7 +39,7 @@ class CommandErrorHandler(commands.Cog):
             return
 
         elif isinstance(error, commands.DisabledCommand):
-            return await ctx.send(f'`{ctx.command}` has been disabled. If you believe this is a mistake, please contact @Willy#7692')
+            return await ctx.send(f'`{ctx.command}` has been disabled. If you believe this is a mistake, please contact @{self.owner}')
 
         elif isinstance(error, commands.NoPrivateMessage):
             return await ctx.author.send(f'The command `{ctx.command}` cannot be used in Private Messages.')
@@ -43,7 +48,7 @@ class CommandErrorHandler(commands.Cog):
             return await ctx.send(f'One or more of arguments are incorrect. Please see {ctx.prefix}help {ctx.command} for more info')
 
         elif isinstance(error, commands.NotOwner):
-            return await ctx.send('Sorry, this command can only be used by my owner. If you believe this is a mistake, please contact @Willy#7692')
+            return await ctx.send(f'Sorry, this command can only be used by my owner. If you believe this is a mistake, please contact @{self.owner}')
 
         elif isinstance(error, commands.MissingRequiredArgument):
             return await ctx.send(f'Missing one or more required arguments: `{error.param.name}` See {ctx.prefix}help {ctx.command} for more info')
@@ -74,23 +79,19 @@ class CommandErrorHandler(commands.Cog):
                        f'If you really want to know what went wrong:\n'
                        f'||```py\n{tb[-1]}```||')
 
-        _info = await self.bot.application_info()
-        me =  _info.owner
         e = discord.Embed(title=f'An unhandled error occurred in {ctx.guild} | #{ctx.channel}',
                           description=f'Invocation message: {ctx.message.content}\n'
                                       f'[Jump to message]({ctx.message.jump_url})',
                           color=discord.Color.red())
         e.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
 
-        await me.send(embed=e)
-        await me.send(f'```py\n{"".join(tb)}```')
+        await self.owner.send(embed=e)
+        await self.owner.send(f'```py\n{"".join(tb)}```')
 
     async def on_error(self, event, *args, **kwargs):
         await self.bot.wait_until_ready()
-        _info = await self.bot.application_info()
-        me =  _info.owner
-        await me.send(f'An error occurred in event `{event}`')
-        await me.send(f'```py\n{"".join(traceback.format_exc())}```')
+        await self.owner.send(f'An error occurred in event `{event}`')
+        await self.owner.send(f'```py\n{"".join(traceback.format_exc())}```')
 
 def setup(bot):
     bot.add_cog(CommandErrorHandler(bot))
