@@ -9,9 +9,10 @@ class PrefixCog(commands.Cog, name='Prefix'):
     def __init__(self, bot):
         self.bot = bot
         self.save_prefixes_to_json.start()
+        bot.loop.create_task(self.set_mention_regex())
 
-    @commands.Cog.listener()
-    async def on_ready(self):
+    async def set_mention_regex(self):
+        await self.bot.wait_until_ready()
         self.mention = re.compile(r'<@!?' + str(self.bot.user.id) + r'>')
 
     def save_prefixes(self):
