@@ -19,7 +19,7 @@ class PrefixCog(commands.Cog, name='Prefix'):
         with open('data/prefixes.json', 'w') as f:
             json.dump(self.bot.prefixes, f, indent=2)
 
-    @commands.group(invoke_without_command=True)
+    @commands.group(invoke_without_command=True, case_insensitive=True)
     async def prefix(self, ctx):
         await ctx.send_help(ctx.command)
 

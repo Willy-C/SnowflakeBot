@@ -486,7 +486,7 @@ class ModCog(commands.Cog, name='Mod'):
 
     # Purge group:
 
-    @commands.group()
+    @commands.group(case_insensitive=True)
     @commands.bot_has_permissions(manage_messages=True)
     @can_manage_messages()
     @commands.guild_only()

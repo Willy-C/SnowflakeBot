@@ -1134,7 +1134,7 @@ class Music(commands.Cog):
 
     # Custom playlist stuff:
 
-    @commands.group(invoke_without_command=True)
+    @commands.group(invoke_without_command=True, case_insensitive=True)
     async def playlist(self, ctx, *, name=None):
         """Play/Add/Remove custom playlists"""
         if name is None:

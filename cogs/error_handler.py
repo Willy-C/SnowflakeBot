@@ -95,3 +95,6 @@ class CommandErrorHandler(commands.Cog):
 
 def setup(bot):
     bot.add_cog(CommandErrorHandler(bot))
+
+def teardown(bot):
+    bot.on_error = commands.Bot.on_error

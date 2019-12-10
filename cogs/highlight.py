@@ -170,7 +170,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             if user.id in self.mentions and user != message.author:
                 await self._dm_mention(message, user.id)
 
-    @commands.group(aliases=['hl'])
+    @commands.group(aliases=['hl'], case_insensitive=True)
     async def highlight(self, ctx):
         """Get DMs for keywords and mentions!"""
         if ctx.invoked_subcommand is None:
