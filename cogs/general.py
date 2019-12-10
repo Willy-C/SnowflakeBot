@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 
+import random
 import datetime
 import unicodedata
 from typing import Optional, Union
@@ -88,11 +89,19 @@ class GeneralCog(commands.Cog, name='General'):
             pass
 
     @commands.command(name='bigemoji')
-    async def _get_emoji_info(self, ctx, emoji: Union[discord.Emoji, discord.PartialEmoji, str]):
+    async def get_emoji_url(self, ctx, emoji: Union[discord.Emoji, discord.PartialEmoji, str]):
         if isinstance(emoji, (discord.Emoji, discord.PartialEmoji)):
             await ctx.send(str(emoji.url))
         else:
             await ctx.send(emoji)
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if message.guild is None or message.author.bot:
+            return
+        if message.content == '@someone':
+            humans = [m for m in message.guild.members if not m.bot]
+            await message.channel.send(random.choice(humans).mention)
 
 
 def to_emoji(c):

@@ -60,7 +60,7 @@ class GatekeepCog(commands.Cog):
             return
 
         e = discord.Embed(title='Member leave',
-                          color=discord.Color(0xff0000),
+                          color=0xff0000,
                           timestamp=datetime.utcnow())
         e.set_author(icon_url=member.avatar_url, name=member)
 

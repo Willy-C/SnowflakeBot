@@ -20,7 +20,6 @@ class AvatarCog(commands.Cog, name='General'):
         embed.set_author(name=user.display_name, url=avatar_url)
 
         await ctx.send(embed=embed)
-        # await ctx.send(user.avatar_url_as(static_format='png'))
 
     @get_avatar.error
     async def get_avatar_error(self, ctx, error):

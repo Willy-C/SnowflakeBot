@@ -8,7 +8,7 @@ from datetime import datetime
 
 from config import BOT_TOKEN, blacklist
 
-DESCR = 'This bot is a small side project I am making for fun'
+DESCR = 'This is a general purpose bot I am making for fun'
 
 # File names of extensions we are loading on startup
 startup_extensions = ['jishaku',

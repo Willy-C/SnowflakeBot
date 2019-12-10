@@ -62,5 +62,14 @@ class RNGCog(commands.Cog, name='RNG'):
 
         await ctx.send(random.choice(choices))
 
+    @commands.command() # Stolen from Danny, just want catto
+    async def cat(self, ctx):
+        """Sends a random cat."""
+        async with self.bot.session.get('https://aws.random.cat/meow') as resp:
+            if resp.status != 200:
+                return await ctx.send('No cat found :(')
+            js = await resp.json()
+            await ctx.send(embed=discord.Embed(title='Random Cat').set_image(url=js['file']))
+
 def setup(bot):
     bot.add_cog(RNGCog(bot))
