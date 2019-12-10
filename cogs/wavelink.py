@@ -366,7 +366,7 @@ class Music(commands.Cog):
         if isinstance(event, wavelink.TrackEnd):
             event.player.next_event.set()
         elif isinstance(event, wavelink.TrackException):
-            print(event.error)
+            print(f'{event} - {event.track.title}\n{event.error}')
 
     def required(self, player, invoked_with):
         """Calculate required votes."""
@@ -992,7 +992,7 @@ class Music(commands.Cog):
         if not player.updating and not player.update:
             await player.invoke_controller()
 
-    @commands.command()
+    @commands.command(hidden=True)
     async def wlinfo(self, ctx):
         """Retrieve various Node/Server/Player information."""
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)

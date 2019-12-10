@@ -38,7 +38,7 @@ class ViCog(commands.Cog):
             self.vc_history[after.channel.id]['join'] = (str(member), datetime.utcnow())
 
     # noinspection PyTupleAssignmentBalance
-    @commands.command()
+    @commands.command(hidden=True)
     async def who(self, ctx, *, voicechannel: discord.VoiceChannel = None):
         if ctx.guild and ctx.guild.id != GUILD_ID:
             return

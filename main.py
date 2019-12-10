@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from jishaku.help_command import MinimalEmbedPaginatorHelp
 
 import json
 import aiohttp
@@ -46,8 +47,11 @@ def get_prefix(bot, message):
 
 class SnowflakeBot(commands.Bot):
     def __init__(self):
-        super().__init__(command_prefix=get_prefix, description=DESCR, case_insensitive=True,
-                         activity=discord.Activity(type=discord.ActivityType.listening, name='you :)'))
+        super().__init__(command_prefix=get_prefix,
+                         description=DESCR,
+                         case_insensitive=True,
+                         activity=discord.Activity(type=discord.ActivityType.listening, name='you :)'),
+                         help_command=MinimalEmbedPaginatorHelp())
 
         self.starttime = datetime.utcnow()
         self.blacklist = blacklist

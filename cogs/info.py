@@ -7,7 +7,7 @@ from typing import Union
 
 from utils.global_utils import bright_color
 
-class InfoCog(commands.Cog):
+class InfoCog(commands.Cog, name='Info'):
     def __init__(self, bot):
         self.bot = bot
 

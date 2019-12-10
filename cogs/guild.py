@@ -25,7 +25,7 @@ class GuildCog(commands.Cog, name='Guild'):
             member = ctx.author
         await ctx.send(f'{member.display_name} joined on {member.joined_at.isoformat(" ", "seconds")}')
 
-    @commands.command(name='membercount', aliases=['memcount'])
+    @commands.command(name='memcount', aliases=['membercount'])
     async def member_count(self, ctx):
         """Returns the member count of the guild"""
         statuses = Counter(m.status for m in ctx.guild.members)
