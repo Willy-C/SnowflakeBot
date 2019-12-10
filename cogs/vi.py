@@ -32,9 +32,9 @@ class ViCog(commands.Cog):
         if member.guild.id != GUILD_ID:
             return
 
-        if before.channel and before.channel.id in self.vc_history:
+        if before.channel and before.channel.id in self.vc_history and after.channel != before.channel:
             self.vc_history[before.channel.id]['leave'] = (str(member), datetime.utcnow())
-        if after.channel and after.channel.id in self.vc_history:
+        if after.channel and after.channel.id in self.vc_history and before.channel != after.channel:
             self.vc_history[after.channel.id]['join'] = (str(member), datetime.utcnow())
 
     # noinspection PyTupleAssignmentBalance
