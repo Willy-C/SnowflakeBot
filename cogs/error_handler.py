@@ -1,5 +1,4 @@
 import traceback
-import sys
 from discord.ext import commands
 import discord
 
@@ -13,9 +12,9 @@ class CommandErrorHandler(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         bot.on_error = self.on_error
-        bot.loop.create_task(self.set_owner_info())
+        bot.loop.create_task(self.set_owner())
 
-    async def set_owner_info(self):
+    async def set_owner(self):
         await self.bot.wait_until_ready()
         self.owner = (await self.bot.application_info()).owner
 
@@ -59,11 +58,14 @@ class CommandErrorHandler(commands.Cog):
         elif isinstance(error, commands.BotMissingPermissions):
             return await ctx.send(f'I cannot complete this command, I am missing the following permission{"" if len(error.missing_perms) == 1 else "s"}: {", ".join(error.missing_perms)}')
 
+        elif isinstance(error, commands.CheckFailure):
+            return await ctx.send('Sorry, you cannot use this command')
+
         elif isinstance(error, NoBlacklist):
             return await ctx.send('You are blacklisted and cannot use this bot.')
 
         elif isinstance(error, TexRenderError):
-            if error.logs is None :
+            if error.logs is None:
                 return await ctx.send('Rendering failed. Check your code.')
 
             err = re.search(r'^!.*?^!', error.logs + '\n!', re.MULTILINE + re.DOTALL)
@@ -93,8 +95,10 @@ class CommandErrorHandler(commands.Cog):
         await self.owner.send(f'An error occurred in event `{event}`')
         await self.owner.send(f'```py\n{"".join(traceback.format_exc())}```')
 
+
 def setup(bot):
     bot.add_cog(CommandErrorHandler(bot))
+
 
 def teardown(bot):
     bot.on_error = commands.Bot.on_error

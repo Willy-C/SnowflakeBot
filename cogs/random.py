@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
-import random
 
+import io
+import random
 from typing import Optional
 
 
@@ -62,7 +63,7 @@ class RNGCog(commands.Cog, name='RNG'):
 
         await ctx.send(random.choice(choices))
 
-    @commands.command() # Stolen from Danny, just want catto
+    @commands.command()  # Stolen from Danny, just want catto
     async def cat(self, ctx):
         """Sends a random cat."""
         async with self.bot.session.get('https://aws.random.cat/meow') as resp:
@@ -70,6 +71,31 @@ class RNGCog(commands.Cog, name='RNG'):
                 return await ctx.send('No cat found :(')
             js = await resp.json()
             await ctx.send(embed=discord.Embed(title='Random Cat').set_image(url=js['file']))
+
+    @commands.command()  # Also stolen from Danno
+    async def dog(self, ctx):
+        """Gives you a random dog."""
+        async with self.bot.session.get('https://random.dog/woof') as resp:
+            if resp.status != 200:
+                return await ctx.send('No dog found :(')
+
+            filename = await resp.text()
+            url = f'https://random.dog/{filename}'
+            filesize = ctx.guild.filesize_limit if ctx.guild else 8388608
+            if filename.endswith(('.mp4', '.webm')):
+                async with ctx.typing():
+                    async with self.bot.session.get(url) as other:
+                        if other.status != 200:
+                            return await ctx.send('Could not download dog video :(')
+
+                        if int(other.headers['Content-Length']) >= filesize:
+                            return await ctx.send(f'Video was too big to upload... See it here: {url} instead.')
+
+                        fp = io.BytesIO(await other.read())
+                        await ctx.send(file=discord.File(fp, filename=filename))
+            else:
+                await ctx.send(embed=discord.Embed(title='Random Dog').set_image(url=url))
+
 
 def setup(bot):
     bot.add_cog(RNGCog(bot))
