@@ -4,7 +4,8 @@ from jishaku.help_command import MinimalEmbedPaginatorHelp
 
 import json
 import aiohttp
-import traceback, platform
+import traceback
+import platform
 from datetime import datetime
 
 from config import BOT_TOKEN, blacklist

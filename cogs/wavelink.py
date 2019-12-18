@@ -366,7 +366,7 @@ class Music(commands.Cog):
         if isinstance(event, wavelink.TrackEnd):
             event.player.next_event.set()
         elif isinstance(event, wavelink.TrackException):
-            print(f'{event} - {event.track.title}\n{event.error}')
+            print(f'{event} - {event.error}')
 
     def required(self, player, invoked_with):
         """Calculate required votes."""
@@ -441,11 +441,6 @@ class Music(commands.Cog):
         %join   (joins your current voice channel if you are in one)
         %join cool vc
         """
-        # try:
-        #     await ctx.message.delete()
-        # except discord.HTTPException:
-        #     pass
-
         if not channel:
             try:
                 channel = ctx.author.voice.channel
@@ -1232,11 +1227,6 @@ class Music(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
-        """
-        :param member: Member
-        :param before: VoiceState
-        :param after:  VoiceState
-        """
         if member.id not in self.noafks:
             return
 
@@ -1260,7 +1250,7 @@ class Music(commands.Cog):
             try:
                 current_channel = member.guild.get_channel(int(player.channel_id))
                 if current_channel is not None:
-                    await member.move_to(current_channel)
+                    await member.move_to(current_channel, reason=f'Anti-AFK for {member} ({member.id})')
             except discord.HTTPException:
                 pass
 
