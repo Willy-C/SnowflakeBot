@@ -89,8 +89,13 @@ class Player(wavelink.Player):
 
         self.eq = 'Flat'
 
-        bot.loop.create_task(self.player_loop())
-        bot.loop.create_task(self.updater())
+        self._loop = bot.loop.create_task(self.player_loop())
+        self._updater = bot.loop.create_task(self.updater())
+
+    async def destroy(self):
+        self._loop.cancel()
+        self._updater.cancel()
+        return await super().destroy()
 
     @property
     def entries(self):
@@ -272,10 +277,9 @@ class Player(wavelink.Player):
         """Destroy both the main controller and it's reaction controller."""
         try:
             await self.controller_message.delete()
-            self.controller_message = None
         except (AttributeError, discord.HTTPException):
             pass
-
+        self.controller_message = None
         try:
             self.reaction_task.cancel()
         except Exception:
@@ -574,7 +578,6 @@ class Music(commands.Cog):
         ---------
             np
             current
-            currentsong
         Examples
         ----------
         %now_playing
