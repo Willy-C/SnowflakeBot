@@ -73,6 +73,36 @@ class EmojiCog(commands.Cog, name='Emoji'):
         else:
             await ctx.message.add_reaction('<:redTick:602811779474522113>')
 
+    @commands.command(name='createemoji', aliases=['newemoji'])
+    @commands.bot_has_permissions(manage_emojis=True)
+    @commands.has_permissions(manage_emojis=True)
+    async def create_emoji(self, ctx, name, url):
+        url = url.split('?')[0]
+        if not url.endswith(('.png', '.jpeg', '.jpg', '.gif')):
+            return await ctx.send('Invalid file type! Must be one of the following: `.png .jpeg .jpg .gif`')
+
+        if url.endswith('.gif'):
+            animated_count = sum([e.animated for e in ctx.guild.emojis])
+            if animated_count >= ctx.guild.emoji_limit:
+                return await ctx.send('There are no more animated emoji slots!')
+        else:
+            emoji_count = sum([not e.animated for e in ctx.guild.emojis])
+            if emoji_count >= ctx.guild.emoji_limit:
+                return await ctx.send('There are no more emoji slots!')
+
+        async with self.bot.session.get(url) as resp:
+            if resp.status >= 400:
+                return await ctx.send('Could not fetch the image.')
+            if int(resp.headers['Content-Length']) >= (256 * 1024):
+                return await ctx.send('Image is too big!')
+            data = await resp.read()
+            try:
+                await ctx.guild.create_custom_emoji(name=name, image=data, reason=f'Emoji created by {ctx.author} ({ctx.author.id})')
+            except discord.HTTPException as e:
+                await ctx.send(f'An error has occurred:\n```{e}```')
+            else:
+                await ctx.message.add_reaction('\U00002705')
+
 
 def setup(bot):
     bot.add_cog(EmojiCog(bot))
