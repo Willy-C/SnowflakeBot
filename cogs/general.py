@@ -104,12 +104,11 @@ class GeneralCog(commands.Cog, name='General'):
         paginator = commands.Paginator(suffix='', prefix='')
 
         for guild in sorted(self.bot.guilds, key=lambda g: g.name):
+            emojis = sorted([emoji for emoji in guild.emojis if emoji.require_colons], key=lambda e: e.name)
 
-            if not guild.emojis:
+            if not emojis:
                 continue
-
             paginator.add_line(f'__**{guild.name}**__')
-            emojis = sorted([emoji for emoji in guild.emojis if not emoji.require_colons], key=lambda e: e.name)
 
             if codepoint:
                 for emoji in emojis:

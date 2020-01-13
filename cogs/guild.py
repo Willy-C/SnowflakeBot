@@ -113,7 +113,7 @@ class GuildCog(commands.Cog, name='Guild'):
     async def guild_emojis(self, ctx, codepoint: bool = False):
         """Returns all usable emojis in the guild sorted by name
         Pass in True as a parameter to get codepoints"""
-        emojis = sorted([emoji for emoji in ctx.guild.emojis if not emoji.require_colons], key=lambda e: e.name)
+        emojis = sorted([emoji for emoji in ctx.guild.emojis if emoji.require_colons], key=lambda e: e.name)
         paginator = commands.Paginator(suffix='', prefix='')
         paginator.add_line(f'{ctx.invoked_with.capitalize()} of {ctx.guild.name}:')
         if codepoint:
