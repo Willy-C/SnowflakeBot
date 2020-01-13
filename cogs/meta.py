@@ -64,33 +64,6 @@ class MetaCog(commands.Cog, name='Meta'):
                           description=f'[Click here to invite {user}]({url})')
         await ctx.send(embed=e)
 
-    @commands.command(name='allemojis', aliases=['allemotes'], hidden=True)
-    async def all_guild_emojis(self, ctx, codepoint: bool = False):
-        """
-        Returns all emojis from every guild the bot can see
-        Pass in True as a parameter to get codepoints"""
-        paginator = commands.Paginator(suffix='', prefix='')
-
-        for guild in sorted(self.bot.guilds, key=lambda g: g.name):
-
-            if not guild.emojis:
-                continue
-
-            paginator.add_line(f'__**{guild.name}**__')
-            emojis = sorted(guild.emojis, key=lambda e: e.name)
-
-            if codepoint:
-                for emoji in emojis:
-                    paginator.add_line(f'{emoji} -- {emoji.name} -- `{emoji}`')
-                paginator.add_line('')
-            else:
-                for emoji in emojis:
-                    paginator.add_line(f'{emoji} -- {emoji.name}')
-                paginator.add_line('')
-
-        for page in paginator.pages:
-            await ctx.send(page)
-
     @commands.command()
     async def uptime(self, ctx, simple: bool=True):
         """Returns the bot's uptime
