@@ -79,7 +79,7 @@ class CommandErrorHandler(commands.Cog):
         tb = traceback.format_exception(type(error), error, error.__traceback__)
         await ctx.send(f'An unexpected error has occurred! My owner has been notified.\n'
                        f'If you really want to know what went wrong:\n'
-                       f'||```py\n{tb[-1]}```||')
+                       f'||```py\n{tb[-1][:150]}```||')
 
         e = discord.Embed(title=f'An unhandled error occurred in {ctx.guild} | #{ctx.channel}',
                           description=f'Invocation message: {ctx.message.content}\n'
