@@ -61,5 +61,22 @@ class InfoCog(commands.Cog, name='Info'):
             ctx.local_handled = True
             return await ctx.send('Unable to find that person')
 
+    @commands.command()
+    async def device(self, ctx, member: discord.Member=None):
+        member = member or ctx.author
+        statuses = {
+            discord.Status.online: '<:status_online:602811779948740627> Online',
+            discord.Status.offline: '<:status_offline:602811780053336069> Offline',
+            discord.Status.idle: '<:status_idle:602811780129095701> Idle',
+            discord.Status.dnd: '<:status_dnd:602811779931701259>'
+        }
+        e = discord.Embed(title=f'{member.name}\'s Status',
+                          colour=member.colour)
+        e.add_field(name='Desktop Status', value=statuses[member.desktop_status])
+        e.add_field(name='Mobile Status', value=statuses[member.mobile_status])
+        e.add_field(name='Web Status', value=statuses[member.web_status])
+
+        await ctx.send(embed=e)
+
 def setup(bot):
     bot.add_cog(InfoCog(bot))
