@@ -3,24 +3,11 @@ from discord.ext import commands
 
 import aiohttp
 
+from utils.converters import LastImage
 from config import DEEPAI_API_KEY
 
 API_URL = 'https://api.deepai.org/api/waifu2x'
 HEADERS = {'api-key': DEEPAI_API_KEY}
-
-
-class LastImage(commands.Converter):
-    """Converter that tries to find the last image in chat.
-    Raises BadArgument if no image found within limit."""
-    async def convert(self, ctx, argument):
-        async for message in ctx.channel.history(limit=25):
-            for embed in message.embeds:
-                if embed.thumbnail and embed.thumbnail.proxy_url:
-                    return embed.thumbnail.proxy_url
-            for attachment in message.attachments:
-                if attachment.proxy_url:
-                    return attachment.proxy_url
-        raise commands.BadArgument
 
 
 class Waifu2x(commands.Cog):
