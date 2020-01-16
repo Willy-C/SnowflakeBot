@@ -35,7 +35,7 @@ class Waifu2x(commands.Cog):
         except (aiohttp.InvalidURL, KeyError):
             return False
 
-    @commands.command()
+    @commands.command(hidden=True)
     async def upscale(self, ctx, url=None):
         url = url or await LastImage().convert(ctx, url)
         if not await self.is_image(url):

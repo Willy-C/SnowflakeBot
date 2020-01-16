@@ -33,7 +33,8 @@ startup_extensions = ['jishaku',
                       'cogs.vi',
                       'cogs.gatekeep',
                       'cogs.reddit',
-                      'cogs.emoji']
+                      'cogs.emoji',
+                      'cogs.waifu2x']
 
 
 def get_prefix(bot, message):
