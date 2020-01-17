@@ -3,6 +3,7 @@ from discord.ext import commands
 
 import aiohttp
 
+from utils.global_utils import bright_color
 from utils.converters import LastImage
 from config import DEEPAI_API_KEY
 
@@ -32,7 +33,13 @@ class Waifu2x(commands.Cog):
         }
         async with self.bot.session.post(API_URL, data=data, headers=HEADERS) as resp:
             jdata = await resp.json()
-            await ctx.send(jdata.get('output_url', 'Failed'))
+            img_url = jdata.get('output_url')
+        if img_url is None:
+            return await ctx.send('Failed')
+        e = discord.Embed(colour=bright_color())
+        e.set_image(url=img_url)
+        e.set_author(name='Upscale', url=img_url)
+        await ctx.send(embed=e)
 
 
 def setup(bot):

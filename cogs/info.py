@@ -68,9 +68,9 @@ class InfoCog(commands.Cog, name='Info'):
             discord.Status.online: '<:status_online:602811779948740627> Online',
             discord.Status.offline: '<:status_offline:602811780053336069> Offline',
             discord.Status.idle: '<:status_idle:602811780129095701> Idle',
-            discord.Status.dnd: '<:status_dnd:602811779931701259>'
+            discord.Status.dnd: '<:status_dnd:602811779931701259> DND'
         }
-        e = discord.Embed(title=f'{member.name}\'s Status',
+        e = discord.Embed(title=f'{member}\'s Status',
                           colour=member.colour)
         e.add_field(name='Desktop Status', value=statuses[member.desktop_status])
         e.add_field(name='Mobile Status', value=statuses[member.mobile_status])
