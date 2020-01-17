@@ -74,3 +74,15 @@ def cleanup_code(content):
     if content.startswith('```') and content.endswith('```'):
         return '\n'.join(content.split('\n')[1:-1])
     return content.strip('` \n')
+
+async def last_image(ctx):
+    """Tries to find the last image in chat and return its url.
+    Raises BadArgument if no image found within limit."""
+    async for message in ctx.channel.history(limit=50):
+        for embed in message.embeds:
+            if embed.thumbnail and embed.thumbnail.proxy_url:
+                return embed.thumbnail.proxy_url
+        for attachment in message.attachments:
+            if attachment.proxy_url:
+                return attachment.proxy_url
+    raise commands.BadArgument

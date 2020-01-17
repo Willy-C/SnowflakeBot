@@ -3,8 +3,7 @@ from discord.ext import commands
 
 import aiohttp
 
-from utils.global_utils import bright_color
-from utils.converters import LastImage
+from utils.global_utils import bright_color, last_image
 from config import DEEPAI_API_KEY
 
 API_URL = 'https://api.deepai.org/api/waifu2x'
@@ -25,7 +24,7 @@ class Waifu2x(commands.Cog):
 
     @commands.command(hidden=True)
     async def upscale(self, ctx, url=None):
-        url = url or await LastImage().convert(ctx, url)
+        url = url or await last_image(ctx)
         if not await self.is_image(url):
             return await ctx.send('That is not a valid image url')
         data = {
