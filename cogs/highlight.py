@@ -181,10 +181,12 @@ class HighlightCog(commands.Cog, name='Highlight'):
         """Add a highlight keyword"""
         key = keyword.lower()
         if len(key) < 3:
+            await ctx.message.add_reaction('<:redTick:602811779474522113>')
             return await ctx.send('Keywords must be at least 3 characters!')
         guild_hl = self.data.setdefault(ctx.guild.id, {})
         member_hl = guild_hl.setdefault(ctx.author.id, [])
         if key in member_hl:
+            await ctx.message.add_reaction('<:redTick:602811779474522113>')
             return await ctx.send('You already have this keyword added!', delete_after=10)
         else:
             member_hl.append(key)
@@ -199,11 +201,14 @@ class HighlightCog(commands.Cog, name='Highlight'):
         key = keyword.lower()
         guild_hl = self.data.get(ctx.guild.id)
         if not guild_hl:
-            return await ctx.send('No highlights found for this guild', delete_after=5)
+            await ctx.message.add_reaction('<:redTick:602811779474522113>')
+            return await ctx.send(f'No highlights found for {ctx.guild}', delete_after=5)
         member_hl = guild_hl.get(ctx.author.id)
         if member_hl is None:
-            return await ctx.send('Sorry, you do not seem to have any keywords added', delete_after=10)
+            await ctx.message.add_reaction('<:redTick:602811779474522113>')
+            return await ctx.send(f'Sorry, you do not seem to have any keywords added for {ctx.guild}', delete_after=10)
         if key not in member_hl:
+            await ctx.message.add_reaction('<:redTick:602811779474522113>')
             return await ctx.send('Sorry, you do not seem to have this keyword added', delete_after=10)
         member_hl.remove(key)
         if not member_hl:
@@ -215,7 +220,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         else:
             self.update_regex(ctx)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
-        await ctx.send(f'Successfully removed  highlight key: {key}', delete_after=10)
+        await ctx.send(f'Successfully removed  highlight key: `{key}`', delete_after=10)
 
     @highlight.command(name='import')
     @commands.guild_only()
@@ -229,14 +234,17 @@ class HighlightCog(commands.Cog, name='Highlight'):
                 guild_hl = self.data.setdefault(ctx.guild.id, {})
                 guild_hl[ctx.author.id] = self.data[g.id][ctx.author.id]
                 self.update_regex(ctx)
-                await ctx.send(f'Imported your highlights from {g}')
+                await ctx.message.add_reaction('\U00002705')  # React with checkmark
+                await ctx.send(f'Imported your highlights from {g}', delete_after=7)
         else:
-            await ctx.send('Unable to find server with that name or ID')
+            await ctx.send('Unable to find server with that name or ID', delete_after=7)
+            await ctx.message.add_reaction('<:redTick:602811779474522113>')
 
     @highlight.command()
     async def list(self, ctx):
         """List your highlight words for the current guild
         If used in DM, all words from all guilds will be given"""
+        delete_after = 15
         if ctx.guild is None:
             all_hl = []
             for guild in self.data:
@@ -244,10 +252,11 @@ class HighlightCog(commands.Cog, name='Highlight'):
                     all_hl.append(f'**__{self.bot.get_guild(guild)}__**')
                     all_hl.extend(self.data[guild][ctx.author.id])
             keys = '\n'.join(all_hl)
+            delete_after = None
         elif ctx.guild.id in self.data and ctx.author.id in self.data[ctx.guild.id]:
             keys = '\n'.join(self.data[ctx.guild.id][ctx.author.id])
         else:
-            keys = 'You do not have any highlight words'
+            keys = 'You do not have any highlight words here'
 
         e = discord.Embed(color=discord.Color.dark_orange(),
                           title=f'Highlights for {ctx.guild}',
@@ -256,7 +265,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         e.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
 
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
-        await ctx.send(embed=e, delete_after=20)
+        await ctx.send(embed=e, delete_after=delete_after)
 
     @highlight.command()
     async def mention(self, ctx):
@@ -297,9 +306,9 @@ class HighlightCog(commands.Cog, name='Highlight'):
             if not self.data[ctx.guild.id]:
                 del self.data[ctx.guild.id]
                 del self.highlights[ctx.guild.id]
-            await ctx.send(f'Cleared all of your highlight words for {ctx.guild}', delete_after=10)
+            await ctx.send(f'Cleared all of your highlight words for {ctx.guild}', delete_after=7)
         else:
-            return await ctx.send('You do not have any highlight words', delete_after=10)
+            await ctx.send(f'You do not have any highlight words for {ctx.guild}', delete_after=7)
 
         if ctx.author.id in self.mentions:
             self.mentions.remove(ctx.author.id)
@@ -314,11 +323,11 @@ class HighlightCog(commands.Cog, name='Highlight'):
             users = ignores.setdefault('users', [])
             if target.id not in users:
                 users.append(target.id)
-                await ctx.send(f'Ignoring highlights from {target}', delete_after=10)
+                await ctx.send(f'Ignoring highlights from {target}', delete_after=7)
                 await ctx.message.add_reaction('\U00002795')  # React with plus sign
             else:
                 users.remove(target.id)
-                await ctx.send(f'No longer ignoring highlights from {target}', delete_after=10)
+                await ctx.send(f'No longer ignoring highlights from {target}', delete_after=7)
                 if not ignores['users']:
                     del ignores['users']
                 await ctx.message.add_reaction('\U00002796')  # React with minus sign
@@ -328,17 +337,18 @@ class HighlightCog(commands.Cog, name='Highlight'):
             channels = ignores.setdefault('channels', [])
             if target.id not in channels:
                 channels.append(target.id)
-                await ctx.send(f'Ignoring highlights from {target}', delete_after=10)
-                await ctx.message.add_reaction('\U00002795')  # React with heavy plus sign
+                await ctx.send(f'Ignoring highlights from {target}', delete_after=7)
+                await ctx.message.add_reaction('\U00002795')  # React with plus sign
             else:
                 channels.remove(target.id)
-                await ctx.send(f'No longer ignoring highlights from {target}!', delete_after=8)
+                await ctx.send(f'No longer ignoring highlights from {target}!', delete_after=7)
                 if not ignores['channels']:
                     del ignores['channels']
-                await ctx.message.add_reaction('\U00002796')  # React with heavy minus sign
+                await ctx.message.add_reaction('\U00002796')  # React with minus sign
             await ctx.message.add_reaction('\U00002705')  # React with checkmark
         else:
-            await ctx.send('Unable to find target to ignore, please enter a users or a text channel', delete_after=5)
+            await ctx.message.add_reaction('<:redTick:602811779474522113>')
+            await ctx.send('Unable to find target to ignore, please enter a users or a text channel', delete_after=7)
         if not ignores:
             del self.ignores[ctx.author.id]
 
@@ -358,6 +368,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             await ctx.send(embed=e, delete_after=15)
         else:
             await ctx.send('You do not have ignores set!', delete_after=5)
+        await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
     def save_highlights(self):
         with open('data/highlights.json', 'w') as f:
@@ -379,6 +390,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             self.save_mentions()
             self.save_ignores()
         except Exception as e:
+            await ctx.message.add_reaction('<:redTick:602811779474522113>')
             await ctx.send(f'An error has occurred\n```{e}```')
         else:
             await ctx.message.add_reaction('\U00002705')  # React with checkmark
