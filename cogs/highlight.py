@@ -176,6 +176,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             await ctx.send_help(ctx.command)
 
     @highlight.command()
+    @commands.guild_only()
     async def add(self, ctx, keyword):
         """Add a highlight keyword"""
         key = keyword.lower()
@@ -192,6 +193,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             await ctx.send(f'Successfully added highlight key: {key}', delete_after=10)
 
     @highlight.command()
+    @commands.guild_only()
     async def remove(self, ctx, keyword):
         """Remove a highlight keyword"""
         key = keyword.lower()
@@ -216,6 +218,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         await ctx.send(f'Successfully removed  highlight key: {key}', delete_after=10)
 
     @highlight.command(name='import')
+    @commands.guild_only()
     async def _import(self, ctx, *, guild: Union[int, str]):
         """Import your highlight words from another server."""
         g = self.bot.get_guild(guild)
