@@ -215,6 +215,21 @@ class HighlightCog(commands.Cog, name='Highlight'):
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
         await ctx.send(f'Successfully removed  highlight key: {key}', delete_after=10)
 
+    @highlight.command(name='import')
+    async def _import(self, ctx, *, guild: Union[int, str]):
+        """Import your highlight words from another server."""
+        g = self.bot.get_guild(guild)
+        if g is None:
+            g = discord.utils.get(self.bot.guilds, name=str(guild))
+        if g is not None:
+            if g.id in self.data and ctx.author.id in self.data[g.id]:
+                guild_hl = self.data.setdefault(ctx.guild.id, {})
+                guild_hl[ctx.author.id] = self.data[g.id][ctx.author.id]
+                self.update_regex(ctx)
+                await ctx.send(f'Imported your highlights from {g}')
+        else:
+            await ctx.send('Unable to find server with that name or ID')
+
     @highlight.command()
     async def list(self, ctx):
         """List your highlight words for the current guild
@@ -260,13 +275,16 @@ class HighlightCog(commands.Cog, name='Highlight'):
         if ctx.guild is None:
             if not await confirm_prompt(ctx, 'Clear all highlight words?'):
                 return
+            to_del = []
             for guild_id in self.data:
                 if ctx.author.id in self.data[guild_id]:
                     del self.data[guild_id][ctx.author.id]
                     del self.highlights[guild_id][ctx.author.id]
                     if not self.data[guild_id]:
-                        del self.data[guild_id]
-                        del self.highlights[guild_id]
+                        to_del.append(guild_id)
+            for guild_id in to_del:
+                del self.data[guild_id]
+                del self.highlights[guild_id]
             await ctx.send(f'Cleared all of your highlight words')
         elif ctx.guild.id in self.data and ctx.author.id in self.data[ctx.guild.id]:
             if not await confirm_prompt(ctx, f'Clear all highlight words for {ctx.guild}?'):
