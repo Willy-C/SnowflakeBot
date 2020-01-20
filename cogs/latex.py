@@ -39,6 +39,11 @@ class TexRenderError(commands.CommandError):
 class LatexCog(commands.Cog, name='General'):
     def __init__(self, bot):
         self.bot = bot
+        self.bot.loop.create_task(self.set_help())
+
+    async def set_help(self):
+        await self.bot.wait_until_ready()
+        self.bot.get_command('latex').cog = None
 
     @commands.command(aliases=['tex'])
     async def latex(self, ctx, *, latex):

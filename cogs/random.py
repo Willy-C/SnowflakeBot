@@ -6,7 +6,7 @@ import random
 from typing import Optional
 
 
-class RNGCog(commands.Cog, name='RNG'):
+class RNGCog(commands.Cog, name='Rng'):
     def __init__(self, bot):
         self.bot = bot
 

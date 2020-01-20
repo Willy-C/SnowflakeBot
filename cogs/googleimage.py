@@ -5,9 +5,14 @@ from config import GOOGLE_API_KEY, GOOGLE_CUSTOM_SEARCH_ENGINE
 from google_images_search import GoogleImagesSearch
 
 
-class GoogleImage(commands.Cog, name='General'):
+class GoogleImage(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.bot.loop.create_task(self.set_help())
+
+    async def set_help(self):
+        await self.bot.wait_until_ready()
+        self.bot.get_command('gi').cog = None
 
     @commands.command(name='gi')
     async def google_image(self, ctx, *, search_param: str = 'cat'):
