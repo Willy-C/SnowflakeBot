@@ -10,7 +10,7 @@ API_URL = 'https://api.deepai.org/api/waifu2x'
 HEADERS = {'api-key': DEEPAI_API_KEY}
 
 
-class Waifu2x(commands.Cog):
+class Waifu2x(commands.Cog, command_attrs={'hidden': True}):
     def __init__(self, bot):
         self.bot = bot
 
@@ -24,7 +24,10 @@ class Waifu2x(commands.Cog):
 
     @commands.command(hidden=True)
     async def upscale(self, ctx, url=None):
-        url = url or await last_image(ctx)
+        if url is None:
+            url = await last_image(ctx)
+            if url is None:
+                return await ctx.send('Unable to find an image')
         if not await self.is_image(url):
             return await ctx.send('That is not a valid image url')
         data = {
@@ -38,6 +41,15 @@ class Waifu2x(commands.Cog):
         e = discord.Embed(colour=bright_color())
         e.set_image(url=img_url)
         e.set_author(name='Upscale', url=img_url)
+        await ctx.send(embed=e)
+
+    @commands.command()
+    async def lastimage(self, ctx):
+        url = await last_image(ctx)
+        if url is None:
+            return await ctx.send('Unable to find an image')
+        e = discord.Embed(colour=bright_color())
+        e.set_image(url=url)
         await ctx.send(embed=e)
 
 

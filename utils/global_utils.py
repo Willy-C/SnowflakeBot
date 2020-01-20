@@ -85,4 +85,3 @@ async def last_image(ctx):
         for attachment in message.attachments:
             if attachment.proxy_url:
                 return attachment.proxy_url
-    raise commands.BadArgument

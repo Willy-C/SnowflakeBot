@@ -172,6 +172,11 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     @commands.group(aliases=['hl'], case_insensitive=True)
     async def highlight(self, ctx):
+        """Highlight is an attempt to emulate Skype's word highlighting feature.
+        Useful for allowing you to only get notifications when specific words are used.
+        This works by sending a DM to you with the message context when your word is used.
+        Additionally, I can send you a DM when I see you get pinged.
+        """
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
