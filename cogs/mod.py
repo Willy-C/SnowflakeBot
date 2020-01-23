@@ -467,22 +467,23 @@ class ModCog(commands.Cog, name='Mod'):
 
     @commands.command(hidden=True)
     @can_move_members()
-    async def move(self, ctx, member: discord.Member, *, channel: discord.VoiceChannel = None):
-        """Move a user to another voice channel.
+    async def move(self, ctx, members: commands.Greedy[discord.Member]=None, *, channel: discord.VoiceChannel = None):
+        """Move members to another voice channel.
         Disconnects user if channel is None.
         """
         if not ctx.guild.me.guild_permissions.move_members:
             return
+        if ctx.author.voice:
+            members = members or ctx.author.voice.channel.members
+        else:
+            members = members or [ctx.author]
         try:
-            await member.move_to(channel)
-        except discord.HTTPException as e:
-            await ctx.send(f'Unable to move: `{e}`')
+            for member in members:
+                await member.move_to(channel)
+        except discord.HTTPException:
+            await ctx.send(f'Unable to move')
         else:
             await ctx.message.add_reaction('\U00002705')  # React with checkmark
-
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        pass
 
     # Purge group:
 
