@@ -3,6 +3,7 @@ from discord.ext import commands, tasks
 
 import json
 import re
+import random
 from datetime import datetime, timedelta
 from asyncio import TimeoutError
 from typing import Union
@@ -106,7 +107,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             return
         return '\n'.join(msg_context)
 
-    async def dm_highlight(self, message: discord.Message, member_id: int, word: str):
+    async def dm_highlight(self, message, member_id: int, word: str):
         member = message.guild.get_member(member_id)
         if member is None:
             del self.highlights[message.guild.id][member_id]
@@ -129,7 +130,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             if 'Cannot send messages to this user' in err.text:
                 await self.bot.get_user(self.bot.owner_id).send(f'Missing permission highlight to {member}, removing...\n```{err}```')
 
-    async def dm_mention(self, message: discord.Message, member_id):
+    async def dm_mention(self, message, member_id):
         member = message.guild.get_member(member_id)
         if (member is None or not member.permissions_in(message.channel).read_messages) and id != self.bot.owner_id:
             return
@@ -150,12 +151,18 @@ class HighlightCog(commands.Cog, name='Highlight'):
                 await self.bot.get_user(self.bot.owner_id).send(f'Failed to DM {target}|{member_id}\n```{e}```')
         else:
             try:
-                await message.add_reaction('<a:angeryping:667541695755190282>')
+                reactions = ['<a:angeryping:667541695755190282>',
+                             '<a:hammerping:656983551429967896>',
+                             '<:eyes:644633489727291402>,',
+                             '<:dabJuicy:667892769053736981>',
+                             '<:angryJuicy:669305873562206211>',
+                             '<a:bap:667465646384218122>']
+                await message.add_reaction(random.choice(reactions))
             except discord.HTTPException:
                 pass
 
     @commands.Cog.listener()
-    async def on_message(self, message: discord.Message):
+    async def on_message(self, message):
         if message.author.bot or message.guild is None or message.guild.id not in self.highlights or message.webhook_id is not None:
             return
         for mid, regex in self.highlights[message.guild.id].items():
@@ -183,7 +190,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
     @highlight.command()
     @commands.guild_only()
     async def add(self, ctx, keyword):
-        """Add a highlight keyword"""
+        """Add a highlight keyword for the current server"""
         key = keyword.lower()
         if len(key) < 3:
             await ctx.message.add_reaction('<:redTick:602811779474522113>')
@@ -202,7 +209,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
     @highlight.command()
     @commands.guild_only()
     async def remove(self, ctx, keyword):
-        """Remove a highlight keyword"""
+        """Remove a highlight keyword for the current server"""
         key = keyword.lower()
         guild_hl = self.data.get(ctx.guild.id)
         if not guild_hl:
