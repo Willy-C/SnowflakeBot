@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 
+from asyncio import TimeoutError
 from typing import Optional
 from datetime import datetime
 from collections import Counter
@@ -125,6 +126,33 @@ class GuildCog(commands.Cog, name='Guild'):
 
         for page in paginator.pages:
             await ctx.send(page)
+
+    @commands.command(hidden=True)
+    async def waitfor(self, ctx, channel: Optional[discord.TextChannel], user: discord.Member=None):
+        channel = channel or ctx.channel
+        await ctx.send(f'Waiting for reply from `{user if user is not None else "anyone"}` in this channel for up to 24 hours', delete_after=5)
+        await ctx.message.add_reaction('<a:typing:559157048919457801>')
+        try:
+            msg = await self.bot.wait_for('message',
+                                          check=lambda m: m.channel == channel
+                                                          and m.author != ctx.author
+                                                          and not m.author.bot
+                                                          and (not user or m.author == user),
+                                          timeout=86400)
+        except TimeoutError:
+            return
+        else:
+            try:
+                e = discord.Embed(title=f'You got a reply at: {channel.guild} | #{channel}',
+                                  description=f'{msg.author}: {msg.content}\n'
+                                              f'[Jump to message]({msg.jump_url})',
+                                  colour=0x0DF33E,
+                                  timestamp=datetime.utcnow())
+                await ctx.author.send(embed=e)
+            except discord.Forbidden:
+                pass
+        finally:
+            await ctx.message.add_reaction('\U00002705')
 
 
 def setup(bot):

@@ -7,6 +7,7 @@ from typing import Union
 
 from utils.global_utils import bright_color
 
+
 class InfoCog(commands.Cog, name='Info'):
     def __init__(self, bot):
         self.bot = bot
@@ -17,7 +18,9 @@ class InfoCog(commands.Cog, name='Info'):
         guild = ctx.guild
         text_channels = len(guild.text_channels)
         voice_channels = len(guild.voice_channels)
-        roles = ", ".join([role.mention for role in guild.roles])
+        roles = ['@everyone']
+        roles.extend([role.mention for role in guild.roles[1:]])
+        roles = ", ".join(roles)
 
         e = discord.Embed(title='Server Info', color=bright_color())
         e.set_author(icon_url=guild.icon_url, name=guild.name)
@@ -62,7 +65,7 @@ class InfoCog(commands.Cog, name='Info'):
             return await ctx.send('Unable to find that person')
 
     @commands.command()
-    async def device(self, ctx, member: discord.Member=None):
+    async def device(self, ctx, member: discord.Member = None):
         member = member or ctx.author
         statuses = {
             discord.Status.online: '<:status_online:602811779948740627> Online',
@@ -77,6 +80,7 @@ class InfoCog(commands.Cog, name='Info'):
         e.add_field(name='Web Status', value=statuses[member.web_status])
 
         await ctx.send(embed=e)
+
 
 def setup(bot):
     bot.add_cog(InfoCog(bot))

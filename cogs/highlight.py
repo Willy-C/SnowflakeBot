@@ -128,7 +128,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             await member.send(embed=e)
         except discord.Forbidden as err:
             if 'Cannot send messages to this user' in err.text:
-                await self.bot.get_user(self.bot.owner_id).send(f'Missing permission highlight to {member}, removing...\n```{err}```')
+                await self.bot.get_user(self.bot.owner_id).send(f'Missing permissions to DM {member}\n```{err}```')
 
     async def dm_mention(self, message, member_id):
         member = message.guild.get_member(member_id)
@@ -146,9 +146,9 @@ class HighlightCog(commands.Cog, name='Highlight'):
         target = self.bot.get_user(member_id)
         try:
             await target.send(embed=e)
-        except (discord.Forbidden, AttributeError) as e:
-            if 'Cannot send messages to this user' in e.text:
-                await self.bot.get_user(self.bot.owner_id).send(f'Failed to DM {target}|{member_id}\n```{e}```')
+        except (discord.Forbidden, AttributeError) as err:
+            if 'Cannot send messages to this user' in err.text:
+                await self.bot.get_user(self.bot.owner_id).send(f'Failed to DM {target}|{member_id}\n```{err}```')
         else:
             try:
                 reactions = ['<a:angeryping:667541695755190282>',
