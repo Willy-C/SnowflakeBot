@@ -59,7 +59,7 @@ class GuildCog(commands.Cog, name='Guild'):
         e = discord.Embed(title='Permissions for:', description=ctx.guild.name, colour=member.colour)
         e.set_author(icon_url=member.avatar_url, name=str(member))
 
-        e.add_field(name='\uFEFF', value=perms) # zero-width space
+        e.add_field(name='\uFEFF', value=perms)  # zero-width space
 
         await ctx.send(embed=e)
 
@@ -148,8 +148,9 @@ class GuildCog(commands.Cog, name='Guild'):
                                                           and (not user or m.author == user),
                                           timeout=86400)
         except TimeoutError:
-            return
+            await ctx.message.add_reaction('<:redTick:602811779474522113>')
         else:
+            await ctx.message.add_reaction('\U00002705')
             try:
                 e = discord.Embed(title=f'You got a reply at: {ctx.guild} | #{ctx.channel}',
                                   description=f'{msg.author}: {msg.content}\n'
@@ -159,8 +160,7 @@ class GuildCog(commands.Cog, name='Guild'):
                 await ctx.author.send(embed=e)
             except discord.Forbidden:
                 pass
-        finally:
-            await ctx.message.add_reaction('\U00002705')
+
 
 
 def setup(bot):

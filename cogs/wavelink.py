@@ -132,7 +132,7 @@ class Player(wavelink.Player):
                 await self.destroy_controller()
                 try:
                     await self.destroy()
-                except  KeyError:
+                except KeyError:
                     pass
                 return
 
