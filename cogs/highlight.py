@@ -236,7 +236,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
                 del self.data[guild.id]
                 del self.highlights[guild.id]
         else:
-            self.update_regex(ctx)
+            self.update_regex(ctx, guild.id)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
         await ctx.send(f'Successfully removed  highlight key: `{key}` for {guild}', delete_after=10)
 
@@ -387,28 +387,6 @@ class HighlightCog(commands.Cog, name='Highlight'):
         else:
             await ctx.send('You do not have ignores set!', delete_after=5)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
-
-    @highlight.command(name='guildadd', hidden=True)
-    async def stealth_add(self, ctx, guild_id: int, keyword):
-        """Add a highlight word for another server"""
-        guild = self.bot.get_guild(guild_id)
-        if guild is None:
-            await ctx.message.add_reaction('<:redTick:602811779474522113>')
-            return await ctx.send('Unable to find a guild with that ID', delete_after=10)
-        key = keyword.lower()
-        if len(key) < 3 and ctx.author != self.bot.owner_id:
-            await ctx.message.add_reaction('<:redTick:602811779474522113>')
-            return await ctx.send('Keywords must be at least 3 characters!')
-        guild_hl = self.data.setdefault(guild_id, {})
-        member_hl = guild_hl.setdefault(ctx.author.id, [])
-        if key in member_hl:
-            await ctx.message.add_reaction('<:redTick:602811779474522113>')
-            return await ctx.send('You already have this keyword added!', delete_after=10)
-        else:
-            member_hl.append(key)
-            self.update_regex(ctx)
-            await ctx.message.add_reaction('\U00002705')  # React with checkmark
-            await ctx.send(f'Successfully added highlight key: `{key}` for `{guild}`', delete_after=10)
 
     def save_highlights(self):
         with open('data/highlights.json', 'w') as f:
