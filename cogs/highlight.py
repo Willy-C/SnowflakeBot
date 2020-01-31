@@ -238,7 +238,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         else:
             self.update_regex(ctx, guild.id)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
-        await ctx.send(f'Successfully removed  highlight key: `{key}` for {guild}', delete_after=10)
+        await ctx.send(f'Successfully removed  highlight key: `{key}` for `{guild}`', delete_after=10)
 
     @highlight.command(name='import')
     @commands.guild_only()
@@ -253,7 +253,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
                 guild_hl[ctx.author.id] = self.data[g.id][ctx.author.id]
                 self.update_regex(ctx)
                 await ctx.message.add_reaction('\U00002705')  # React with checkmark
-                await ctx.send(f'Imported your highlights from {g}', delete_after=7)
+                await ctx.send(f'Imported your highlights from `{g}`', delete_after=7)
         else:
             await ctx.send('Unable to find server with that name or ID', delete_after=7)
             await ctx.message.add_reaction('<:redTick:602811779474522113>')
@@ -317,16 +317,16 @@ class HighlightCog(commands.Cog, name='Highlight'):
                 del self.highlights[guild_id]
             await ctx.send(f'Cleared all of your highlight words')
         elif ctx.guild.id in self.data and ctx.author.id in self.data[ctx.guild.id]:
-            if not await confirm_prompt(ctx, f'Clear all highlight words for {ctx.guild}?'):
+            if not await confirm_prompt(ctx, f'Clear all highlight words for `{ctx.guild}`?'):
                 return
             del self.data[ctx.guild.id][ctx.author.id]
             del self.highlights[ctx.guild.id][ctx.author.id]
             if not self.data[ctx.guild.id]:
                 del self.data[ctx.guild.id]
                 del self.highlights[ctx.guild.id]
-            await ctx.send(f'Cleared all of your highlight words for {ctx.guild}', delete_after=7)
+            await ctx.send(f'Cleared all of your highlight words for `{ctx.guild}`', delete_after=7)
         else:
-            await ctx.send(f'You do not have any highlight words for {ctx.guild}', delete_after=7)
+            await ctx.send(f'You do not have any highlight words for `{ctx.guild}`', delete_after=7)
 
         if ctx.author.id in self.mentions:
             self.mentions.remove(ctx.author.id)
@@ -341,11 +341,11 @@ class HighlightCog(commands.Cog, name='Highlight'):
             users = ignores.setdefault('users', [])
             if target.id not in users:
                 users.append(target.id)
-                await ctx.send(f'Ignoring highlights from {target}', delete_after=7)
+                await ctx.send(f'Ignoring highlights from `{target}`', delete_after=7)
                 await ctx.message.add_reaction('\U00002795')  # React with plus sign
             else:
                 users.remove(target.id)
-                await ctx.send(f'No longer ignoring highlights from {target}', delete_after=7)
+                await ctx.send(f'No longer ignoring highlights from `{target}`', delete_after=7)
                 if not ignores['users']:
                     del ignores['users']
                 await ctx.message.add_reaction('\U00002796')  # React with minus sign
@@ -355,11 +355,11 @@ class HighlightCog(commands.Cog, name='Highlight'):
             channels = ignores.setdefault('channels', [])
             if target.id not in channels:
                 channels.append(target.id)
-                await ctx.send(f'Ignoring highlights from {target}', delete_after=7)
+                await ctx.send(f'Ignoring highlights from `{target}`', delete_after=7)
                 await ctx.message.add_reaction('\U00002795')  # React with plus sign
             else:
                 channels.remove(target.id)
-                await ctx.send(f'No longer ignoring highlights from {target}!', delete_after=7)
+                await ctx.send(f'No longer ignoring highlights from `{target}`!', delete_after=7)
                 if not ignores['channels']:
                     del ignores['channels']
                 await ctx.message.add_reaction('\U00002796')  # React with minus sign

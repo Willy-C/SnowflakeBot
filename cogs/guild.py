@@ -128,21 +128,24 @@ class GuildCog(commands.Cog, name='Guild'):
             await ctx.send(page)
 
     @commands.command(hidden=True)
-    async def waitfor(self, ctx, user: discord.Member = None):
+    async def waitfor(self, ctx, channel: Optional[discord.TextChannel], user: discord.Member = None):
         """Get a DM when someone sends a message to your channel
         Useful for when you want to wait for a reply
 
-        - Will only trigger for messages in this channel
         - Will not trigger on messages by you or bots
         - Only waits for a max of 24 hours
-        - You can specify a user to only wait for their message
-        `Ex. %waitfor` will a message from anyone
-        `Ex. %waitfor Bob` will wait for a message from Bob"""
-        await ctx.send(f'Waiting for reply from `{user if user is not None else "anyone"}` in this channel for up to 24 hours', delete_after=5)
+        - You can specify a channel to wait for in, if none is given, defaults to this channel
+        - You can specify a user to only wait for their message, if none is given, defaults to anyone
+
+        `Ex. %waitfor` will wait for a message from anyone in the current channel
+        `Ex. %waitfor Bob` will wait for a message from Bob in the current channel
+        `Ex. %waitfor #general Bob` will wait for a message from Bob in #general"""
+        await ctx.send(f'Waiting for reply from `{user if user is not None else "anyone"}` in {f"`{channel}`" if channel else "this channel"} for up to 24 hours', delete_after=5)
         await ctx.message.add_reaction('<a:typing:559157048919457801>')
+        channel = channel or ctx.channel
         try:
             msg = await self.bot.wait_for('message',
-                                          check=lambda m: m.channel == ctx.channel
+                                          check=lambda m: m.channel == channel
                                                           and m.author != ctx.author
                                                           and not m.author.bot
                                                           and (not user or m.author == user),
@@ -152,7 +155,7 @@ class GuildCog(commands.Cog, name='Guild'):
         else:
             await ctx.message.add_reaction('\U00002705')
             try:
-                e = discord.Embed(title=f'You got a reply at: {ctx.guild} | #{ctx.channel}',
+                e = discord.Embed(title=f'You got a reply at: {ctx.guild} | #{channel}',
                                   description=f'{msg.author}: {msg.content}\n'
                                               f'[Jump to message]({msg.jump_url})',
                                   colour=0x0DF33E,

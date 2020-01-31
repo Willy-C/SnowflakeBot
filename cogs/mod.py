@@ -466,13 +466,12 @@ class ModCog(commands.Cog, name='Mod'):
             await ctx.channel.set_permissions(member, overwrite=None)
 
     @commands.command(hidden=True)
+    @commands.bot_has_guild_permissions(move_members=True)
     @can_move_members()
     async def move(self, ctx, members: commands.Greedy[discord.Member]=None, *, channel: discord.VoiceChannel = None):
         """Move members to another voice channel.
         Disconnects user if channel is None.
         """
-        if not ctx.guild.me.guild_permissions.move_members:
-            return
         if ctx.author.voice:
             members = members or ctx.author.voice.channel.members
         else:
