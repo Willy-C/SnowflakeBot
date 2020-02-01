@@ -29,7 +29,7 @@ class WASHCog(commands.Cog):
         if message.channel.id != CHANNEL_ID or message.author.bot:
             return
 
-        if (message.created_at - self.last_msg).seconds > self._timeout:
+        if abs(message.created_at - self.last_msg).seconds > self._timeout:
             await self.send_alert(message)
         self.last_msg = message.created_at
 
