@@ -67,6 +67,7 @@ class SnowflakeBot(commands.Bot):
     async def close(self):
         await super().close()
         await self.session.close()
+        await asyncio.wait_for(self.pool.close(), timeout=60)
 
 
 bot = SnowflakeBot()
@@ -88,7 +89,7 @@ for extension in startup_extensions:
         bot.load_extension(extension)
         print(f'Successfully loaded extension {extension}.')
         successes += 1
-    except Exception as e:
+    except Exception:
         print(f'Failed to load extension {extension}.')
         traceback.print_exc()
 
@@ -98,10 +99,11 @@ print(f'Successfully loaded {successes}/{total} extensions.')
 loop = asyncio.get_event_loop()
 try:
     bot.pool = loop.run_until_complete(asyncpg.create_pool(DBURI))
-except Exception as e:
-    print(f'Unable to connect to PostgreSQL, exiting...\n{e}')
+except Exception:
+    print(f'\nUnable to connect to PostgreSQL, exiting...\n')
+    traceback.print_exc()
     exit()
 else:
-    print('Connected to PostgreSQL')
+    print('\nConnected to PostgreSQL')
 
 bot.run(BOT_TOKEN)

@@ -151,9 +151,15 @@ class GuildCog(commands.Cog, name='Guild'):
                                                           and (not user or m.author == user),
                                           timeout=86400)
         except TimeoutError:
-            await ctx.message.add_reaction('<:redTick:602811779474522113>')
+            try:
+                await ctx.message.add_reaction('<:redTick:602811779474522113>')
+            except discord.HTTPException:
+                pass
         else:
-            await ctx.message.add_reaction('\U00002705')
+            try:
+                await ctx.message.add_reaction('\U00002705')
+            except discord.HTTPException:
+                pass
             try:
                 e = discord.Embed(title=f'You got a reply at: {ctx.guild} | #{channel}',
                                   description=f'{msg.author}: {msg.content}\n'
@@ -163,7 +169,6 @@ class GuildCog(commands.Cog, name='Guild'):
                 await ctx.author.send(embed=e)
             except discord.Forbidden:
                 pass
-
 
 
 def setup(bot):
