@@ -1,13 +1,16 @@
 import discord
+import asyncpg
 from discord.ext import commands
 
 import json
 import aiohttp
+import asyncio
 import traceback
 import platform
 from datetime import datetime
+from sys import exit
 
-from config import BOT_TOKEN, blacklist
+from config import BOT_TOKEN, DBURI
 
 DESCR = 'This is a general purpose bot I am making for fun'
 
@@ -56,7 +59,6 @@ class SnowflakeBot(commands.Bot):
                          help_command=commands.MinimalHelpCommand())
 
         self.starttime = datetime.utcnow()
-        self.blacklist = blacklist
         self.session = aiohttp.ClientSession(loop=self.loop)
 
         with open('data/prefixes.json') as f:
@@ -79,19 +81,27 @@ async def on_ready():
     print(f'Ready! {datetime.now()}\n')
 
 
-if __name__ == '__main__':
-    total = len(startup_extensions)
-    successes = 0
-    for extension in startup_extensions:
-        try:
-            bot.load_extension(extension)
-            print(f'Successfully loaded extension {extension}.')
-            successes += 1
-        except Exception as e:
-            print(f'Failed to load extension {extension}.')
-            traceback.print_exc()
+total = len(startup_extensions)
+successes = 0
+for extension in startup_extensions:
+    try:
+        bot.load_extension(extension)
+        print(f'Successfully loaded extension {extension}.')
+        successes += 1
+    except Exception as e:
+        print(f'Failed to load extension {extension}.')
+        traceback.print_exc()
 
-    print('-' * 52)
-    print(f'Successfully loaded {successes}/{total} extensions.')
+print('-' * 52)
+print(f'Successfully loaded {successes}/{total} extensions.')
 
-bot.run(BOT_TOKEN, reconnect=True)
+loop = asyncio.get_event_loop()
+try:
+    bot.pool = loop.run_until_complete(asyncpg.create_pool(DBURI))
+except Exception as e:
+    print(f'Unable to connect to PostgreSQL, exiting...\n{e}')
+    exit()
+else:
+    print('Connected to PostgreSQL')
+
+bot.run(BOT_TOKEN)

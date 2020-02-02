@@ -175,12 +175,7 @@ class OwnerCog(commands.Cog, name='Owner'):
 
     # Blacklist stuff
 
-    async def bot_check(self, ctx):
-        if ctx.author.id in self.bot.blacklist:
-            raise NoBlacklist
-        return True
-
-    @commands.command(name='blacklist')
+    @commands.command(name='blacklist', enabled=False)
     async def add_blacklist(self, ctx, user: Union[int, discord.User]):
         if isinstance(user, int):
             self.bot.blacklist.append(user)
@@ -189,7 +184,7 @@ class OwnerCog(commands.Cog, name='Owner'):
             self.bot.blacklist.append(user.id)
         await ctx.send(f'Blacklisted {user}')
 
-    @commands.command(name='unblacklist')
+    @commands.command(name='unblacklist', enabled=False)
     async def remove_blacklist(self, ctx, user: Union[int, discord.User]):
         if isinstance(user, int):
             self.bot.blacklist.remove(user)
