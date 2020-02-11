@@ -55,7 +55,7 @@ class SnowflakeBot(commands.Bot):
         super().__init__(command_prefix=get_prefix,
                          description=DESCR,
                          case_insensitive=True,
-                         activity=discord.Activity(type=discord.ActivityType.listening, name='you :)'),
+                         activity=discord.Activity(type=discord.ActivityType.listening, name='you again :)'),
                          help_command=commands.MinimalHelpCommand())
 
         self.starttime = datetime.utcnow()

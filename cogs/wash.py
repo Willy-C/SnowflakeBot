@@ -1,12 +1,10 @@
 import discord
 from discord.ext import commands
 
-from datetime import datetime
-
 GUILD_ID = 528403806984077312
 CHANNEL_ID = 528405322168270849
-
 HAD_ID = 299205173878849537
+
 
 class WASHCog(commands.Cog):
 
@@ -18,9 +16,11 @@ class WASHCog(commands.Cog):
     async def set_last_msg(self):
         await self.bot.wait_until_ready()
         channel = self.bot.get_guild(GUILD_ID).get_channel(CHANNEL_ID)
-        last_msg = await channel.fetch_message(channel.last_message_id)
-        if last_msg is None:
-            self.last_msg = datetime.utcnow() # couldn't get last message, default to utcnow
+        try:
+            last_msg = await channel.fetch_message(channel.last_message_id)
+        except discord.NotFound:
+            last_msg = await channel.history(limit=1).flatten()
+            self.last_msg = last_msg[0].created_at  # couldn't get last message with ID, use .history
         else:
             self.last_msg = last_msg.created_at
 
@@ -52,6 +52,7 @@ class WASHCog(commands.Cog):
             return await ctx.send(f'Please enter a positive number.')
         self._timeout = time
         await ctx.send(f'I will now send a ping when there is a new message after {time}s of silence')
+
 
 def setup(bot):
     bot.add_cog(WASHCog(bot))
