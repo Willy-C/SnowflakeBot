@@ -173,7 +173,7 @@ class Player(wavelink.Player):
 
         embed = discord.Embed(title='Music Controller',
                               description=f'{"<a:eq:628825184941637652> Now Playing:" if self.is_playing and not self.paused else "⏸ PAUSED"}```ini\n{track.title}\n\n'
-                                          f'[EQ]: {self.eq}```',
+                                          f'[EQ]: {self.eq} [Flat/Boost/Metal/Piano]```',
                               colour=0xffb347)
         embed.set_thumbnail(url=track.thumb)
 
@@ -730,8 +730,8 @@ class Music(commands.Cog):
         if ctx.author not in current_channel_members and not ctx.channel.permissions_for(ctx.author).manage_guild and ctx.author.id != self.bot.owner_id:
             return await ctx.send('You are not in my voice channel!')
         if not ctx.channel.permissions_for(ctx.author).manage_guild and (len(current_channel_members) - 1) > 1 and ctx.author.id != self.bot.owner_id:
-                if not 0 <= value <= 100:
-                    return await ctx.send('Please enter a value between 0 and 100.')
+            if not 0 <= value <= 100:
+                return await ctx.send('Please enter a value between 0 and 100.')
 
         if value < 0:
             return await ctx.send('Please enter a value that is at least 0!')
@@ -1091,7 +1091,7 @@ class Music(commands.Cog):
 
     @commands.command(name='rewind', aliases=['rwd'])
     async def rewind(self, ctx, time: SongTime):
-        """Fast forward a certain amount of time
+        """Rewinds a certain amount of time
         ex. rwd 10      (rewinds 10s)
             rwd 4:30    (rewinds 4m30s)
             rwd 1:15:10 (rewinds 1h15m10s)"""

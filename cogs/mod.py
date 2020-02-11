@@ -468,21 +468,28 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.command(hidden=True)
     @commands.bot_has_guild_permissions(move_members=True)
     @can_move_members()
-    async def move(self, ctx, members: commands.Greedy[discord.Member]=None, *, channel: discord.VoiceChannel = None):
-        """Move members to another voice channel.
+    async def move(self, ctx, members: commands.Greedy[discord.Member] = None, *, channel: discord.VoiceChannel = None):
+        """Move users to another voice channel.
+        If no users are given, moves everyone in your current voice channel
         Disconnects user if channel is None.
+
+        `Ex. %move voice1` will move everyone in your vc to voice1
+        `Ex. %move Adam Bob voice1` will move Adam and Bob to voice1
+        `Ex %move Bob` will disconnect Bob as no vc is given
         """
         if ctx.author.voice:
             members = members or ctx.author.voice.channel.members
         else:
-            members = members or [ctx.author]
-        try:
-            for member in members:
+            if members is None:
+                return await ctx.send('Please specify users or join a voice channel')
+
+        for member in members:
+            try:
                 await member.move_to(channel)
-        except discord.HTTPException:
-            await ctx.send(f'Unable to move')
-        else:
-            await ctx.message.add_reaction('\U00002705')  # React with checkmark
+            except discord.HTTPException as e:
+                await ctx.send(f'Unable to move {member} - `{e}`', delete_after=7)
+            else:
+                await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
     # Purge group:
 

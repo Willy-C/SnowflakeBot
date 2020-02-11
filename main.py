@@ -65,8 +65,8 @@ class SnowflakeBot(commands.Bot):
             self.prefixes = {int(k): v for k, v in json.load(f).items()}
 
     async def close(self):
-        await super().close()
         await self.session.close()
+        await super().close()
         await asyncio.wait_for(self.pool.close(), timeout=60)
 
 
