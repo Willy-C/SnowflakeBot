@@ -28,7 +28,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     @staticmethod
     def create_regex(words):
-        return re.compile(r'\b(?:' + '|'.join(map(re.escape, words)) + r')\b', re.IGNORECASE)
+        return re.compile(r'\b(?:' + '|'.join(map(re.escape, words)) + r')s?\b', re.IGNORECASE)
 
     def update_regex(self, ctx, guild_id=None):
         gid = guild_id or ctx.guild.id
@@ -66,7 +66,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             users_to_ignore = ignore.get('users', [])
         else:
             users_to_ignore = []
-        trigger = re.compile(r'\b' + word + r'\b', re.IGNORECASE)
+        trigger = re.compile(r'\b' + word + r's?\b', re.IGNORECASE)
         if any([trigger.search(msg.content) and msg.author.id not in users_to_ignore for msg in recent_msgs]):  # Recently highlighted
             return True
         return False
@@ -75,7 +75,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         now = datetime.utcnow()
         prev_msgs = await message.channel.history(after=(now-timedelta(minutes=5))).flatten()  # Grabs all messages from the last 5 minutes
         msg_context = []
-        recent_msgs = [msg for msg in prev_msgs[:-1] if (now - msg.created_at).seconds <= 90]  # List of messages from last 90 seconds
+        recent_msgs = [msg for msg in prev_msgs[:-1] if (now - msg.created_at).seconds <= 60]  # List of messages from last 60 seconds
 
         if not is_mention:
             if self.is_active(recent_msgs, member_id, word):
