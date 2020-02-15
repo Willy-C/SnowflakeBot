@@ -570,6 +570,8 @@ class Music(commands.Cog):
                 await ctx.message.edit(suppress=True)
         except (discord.HTTPException, discord.Forbidden, AttributeError):
             pass
+        finally:
+            await ctx.message.add_reaction('\U00002705')
 
     @commands.command(name='np', aliases=['current'])
     async def now_playing(self, ctx):
@@ -872,8 +874,8 @@ class Music(commands.Cog):
         if vol > 100:
             vol = 100
             await ctx.send('Maximum volume reached', delete_after=7)
-
-        await ctx.send(f'{ctx.author.mention} has raised the volume!', delete_after=7)
+        else:
+            await ctx.send(f'{ctx.author.mention} has raised the volume!', delete_after=7)
 
         await player.set_volume(vol)
         if not player.updating and not player.update:
@@ -897,8 +899,8 @@ class Music(commands.Cog):
         if vol < 0:
             vol = 0
             await ctx.send('Player is currently muted', delete_after=10)
-
-        await ctx.send(f'{ctx.author.mention} has lowered the volume!', delete_after=7)
+        else:
+            await ctx.send(f'{ctx.author.mention} has lowered the volume!', delete_after=7)
 
         await player.set_volume(vol)
         if not player.updating and not player.update:

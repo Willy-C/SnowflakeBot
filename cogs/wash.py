@@ -39,7 +39,7 @@ class WASHCog(commands.Cog):
         HD = self.bot.get_user(HAD_ID)
         if HD is not None and HD.mentioned_in(message):
             return
-        await message.channel.send(f'<@{HAD_ID}> A conversation just started!', delete_after=1800)
+        await message.channel.send(f'<@{HAD_ID}> A conversation just started!', delete_after=600)
 
     # If a new conversation started, then ping
     # new conversation = new message where the previous message is over `self._timeout` seconds old
