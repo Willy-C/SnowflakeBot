@@ -116,7 +116,7 @@ class Player(wavelink.Player):
     async def player_loop(self):
         await self.bot.wait_until_ready()
 
-        await self.set_preq('Flat')
+        await self.set_eq(self.equalizers.get('FLAT'))
         # We can do any pre loop prep here...
         await self.set_volume(self.volume)
 
@@ -508,6 +508,13 @@ class Music(commands.Cog):
                 pass
             await selector.delete()
 
+    async def _suppress_link(self, message):
+        await asyncio.sleep(90)
+        try:
+            await message.edit(suppress=True)
+        except:
+            pass
+
     @commands.command(name='play', aliases=['p'])
     async def play_(self, ctx, *, query: str = None):
         """Queue a song or playlist for playback.
@@ -565,13 +572,10 @@ class Music(commands.Cog):
         if player.controller_message and player.is_playing:
             await player.invoke_controller()
 
-        try:
-            if ctx.message.id != player.controller_message.id:
-                await ctx.message.edit(suppress=True)
-        except (discord.HTTPException, discord.Forbidden, AttributeError):
-            pass
-        finally:
-            await ctx.message.add_reaction('\U00002705')
+        if ctx.message.id != player.controller_message.id:
+            self.bot.loop.create_task(self._suppress_link(ctx.message))
+
+        await ctx.message.add_reaction('\U00002705')
 
     @commands.command(name='np', aliases=['current'])
     async def now_playing(self, ctx):
@@ -978,7 +982,7 @@ class Music(commands.Cog):
             await player.invoke_controller()
 
     @commands.command(name='eq')
-    async def set_eq(self, ctx, *, eq: str):
+    async def _set_eq(self, ctx, *, eq: str):
         """Set the eq of the player.
         Can be [Flat, Boost, Metal, Piano]"""
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
@@ -986,7 +990,7 @@ class Music(commands.Cog):
         if eq.upper() not in player.equalizers:
             return await ctx.send(f'`{eq}` - Is not a valid equalizer!\nTry Flat, Boost, Metal, Piano.')
 
-        await player.set_preq(eq)
+        await player.set_eq(eq)
         player.eq = eq.capitalize()
         await ctx.send(f'The player Equalizer was set to - {eq.capitalize()} - {ctx.author.mention}')
         if not player.updating and not player.update:
