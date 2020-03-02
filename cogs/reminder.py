@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 import asyncio
 import traceback
@@ -52,7 +52,7 @@ class ReminderCog(commands.Cog, name='Reminder'):
 
             e = discord.Embed(title=f'A error occurred in the timer task',
                               color=discord.Color.red(),
-                              timestamp=datetime.utcnow())
+                              timestamp=datetime.datetime.utcnow())
 
             await owner.send(embed=e)
             await owner.send(f'```py\n{"".join(tb)}```')
@@ -60,7 +60,7 @@ class ReminderCog(commands.Cog, name='Reminder'):
     async def short_timer(self, seconds, user=None, channel=None, message=None, content=None, event='reminder'):
         start = datetime.datetime.utcnow()
         await asyncio.sleep(seconds)
-        mock =  {
+        mock = {
             'user': user,
             'channel': channel,
             'message': message,
