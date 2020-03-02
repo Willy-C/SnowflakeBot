@@ -338,7 +338,7 @@ class Music(commands.Cog):
                 if not player.is_connected:
                     self.bot.loop.create_task(player.destroy())
 
-        self.save_playlists_to_json.cancel()
+        self.save_playlists_to_json.stop()
         self.save_playlists()
         self.save_noafks()
 
@@ -572,10 +572,13 @@ class Music(commands.Cog):
         if player.controller_message and player.is_playing:
             await player.invoke_controller()
 
-        if ctx.message.id != player.controller_message.id:
-            self.bot.loop.create_task(self._suppress_link(ctx.message))
-
-        await ctx.message.add_reaction('\U00002705')
+        try:
+            if player.controller_message and ctx.message.id != player.controller_message.id:
+                self.bot.loop.create_task(self._suppress_link(ctx.message))
+        except (discord.HTTPException, AttributeError):
+            pass
+        finally:
+            await ctx.message.add_reaction('\U00002705')
 
     @commands.command(name='np', aliases=['current'])
     async def now_playing(self, ctx):
@@ -754,7 +757,7 @@ class Music(commands.Cog):
 
         await asyncio.sleep(20)
         try:
-            if ctx.message.id != player.controller_message.id:
+            if player.controller_message and ctx.message.id != player.controller_message.id:
                 await ctx.message.delete()
         except (discord.HTTPException, AttributeError):
             pass
@@ -861,7 +864,7 @@ class Music(commands.Cog):
             await player.invoke_controller()
         await asyncio.sleep(10)
         try:
-            if ctx.message.id != player.controller_message.id:
+            if player.controller_message and ctx.message.id != player.controller_message.id:
                 await ctx.message.delete()
         except (discord.HTTPException, AttributeError):
             pass
@@ -886,7 +889,7 @@ class Music(commands.Cog):
             await player.invoke_controller()
         await asyncio.sleep(10)
         try:
-            if ctx.message.id != player.controller_message.id:
+            if player.controller_message and ctx.message.id != player.controller_message.id:
                 await ctx.message.delete()
         except (discord.HTTPException, AttributeError):
             pass
@@ -911,7 +914,7 @@ class Music(commands.Cog):
             await player.invoke_controller()
         await asyncio.sleep(10)
         try:
-            if ctx.message.id != player.controller_message.id:
+            if player.controller_message and ctx.message.id != player.controller_message.id:
                 await ctx.message.delete()
         except (discord.HTTPException, AttributeError):
             pass

@@ -441,7 +441,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         self.save_ignores()
 
     def cog_unload(self):
-        self.save_to_json.cancel()
+        self.save_to_json.stop()
         self.save_highlights()
         self.save_mentions()
         self.save_ignores()

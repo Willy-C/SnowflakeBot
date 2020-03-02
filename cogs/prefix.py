@@ -122,7 +122,7 @@ class PrefixCog(commands.Cog, name='Prefix'):
         self.save_prefixes()
 
     def cog_unload(self):
-        self.save_prefixes_to_json.cancel()
+        self.save_prefixes_to_json.stop()
         self.save_prefixes()
 
 
