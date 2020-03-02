@@ -23,15 +23,11 @@ class CommandErrorHandler(commands.Cog):
         """The event triggered when an error is raised while invoking a command.
         ctx   : Context
         error : Exception"""
-
-        # if hasattr(ctx.command, 'on_error'):
-        #     return
         await self.bot.wait_until_ready()
-        if hasattr(ctx, 'local_handled'):
-            if ctx.local_handled:
-                return
+        if getattr(ctx, 'local_handled', False):
+            return
 
-        ignored = (commands.CommandNotFound)  # Tuple of errors to ignore
+        ignored = (commands.CommandNotFound, commands.CommandOnCooldown)  # Tuple of errors to ignore
         error = getattr(error, 'original', error)
 
         if isinstance(error, ignored):
@@ -44,13 +40,13 @@ class CommandErrorHandler(commands.Cog):
             return await ctx.author.send(f'The command `{ctx.command}` cannot be used in Private Messages.')
 
         elif isinstance(error, commands.BadArgument):
-            return await ctx.send(f'One or more of arguments are incorrect. Please see {ctx.prefix}help {ctx.command} for more info')
+            return await ctx.send(error)
 
         elif isinstance(error, commands.NotOwner):
             return await ctx.send(f'Sorry, this command can only be used by my owner. If you believe this is a mistake, please contact @{self.owner}')
 
         elif isinstance(error, commands.MissingRequiredArgument):
-            return await ctx.send(f'Missing one or more required arguments: `{error.param.name}` See {ctx.prefix}help {ctx.command} for more info')
+            return await ctx.send(f'Missing required argument: `{error.param.name}` See {ctx.prefix}help {ctx.command} for more info')
 
         elif isinstance(error, commands.MissingPermissions):
             return await ctx.send(f'I cannot complete this command, you are missing the following permission{"" if len(error.missing_perms) == 1 else "s"}: {", ".join(error.missing_perms)}')

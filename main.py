@@ -32,11 +32,12 @@ startup_extensions = ['jishaku',
                       'cogs.wavelink',
                       'cogs.wash',
                       'cogs.vi',
-                      'cogs.gatekeep',
+                      # 'cogs.gatekeep',
                       'cogs.reddit',
                       'cogs.emoji',
                       'cogs.waifu2x',
-                      'cogs.help']
+                      'cogs.help',
+                      'cogs.reminder']
 
 
 def get_prefix(bot, message):
@@ -55,7 +56,7 @@ class SnowflakeBot(commands.Bot):
         super().__init__(command_prefix=get_prefix,
                          description=DESCR,
                          case_insensitive=True,
-                         activity=discord.Activity(type=discord.ActivityType.listening, name='you again :)'),
+                         activity=discord.Activity(type=discord.ActivityType.listening, name='you :)'),
                          help_command=commands.MinimalHelpCommand())
 
         self.starttime = datetime.utcnow()

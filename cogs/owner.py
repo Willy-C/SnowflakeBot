@@ -2,16 +2,15 @@ import discord
 from discord.ext import commands
 
 import io
-import copy
 import asyncio
 import datetime
 import textwrap
+import tabulate
 import traceback
 from collections import Counter
-from typing import Optional, Union
+from typing import Optional
 from contextlib import redirect_stdout
 
-from utils.errors import NoBlacklist
 from utils.global_utils import confirm_prompt, cleanup_code, copy_context
 
 
@@ -147,6 +146,30 @@ class OwnerCog(commands.Cog, name='Owner'):
 
         await self.bot.invoke(new_ctx)
 
+    @commands.command(name='sql')
+    async def run_query(self, ctx, *, query):
+        query = cleanup_code(query)
+
+        is_multiple = query.count(';') > 1
+        if is_multiple:
+            # fetch does not support multiple statements
+            method = self.bot.pool.execute
+        else:
+            method = self.bot.pool.fetch
+
+        try:
+            results = await method(query)
+        except Exception:
+            return await ctx.send(f'```py\n{traceback.format_exc()}\n```')
+
+        rows = len(results)
+        if is_multiple or rows == 0:
+            return await ctx.send(f'```\n{results}```')
+        headers = list(results[0].keys())
+        values = [list(map(repr, v)) for v in results]
+        table = tabulate.tabulate(values, tablefmt='psql', headers=headers)
+        await ctx.send(f'```\n{table}```')
+
     @commands.command(name="shutdown")
     async def logout(self, ctx):
         """
@@ -172,32 +195,6 @@ class OwnerCog(commands.Cog, name='Owner'):
                                                   f'If you believe this is a mistake please contact my owner.')
             finally:
                 await guild.leave()
-
-    # Blacklist stuff
-
-    @commands.command(name='blacklist', enabled=False)
-    async def add_blacklist(self, ctx, user: Union[int, discord.User]):
-        if isinstance(user, int):
-            self.bot.blacklist.append(user)
-            user = await self.bot.fetch_user(user) or user
-        elif isinstance(user, discord.User):
-            self.bot.blacklist.append(user.id)
-        await ctx.send(f'Blacklisted {user}')
-
-    @commands.command(name='unblacklist', enabled=False)
-    async def remove_blacklist(self, ctx, user: Union[int, discord.User]):
-        if isinstance(user, int):
-            self.bot.blacklist.remove(user)
-            user = await self.bot.fetch_user(user) or user
-        elif isinstance(user, discord.User):
-            self.bot.blacklist.remove(user.id)
-        await ctx.send(f'Unblacklisted {user}')
-
-    @commands.command()
-    async def remind(self, ctx, seconds: int, *, message):
-        await asyncio.sleep(seconds)
-        await ctx.send(f'{ctx.author.mention} from {seconds}s ago: {message}\n'
-                       f'{ctx.message.jump_url}')
 
 
 def setup(bot):
