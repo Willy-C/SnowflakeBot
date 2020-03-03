@@ -93,8 +93,14 @@ class Player(wavelink.Player):
         self._updater = bot.loop.create_task(self.updater())
 
     async def destroy(self):
-        self._loop.cancel()
-        self._updater.cancel()
+        try:
+            self._loop.cancel()
+        except asyncio.TimeoutError:
+            pass
+        try:
+            self._updater.cancel()
+        except asyncio.TimeoutError:
+            pass
         return await super().destroy()
 
     @property
@@ -132,7 +138,7 @@ class Player(wavelink.Player):
                 await self.destroy_controller()
                 try:
                     await self.destroy()
-                except KeyError:
+                except (KeyError, asyncio.CancelledError):
                     pass
                 return
 

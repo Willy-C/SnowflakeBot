@@ -46,6 +46,8 @@ class ReminderCog(commands.Cog, name='Reminder'):
                     await asyncio.sleep(sleep_time)
                 await self.run_timer(upcoming)
 
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             owner = (await self.bot.application_info()).owner
             tb = traceback.format_exception(type(e), e, e.__traceback__)
@@ -69,8 +71,8 @@ class ReminderCog(commands.Cog, name='Reminder'):
         }
         self.bot.dispatch(f'{event}_complete', mock)
 
-    async def create_timer(self, end, user, channel, message, content=None, event='reminder'):
-        now = datetime.datetime.utcnow()
+    async def create_timer(self, end, user, channel, message, content=None, event='reminder', start=None):
+        now = start or datetime.datetime.utcnow()
         channel_id = channel.id if isinstance(channel, discord.TextChannel) else None
         delta = (end - now).total_seconds()
         if delta <= 60:
@@ -144,8 +146,9 @@ class ReminderCog(commands.Cog, name='Reminder'):
 
         NOTE: Times are in UTC.
         """
-        await self.create_timer(time.dt, ctx.author, ctx.channel, ctx.message, time.arg, 'reminder')
-        await ctx.send(f'Ok, in {human_timedelta(time.dt)}: {time.arg}')
+        now = datetime.datetime.utcnow()
+        await self.create_timer(time.dt, ctx.author, ctx.channel, ctx.message, time.arg, 'reminder', start=now)
+        await ctx.send(f'Ok, in {human_timedelta(time.dt, source=now)}: {time.arg}')
 
     @reminder.command(name='list')
     async def list_reminders(self, ctx):
