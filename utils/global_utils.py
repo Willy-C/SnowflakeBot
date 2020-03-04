@@ -68,12 +68,14 @@ async def confirm_prompt(ctx: commands.Context, msg):
 
     return cont
 
+
 def cleanup_code(content):
     """Automatically removes code blocks from the code."""
     # remove ```py\n```
     if content.startswith('```') and content.endswith('```'):
         return '\n'.join(content.split('\n')[1:-1])
     return content.strip('` \n')
+
 
 async def last_image(ctx):
     """Tries to find the last image in chat and return its url.
@@ -85,3 +87,8 @@ async def last_image(ctx):
         for attachment in message.attachments:
             if attachment.proxy_url:
                 return attachment.proxy_url
+
+
+async def upload_hastebin(ctx, content, url='https://hastebin.com'):
+    async with ctx.bot.session.post(f'{url}/documents', data=content.encode('utf-8')) as post:
+        return f'{url}/{(await post.json())["key"]}'
