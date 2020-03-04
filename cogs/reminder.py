@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import asyncio
 import traceback
@@ -7,19 +7,21 @@ import datetime
 from textwrap import shorten
 
 from utils.time import UserFriendlyTime, human_timedelta
+from utils.global_utils import get_user_timezone
 
 
-class ReminderCog(commands.Cog, name='Reminder'):
+class ReminderCog(commands.Cog, name='Reminders'):
 
     def __init__(self, bot):
         self.bot = bot
         self.have_timer = asyncio.Event()
-        self.have_timer.set()
         self.current_timer = None
+        self.weekly_check.start()
         self.task = bot.loop.create_task(self.timer_task())
 
     def cog_unload(self):
         self.task.cancel()
+        self.weekly_check.cancel()
 
     async def get_timer(self):
         query = 'SELECT * FROM reminders WHERE "end" <  (CURRENT_DATE + $1::interval) ORDER BY "end" LIMIT 1;'
@@ -132,7 +134,7 @@ class ReminderCog(commands.Cog, name='Reminder'):
         except discord.HTTPException:
             pass
 
-    @commands.group(name='remind', aliases=['reminder', 'timer'], invoke_without_command=True)
+    @commands.group(name='remind', aliases=['reminder', 'timer'], invoke_without_command=True, case_insensitive=True)
     async def reminder(self, ctx, *, time: UserFriendlyTime(commands.clean_content)):
         """Set a reminder that sends a message after a certain amount of time.
 
@@ -145,10 +147,27 @@ class ReminderCog(commands.Cog, name='Reminder'):
         - "in 3 days study for exam"
 
         NOTE: Times are in UTC.
+        For absolute times, it is recommended to use the `local` version, see `%help remind local`
         """
         now = datetime.datetime.utcnow()
         await self.create_timer(time.dt, ctx.author, ctx.channel, ctx.message, time.arg, 'reminder', start=now)
         await ctx.send(f'Ok, in {human_timedelta(time.dt, source=now)}: {time.arg}')
+
+    @reminder.command(name='local')
+    async def local_reminder(self, ctx, *, time: UserFriendlyTime(commands.clean_content)):
+        """Similar to the normal `remind` command but tries to convert the end time to your local timezone
+
+        Ex: `%remind local do homework at 4pm tomorrow`
+        Will trigger at 4pm in your timezone if set, otherwise it will trigger at 4pm UTC
+        See `%help timezone` on how to set your timezone
+
+        NOTE: It is not recommended to use a __relative time__ with this command, for that, use the regular `%remind ...`
+
+        Example of __relative time__: `%remind me in 5 seconds...` this will NOT trigger in 5 seconds if your timezone is not set to UTC"""
+        tz = await get_user_timezone(ctx, ctx.author)
+        if tz is None:
+            await ctx.send('No timezone found, defaulting to UTC. See `%help timezone` to set a timezone', delete_after=5)
+        await ctx.invoke(self.reminder, time=time)
 
     @reminder.command(name='list')
     async def list_reminders(self, ctx):
@@ -180,24 +199,31 @@ class ReminderCog(commands.Cog, name='Reminder'):
         await ctx.send(embed=e)
 
     @reminder.command(name='cancel', aliases=['delete', 'remove'])
-    async def cancel_reminder(self, ctx, _id: int):
+    async def cancel_reminder(self, ctx, id: int):
         """Cancels a reminder by ID
         See `%remind list` to get IDs"""
         query = '''DELETE FROM reminders
                    WHERE id = $1
                    AND "user" = $2 
                    AND event = 'reminder';'''
-        result = await self.bot.pool.execute(query, _id, ctx.author.id)
+        result = await self.bot.pool.execute(query, id, ctx.author.id)
 
         if result == 'DELETE 0':
             return await ctx.send('Could not delete reminder with that ID. Are you sure you own that ID?\n'
                                   'You can see your reminders with `%remind list`')
 
-        if self.current_timer and self.current_timer['id'] == _id:
+        if self.current_timer and self.current_timer['id'] == id:
             self.task.cancel()
             self.task = self.bot.loop.create_task(self.timer_task())
 
-        await ctx.send(f'Deleted reminder {_id}')
+        await ctx.send(f'Deleted reminder {id}')
+
+    # Force a data check once a week
+    # Checks every 6day 23hr 45min
+    # In case there is a timer coming up next week and no new timers triggered a check
+    @tasks.loop(hours=167.75)
+    async def weekly_check(self):
+        self.have_timer.set()
 
 
 def setup(bot):
