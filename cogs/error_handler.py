@@ -4,6 +4,7 @@ import discord
 
 import re
 
+from utils.global_utils import upload_hastebin
 from utils.errors import NoBlacklist
 from .latex import TexRenderError
 
@@ -84,7 +85,12 @@ class CommandErrorHandler(commands.Cog):
         e.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
 
         await self.owner.send(embed=e)
-        await self.owner.send(f'```py\n{"".join(tb)}```')
+        fmt = "".join(tb)
+        if len(fmt) >= 1950:
+            url = await upload_hastebin(ctx, "".join(tb))
+            await ctx.send(f'Traceback too long. {url}')
+        else:
+            await self.owner.send(f'```py\n{"".join(tb)}```')
 
     async def on_error(self, event, *args, **kwargs):
         await self.bot.wait_until_ready()
