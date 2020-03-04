@@ -11,7 +11,7 @@ from collections import Counter
 from typing import Optional
 from contextlib import redirect_stdout
 
-from utils.global_utils import confirm_prompt, cleanup_code, copy_context
+from utils.global_utils import confirm_prompt, cleanup_code, copy_context, upload_hastebin
 
 
 class OwnerCog(commands.Cog, name='Owner'):
@@ -168,6 +168,10 @@ class OwnerCog(commands.Cog, name='Owner'):
         headers = list(results[0].keys())
         values = [list(map(repr, v)) for v in results]
         table = tabulate.tabulate(values, tablefmt='psql', headers=headers)
+        if len(table) > 1000:
+            url = await upload_hastebin(ctx, table)
+            return await ctx.send(f'Output too long, uploaded to hastebin instead: <{url}>')
+
         await ctx.send(f'```\n{table}```')
 
     @commands.command(name="shutdown")
