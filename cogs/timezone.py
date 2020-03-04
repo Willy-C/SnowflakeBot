@@ -74,6 +74,20 @@ class TimezoneCog(commands.Cog, name='Timezones'):
         else:
             await ctx.send('Successfully deleted your timezone info.')
 
+    @tz_group.command(name='info')
+    async def timezone_info(self, ctx, timezone: Timezone):
+        """Get the current time of a timezone"""
+        now = utc.localize(datetime.datetime.utcnow())
+        await ctx.send(f'Current time in {timezone.zone}: {now.astimezone(timezone).strftime("%Y-%m-%d %H:%M")}')
+
+    @set_timezone.error
+    @timezone_info.error
+    async def set_tz_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            ctx.local_handled = True
+            await ctx.send('Unknown timezone!')
+            await ctx.invoke(self.list_timezones)
+
 
 def setup(bot):
     bot.add_cog(TimezoneCog(bot))
