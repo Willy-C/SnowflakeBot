@@ -4,6 +4,7 @@ from discord.ext import commands
 import copy
 import colorsys
 import random
+import pytz
 from asyncio import TimeoutError
 
 
@@ -90,5 +91,18 @@ async def last_image(ctx):
 
 
 async def upload_hastebin(ctx, content, url='https://hastebin.com'):
+    """Uploads content to hastebin"""
     async with ctx.bot.session.post(f'{url}/documents', data=content.encode('utf-8')) as post:
         return f'{url}/{(await post.json())["key"]}'
+
+
+async def get_user_timezone(ctx, user):
+    """Returns a pytz.timezone for a user if set, returns None otherwise"""
+    query = '''SELECT tz
+               FROM timezones
+               WHERE "user" = $1;'''
+    record = await ctx.bot.pool.fetchrow(query, user.id)
+    if record is None:
+        return None
+    else:
+        return pytz.timezone(record.get('tz'))
