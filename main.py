@@ -55,7 +55,7 @@ async def set_prefixes(bot):
     query = '''SELECT * 
                FROM prefixes
                ORDER BY CASE WHEN prefix = '%' THEN 0 ELSE 1 END;'''
-    records = bot.pool.fetch(query)
+    records = await bot.pool.fetch(query)
 
     collect_prefixes = {}
     for record in records:
