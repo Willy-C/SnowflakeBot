@@ -52,19 +52,22 @@ class PrefixCog(commands.Cog, name='Prefix'):
         """Add new prefix(es) for this guild.
         Separate multiple prefixes with spaces."""
         # self.bot.prefixes.setdefault(ctx.guild.id, ['%']).extend(new_prefixes)
-        added = []
+        was_empty = False
         if ctx.guild.id not in self.bot.prefixes:
+            was_empty = True
             self.bot.prefixes[ctx.guild.id] = ['%']
         current = self.bot.prefixes[ctx.guild.id]
+        added = []
         for prefix in new_prefixes:
             if prefix not in current:
                 current.append(prefix)
                 added.append(prefix)
         if added:
             await ctx.send(f'Added {", ".join(added)} to this guild\'s prefixes')
-            added.append('%')
             query = '''INSERT INTO prefixes(guild, prefix)
                        VALUES ($1, $2);'''
+            if was_empty:
+                added.insert(0, '%')
             prefixes_with_guild = [(ctx.guild.id, p) for p in added]
             await self.bot.pool.executemany(query, prefixes_with_guild)
         else:
