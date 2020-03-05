@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 import json
 import re
@@ -16,15 +16,11 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     def __init__(self, bot):
         self.bot = bot
-        with open('data/highlights.json') as f:
-            convert_keys = lambda d: {int(k): convert_keys(v) if isinstance(v, dict) else v for (k, v) in d.items()}
-            self.dta = convert_keys(json.load(f))
         with open('data/mentions.json') as f:
             self.mentions = set(json.load(f))
         with open('data/highlightignores.json') as f:
             self.ignores = {int(k): v for k, v in json.load(f).items()}
         self.highlights = {}
-        self.save_to_json.start()
         self.bot.loop.create_task(self.populate_cache())
 
     @staticmethod
@@ -227,7 +223,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         try:
             add_query = '''INSERT INTO highlights(guild, "user", word)
                            VALUES ($1, $2, $3);'''
-            await self.bot.pool.execute(add_query, guild.id, ctx.author, keyword)
+            await self.bot.pool.execute(add_query, guild.id, ctx.author.id, keyword)
         except UniqueViolationError:
             await ctx.message.add_reaction('<:redTick:602811779474522113>')
             return await ctx.send('You already have this word added!', delete_after=delete_after)
@@ -262,7 +258,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             query = '''SELECT DISTINCT "user" 
                        FROM highlights
                        WHERE guild = $1;'''
-            records = await self.bot.pool.fetch(query, guild.id, ctx.author.id)
+            records = await self.bot.pool.fetch(query, guild.id)
 
             guild_records = [record['user'] for record in records]
             if ctx.author.id not in guild_records:
@@ -285,7 +281,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
                        WHERE guild = $1
                        AND "user" = $2;'''
             records = await self.bot.pool.fetch(query, g.id, ctx.author.id)
-            words = [(g.id, ctx.author.id, record["word"]) for record in records]
+            words = [(ctx.guild.id, ctx.author.id, record["word"]) for record in records]
             insert = '''INSERT INTO highlights(guild, "user", word)
                         VALUES ($1, $2, $3);'''
             await self.bot.pool.executemany(insert, words)
@@ -304,7 +300,8 @@ class HighlightCog(commands.Cog, name='Highlight'):
         if ctx.guild is None:
             query = '''SELECT guild, word
                        FROM highlights
-                       WHERE "user" = $1'''
+                       WHERE "user" = $1
+                       ORDER BY word'''
             records = await self.bot.pool.fetch(query, ctx.author.id)
             all_hl = []
             collect_words = {}
@@ -324,7 +321,8 @@ class HighlightCog(commands.Cog, name='Highlight'):
             query = '''SELECT word
                        FROM highlights
                        WHERE guild = $1
-                       AND "user" = $2'''
+                       AND "user" = $2
+                       ORDER BY word'''
             records = await self.bot.pool.fetch(query, ctx.guild.id, ctx.author.id)
             if records:
                 words = '\n'.join([record['word'] for record in records])
@@ -346,45 +344,58 @@ class HighlightCog(commands.Cog, name='Highlight'):
             delete_after = 10
         else:
             delete_after = None
-        if ctx.author.id in self.mentions:
-            self.mentions.remove(ctx.author.id)
-            await ctx.send('You will no longer get a DM when I see you mentioned', delete_after=delete_after)
-            await ctx.message.add_reaction('\U00002796')  # React with minus sign
-        else:
-            self.mentions.add(ctx.author.id)
+
+        query = '''DELETE FROM mentions
+                    WHERE "user" = $1'''
+
+        deleted = await self.bot.pool.execute(query, ctx.author.id)
+        if deleted == 'DELETE 0':
+            toggle = '''INSERT INTO mentions VALUES($1)'''
             await ctx.send('You will now get a DM when I see you mentioned', delete_after=delete_after)
             await ctx.message.add_reaction('\U00002795')  # React with plus sign
+            await self.bot.pool.execute(toggle, ctx.author.id)
+        else:
+            await ctx.send('You will no longer get a DM when I see you mentioned', delete_after=delete_after)
+            await ctx.message.add_reaction('\U00002796')  # React with minus sign
 
     @highlight.command()
-    async def clear(self, ctx):
+    async def clear(self, ctx, guild_id: int = None):
         """Clear all highlight words for the current guild
-        If used in DM, clears all words from all guilds
+        Can pass in a guild id to specify a guild to clear from
+        If used in DM with no guild specified, clears all words from all guilds
         Note: This will also disable highlight for mentions/pings"""
-        if ctx.guild is None:
-            if not await confirm_prompt(ctx, 'Clear all highlight words?'):
+        if ctx.guild is None and guild_id is None:
+            if not await confirm_prompt(ctx, 'Clear all highlight words from **every** server?'):
                 return
+
+            query = '''DELETE FROM highlights
+                       WHERE "user" = $1'''
+            await self.bot.pool.execute(query, ctx.author.id)
+
             to_del = []
-            for guild_id in self.data:
-                if ctx.author.id in self.data[guild_id]:
-                    del self.data[guild_id][ctx.author.id]
-                    del self.highlights[guild_id][ctx.author.id]
-                    if not self.data[guild_id]:
-                        to_del.append(guild_id)
-            for guild_id in to_del:
-                del self.data[guild_id]
-                del self.highlights[guild_id]
+            for guild in self.highlights:
+                if ctx.author.id in self.highlights[guild]:
+                    del self.highlights[guild][ctx.author.id]
+                    if not self.highlights[guild]:
+                        to_del.append(guild)
+
+            for gid in to_del:
+                del self.highlights[gid]
             await ctx.send(f'Cleared all of your highlight words')
-        elif ctx.guild.id in self.data and ctx.author.id in self.data[ctx.guild.id]:
-            if not await confirm_prompt(ctx, f'Clear all highlight words for `{ctx.guild}`?'):
+
+        else:
+            guild = self.bot.get_guild(guild_id) or ctx.guild
+            if not await confirm_prompt(ctx, f'Clear all highlight words for `{guild}`?'):
                 return
-            del self.data[ctx.guild.id][ctx.author.id]
+            query = '''DELETE FROM highlights
+                       WHERE guild = $1
+                       AND "user" = $2;'''
+            await self.bot.pool.execute(query, guild.id, ctx.author.id)
+
             del self.highlights[ctx.guild.id][ctx.author.id]
-            if not self.data[ctx.guild.id]:
-                del self.data[ctx.guild.id]
+            if not self.highlights[ctx.guild.id]:
                 del self.highlights[ctx.guild.id]
             await ctx.send(f'Cleared all of your highlight words for `{ctx.guild}`', delete_after=7)
-        else:
-            await ctx.send(f'You do not have any highlight words for `{ctx.guild}`', delete_after=7)
 
         if ctx.author.id in self.mentions:
             self.mentions.remove(ctx.author.id)
@@ -399,11 +410,13 @@ class HighlightCog(commands.Cog, name='Highlight'):
         else:
             delete_after = None
         ignores = self.ignores.setdefault(ctx.author.id, {})
+        adding = False
         if isinstance(target, discord.User):
             users = ignores.setdefault('users', [])
             if target.id not in users:
                 users.append(target.id)
                 await ctx.send(f'Ignoring highlights from `{target}`', delete_after=delete_after)
+                adding = 'user'
                 await ctx.message.add_reaction('\U00002795')  # React with plus sign
             else:
                 users.remove(target.id)
@@ -418,6 +431,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
             if target.id not in channels:
                 channels.append(target.id)
                 await ctx.send(f'Ignoring highlights from `{target}`', delete_after=delete_after)
+                adding = 'channel'
                 await ctx.message.add_reaction('\U00002795')  # React with plus sign
             else:
                 channels.remove(target.id)
@@ -427,10 +441,21 @@ class HighlightCog(commands.Cog, name='Highlight'):
                 await ctx.message.add_reaction('\U00002796')  # React with minus sign
             await ctx.message.add_reaction('\U00002705')  # React with checkmark
         else:
+            adding = None
             await ctx.message.add_reaction('<:redTick:602811779474522113>')
             await ctx.send('Unable to find target to ignore, please enter a users or a text channel', delete_after=delete_after)
         if not ignores:
             del self.ignores[ctx.author.id]
+
+        if adding:
+            query = '''INSERT INTO hlignores("user", id, type)
+                       VALUES ($1, $2, $3);'''
+            await self.bot.pool.execute(query, ctx.author.id, target.id, adding)
+        elif adding is not None:
+            delete_query = '''DELETE FROM hlignores
+                              WHERE "user" = $1 
+                              AND id = $2;'''
+            await self.bot.pool.execute(delete_query, ctx.author.id, target.id)
 
     @highlight.command(name='ignores', aliases=['listignores'])
     async def list_ignores(self, ctx):
@@ -453,44 +478,6 @@ class HighlightCog(commands.Cog, name='Highlight'):
         else:
             await ctx.send('You do not have ignores set!', delete_after=delete_after)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
-
-    def save_highlights(self):
-        with open('data/highlights.json', 'w') as f:
-            json.dump(self.data, f, indent=2)
-
-    def save_mentions(self):
-        with open('data/mentions.json', 'w') as f:
-            json.dump(list(self.mentions), f, indent=2)
-
-    def save_ignores(self):
-        with open('data/highlightignores.json', 'w') as f:
-            json.dump(self.ignores, f, indent=2)
-
-    @highlight.command()
-    @commands.is_owner()
-    async def save(self, ctx):
-        try:
-            self.save_highlights()
-            self.save_mentions()
-            self.save_ignores()
-        except Exception as e:
-            await ctx.message.add_reaction('<:redTick:602811779474522113>')
-            await ctx.send(f'An error has occurred\n```{e}```')
-        else:
-            await ctx.message.add_reaction('\U00002705')  # React with checkmark
-
-    # noinspection PyCallingNonCallable
-    @tasks.loop(hours=48)
-    async def save_to_json(self):
-        self.save_highlights()
-        self.save_mentions()
-        self.save_ignores()
-
-    def cog_unload(self):
-        self.save_to_json.stop()
-        self.save_highlights()
-        self.save_mentions()
-        self.save_ignores()
 
 
 def setup(bot):

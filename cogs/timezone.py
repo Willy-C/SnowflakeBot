@@ -11,7 +11,7 @@ class TimezoneCog(commands.Cog, name='Timezones'):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.group(name='timezone', invoke_without_command=True, case_insensitive=True)
+    @commands.group(name='timezone', aliases=['tz'], invoke_without_command=True, case_insensitive=True)
     async def tz_group(self, ctx):
         """Timezone settings
         Setting your timezone allows for reminders to use your timezone

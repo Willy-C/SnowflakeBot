@@ -325,6 +325,7 @@ class Music(commands.Cog):
             self.bot.wavelink = wavelink.Client(bot)
 
         bot.loop.create_task(self.initiate_nodes())
+        bot.loop.create_task(self.set_noafks())
 
     def cog_unload(self):
         if not any([player.is_playing for player in self.bot.wavelink.players.values()]):
@@ -1178,7 +1179,6 @@ class Music(commands.Cog):
             await ctx.message.add_reaction('\U00002705')
             await ctx.send(f'Added playlist `{name}`, with link: `{link}`')
 
-
     @playlist.command()
     async def remove(self, ctx, *, name):
         """Remove a saved playlist/song by name
@@ -1227,20 +1227,21 @@ class Music(commands.Cog):
     @commands.command(name='noafk', hidden=True)
     async def no_afk_toggle(self, ctx):
         """Toggles anti-afk"""
-        query = '''SELECT *
-                   FROM noafks
-                   WHERE "user" = $1'''
-        exists = await self.bot.pool.fetchrow(query, ctx.author.id)
-        if exists:
-            toggle = '''DELETE FROM noafks
-                        WHERE "user" = $1'''
-            await ctx.send('You will no longer be moved back when you AFK')
-            await ctx.message.add_reaction('\U00002796')  # React with minus sign
-        else:
+
+        query = '''DELETE FROM noafks
+                    WHERE "user" = $1'''
+
+        deleted = await self.bot.pool.execute(query, ctx.author.id)
+        if deleted == 'DELETE 0':
             toggle = '''INSERT INTO noafks VALUES($1)'''
             await ctx.send('You be moved back when you AFK')
             await ctx.message.add_reaction('\U00002795')  # React with plus sign
-        await self.bot.pool.execute(toggle, ctx.author.id)
+            await self.bot.pool.execute(toggle, ctx.author.id)
+            self.noafks.add(ctx.author.id)
+        else:
+            await ctx.send('You will no longer be moved back when you AFK')
+            await ctx.message.add_reaction('\U00002796')  # React with minus sign
+            self.noafks.remove(ctx.author.id)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
