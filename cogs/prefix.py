@@ -7,7 +7,6 @@ import re
 class PrefixCog(commands.Cog, name='Prefix'):
     def __init__(self, bot):
         self.bot = bot
-        self.save_prefixes_to_json.start()
         bot.loop.create_task(self.set_mention_regex())
 
     async def set_mention_regex(self):
