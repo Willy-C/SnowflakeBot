@@ -54,7 +54,6 @@ class PrefixCog(commands.Cog, name='Prefix'):
         # self.bot.prefixes.setdefault(ctx.guild.id, ['%']).extend(new_prefixes)
         added = []
         if ctx.guild.id not in self.bot.prefixes:
-            added.append('%')
             self.bot.prefixes[ctx.guild.id] = ['%']
         current = self.bot.prefixes[ctx.guild.id]
         for prefix in new_prefixes:
@@ -63,6 +62,7 @@ class PrefixCog(commands.Cog, name='Prefix'):
                 added.append(prefix)
         if added:
             await ctx.send(f'Added {", ".join(added)} to this guild\'s prefixes')
+            added.append('%')
             query = '''INSERT INTO prefixes(guild, prefix)
                        VALUES ($1, $2);'''
             prefixes_with_guild = [(ctx.guild.id, p) for p in added]
@@ -84,6 +84,7 @@ class PrefixCog(commands.Cog, name='Prefix'):
                        WHERE guild = $1
                        AND prefix = $2;'''
             await self.bot.pool.execute(query, ctx.guild.id, prefix_to_remove)
+            await ctx.send(f'Removed prefix: {prefix_to_remove} from this server')
         else:
             return await ctx.send('This is not an existing prefix!')
 
