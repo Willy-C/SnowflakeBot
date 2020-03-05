@@ -22,6 +22,23 @@ class HighlightCog(commands.Cog, name='Highlight'):
             self.ignores = {int(k): v for k, v in json.load(f).items()}
         self.highlights = {}
         self.bot.loop.create_task(self.populate_cache())
+        self.bot.loop.create_task(self.get_data())
+
+    async def get_data(self):
+        mention_query = '''SELECT * FROM mentions'''
+        records = await self.bot.pool.fetch(mention_query)
+        self.mentions = [record['user'] for record in records]
+
+        ignore_query = '''SELECT * FROM hlignores;'''
+        records = await self.bot.pool.fetch(ignore_query)
+        collect_ignores = {}
+        for record in records:
+            uid = record['user']
+            ignores = collect_ignores.setdefault(uid, {})
+            type = record['type']
+            ignores.setdefault(type+'s', []).append(record['id'])
+        self.ignores = collect_ignores
+
 
     @staticmethod
     def create_regex(words):
