@@ -2,7 +2,6 @@ import discord
 import asyncpg
 from discord.ext import commands
 
-import json
 import aiohttp
 import asyncio
 import traceback
@@ -52,6 +51,22 @@ def get_prefix(bot, message):
     return prefixes
 
 
+async def set_prefixes(bot):
+    query = '''SELECT * 
+               FROM prefixes
+               ORDER BY CASE WHEN prefix = '%' THEN 0 ELSE 1 END;'''
+    records = bot.pool.fetch(query)
+
+    collect_prefixes = {}
+    for record in records:
+        gid = record['guild']
+        if gid in collect_prefixes:
+            collect_prefixes[gid].append(record['prefix'])
+        else:
+            collect_prefixes[gid] = [record['prefix']]
+    bot.prefixes = {g: p for g, p in collect_prefixes.items()}
+
+
 class SnowflakeBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix=get_prefix,
@@ -63,8 +78,7 @@ class SnowflakeBot(commands.Bot):
         self.starttime = datetime.utcnow()
         self.session = aiohttp.ClientSession(loop=self.loop)
 
-        with open('data/prefixes.json') as f:
-            self.prefixes = {int(k): v for k, v in json.load(f).items()}
+        self.loop.create_task(set_prefixes(self))
 
     async def close(self):
         await self.session.close()
@@ -72,7 +86,18 @@ class SnowflakeBot(commands.Bot):
         await asyncio.wait_for(self.pool.close(), timeout=60)
 
 
+loop = asyncio.get_event_loop()
+try:
+    pool = loop.run_until_complete(asyncpg.create_pool(DBURI))
+except Exception:
+    print(f'\nUnable to connect to PostgreSQL, exiting...\n')
+    traceback.print_exc()
+    exit()
+else:
+    print('\nConnected to PostgreSQL')
+
 bot = SnowflakeBot()
+bot.pool = pool
 
 
 @bot.event
@@ -98,14 +123,5 @@ for extension in startup_extensions:
 print('-' * 52)
 print(f'Successfully loaded {successes}/{total} extensions.')
 
-loop = asyncio.get_event_loop()
-try:
-    bot.pool = loop.run_until_complete(asyncpg.create_pool(DBURI))
-except Exception:
-    print(f'\nUnable to connect to PostgreSQL, exiting...\n')
-    traceback.print_exc()
-    exit()
-else:
-    print('\nConnected to PostgreSQL')
 
 bot.run(BOT_TOKEN)

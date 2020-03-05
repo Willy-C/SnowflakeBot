@@ -1,7 +1,6 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 
-import json
 import re
 
 
@@ -15,10 +14,6 @@ class PrefixCog(commands.Cog, name='Prefix'):
         await self.bot.wait_until_ready()
         self.mention = re.compile(r'<@!?' + str(self.bot.user.id) + r'>')
 
-    def save_prefixes(self):
-        with open('data/prefixes.json', 'w') as f:
-            json.dump(self.bot.prefixes, f, indent=2)
-
     @commands.group(invoke_without_command=True, case_insensitive=True)
     async def prefix(self, ctx):
         await ctx.send_help(ctx.command)
@@ -28,9 +23,16 @@ class PrefixCog(commands.Cog, name='Prefix'):
     async def set(self, ctx, *new_prefixes):
         """Set my prefix(es) for this guild.
         Separate multiple prefixes with spaces."""
-        self.bot.prefixes[ctx.guild.id] = list(new_prefixes)
+        new = list(new_prefixes)
+        self.bot.prefixes[ctx.guild.id] = new
         await ctx.send(f'This guild\'s prefix is set to {", ".join(new_prefixes)}\n')
         await ctx.send(f'Note: Mentioning the bot will always be a valid prefix. Ex: {self.bot.user.mention} ping', delete_after=10)
+        query = '''DELETE FROM prefixes WHERE guild = $1;'''
+        await self.bot.pool.execute(query, ctx.guild.id)
+        add_new = '''INSERT INTO prefixes(guild, prefix)
+                     VALUES($1, $2);'''
+        prefixes_with_guild = [(ctx.guild.id, n) for n in new]
+        await self.bot.pool.executemany(add_new, prefixes_with_guild)
 
     @prefix.command(aliases=['clear'])
     @commands.guild_only()
@@ -40,7 +42,8 @@ class PrefixCog(commands.Cog, name='Prefix'):
             del self.bot.prefixes[ctx.guild.id]
             await ctx.send('Prefix for this guild has been reset. Default: %')
             await ctx.send(f'Note: Mentioning the bot will always be a valid prefix. Ex: {self.bot.user.mention} ping', delete_after=10)
-
+            query = '''DELETE FROM prefixes WHERE guild = $1;'''
+            await self.bot.pool.execute(query, ctx.guild.id)
         except KeyError:
             await ctx.send('This guild is already using the default prefix: %')
 
@@ -50,15 +53,21 @@ class PrefixCog(commands.Cog, name='Prefix'):
         """Add new prefix(es) for this guild.
         Separate multiple prefixes with spaces."""
         # self.bot.prefixes.setdefault(ctx.guild.id, ['%']).extend(new_prefixes)
-
-        current = self.bot.prefixes.setdefault(ctx.guild.id, ['%'])
         added = []
+        if ctx.guild.id not in self.bot.prefixes:
+            added.append('%')
+            self.bot.prefixes[ctx.guild.id] = ['%']
+        current = self.bot.prefixes[ctx.guild.id]
         for prefix in new_prefixes:
             if prefix not in current:
                 current.append(prefix)
                 added.append(prefix)
         if added:
             await ctx.send(f'Added {", ".join(added)} to this guild\'s prefixes')
+            query = '''INSERT INTO prefixes(guild, prefix)
+                       VALUES ($1, $2);'''
+            prefixes_with_guild = [(ctx.guild.id, p) for p in added]
+            await self.bot.pool.executemany(query, prefixes_with_guild)
         else:
             await ctx.send('No new prefix has been added')
 
@@ -72,6 +81,10 @@ class PrefixCog(commands.Cog, name='Prefix'):
             self.bot.prefixes[ctx.guild.id].remove(prefix_to_remove)
             if not self.bot.prefixes[ctx.guild.id]:
                 del self.bot.prefixes[ctx.guild.id]
+            query = '''DELETE FROM prefixes 
+                       WHERE guild = $1
+                       AND prefix = $2;'''
+            await self.bot.pool.execute(query, ctx.guild.id, prefix_to_remove)
         else:
             return await ctx.send('This is not an existing prefix!')
 
@@ -81,17 +94,7 @@ class PrefixCog(commands.Cog, name='Prefix'):
         await self._list_prefixes(ctx.message)
         await ctx.send(f'\u200b\nYou can always use my mention as a prefix!\n'
                        f'For example: {self.bot.user.mention} ping\n\n'
-                       f'Or just mention me and I will tell you my prefix', delete_after=15)
-
-    @prefix.command()
-    @commands.is_owner()
-    async def save(self, ctx):
-        try:
-            self.save_prefixes()
-        except:
-            await ctx.send('An error has occurred ')
-        else:
-            await ctx.message.add_reaction('\U00002705')  # React with checkmark
+                       f'Or just mention me and I will tell you my prefix', delete_after=10)
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -115,15 +118,6 @@ class PrefixCog(commands.Cog, name='Prefix'):
             await message.channel.send(f'My prefixes {here} are: `{formatted}`')
         else:
             await message.channel.send(f'My prefix {here} is: {formatted}')
-
-    # noinspection PyCallingNonCallable
-    @tasks.loop(hours=24)
-    async def save_prefixes_to_json(self):
-        self.save_prefixes()
-
-    def cog_unload(self):
-        self.save_prefixes_to_json.stop()
-        self.save_prefixes()
 
 
 def setup(bot):
