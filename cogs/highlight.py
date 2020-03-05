@@ -7,6 +7,7 @@ import random
 from datetime import datetime, timedelta
 from asyncio import TimeoutError
 from typing import Union
+from asyncpg import UniqueViolationError
 
 from utils.global_utils import confirm_prompt
 
@@ -17,7 +18,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         self.bot = bot
         with open('data/highlights.json') as f:
             convert_keys = lambda d: {int(k): convert_keys(v) if isinstance(v, dict) else v for (k, v) in d.items()}
-            self.data = convert_keys(json.load(f))
+            self.dta = convert_keys(json.load(f))
         with open('data/mentions.json') as f:
             self.mentions = set(json.load(f))
         with open('data/highlightignores.json') as f:
@@ -30,21 +31,41 @@ class HighlightCog(commands.Cog, name='Highlight'):
     def create_regex(words):
         return re.compile(r'\b(?:' + '|'.join(map(re.escape, words)) + r')s?\b', re.IGNORECASE)
 
-    def update_regex(self, ctx, guild_id=None):
+    async def update_regex(self, ctx, guild_id=None):
+        query = '''SELECT word
+                   FROM highlights
+                   WHERE guild = $1
+                   AND "user" = $2;'''
         gid = guild_id or ctx.guild.id
+        records = await self.bot.pool.fetch(query, gid, ctx.author.id,)
+        words = [record['word'] for record in records]
         guild_hl = self.highlights.setdefault(gid, {})
-        guild_hl[ctx.author.id] = self.create_regex(self.data[gid][ctx.author.id])
+        guild_hl[ctx.author.id] = self.create_regex(words)
 
-    def create_guild_regex(self, guild_id: int):
+    def create_guild_regex(self, records):
         guild_regex = {}
-        for mid in self.data[guild_id]:
-            guild_regex[mid] = self.create_regex(self.data[guild_id][mid])
+        collect_words = {}
+        for record in records:
+            uid = record.get('user')
+            if uid in collect_words:
+                collect_words[uid].append(record.get('word'))
+            else:
+                collect_words[uid] = [record.get('word')]
+
+        for user, words in collect_words.items():
+            guild_regex[user] = self.create_regex(words)
         return guild_regex
 
     async def populate_cache(self):
         await self.bot.wait_until_ready()
-        for guild_id in self.data:
-            self.highlights[guild_id] = self.create_guild_regex(guild_id)
+        for guild in self.bot.guilds:
+            query = '''SELECT "user", word
+                       FROM highlights
+                       WHERE guild = $1;'''
+            records = await self.bot.pool.fetch(query, guild.id)
+            if not records:
+                continue
+            self.highlights[guild.id] = self.create_guild_regex(records)
 
     def ignore_check(self, msg, id):
         if msg.author.id == id:
@@ -203,14 +224,15 @@ class HighlightCog(commands.Cog, name='Highlight'):
         if len(key) < 3:
             await ctx.message.add_reaction('<:redTick:602811779474522113>')
             return await ctx.send('Keywords must be at least 3 characters!')
-        guild_hl = self.data.setdefault(guild.id, {})
-        member_hl = guild_hl.setdefault(ctx.author.id, [])
-        if key in member_hl:
+        try:
+            add_query = '''INSERT INTO highlights(guild, "user", word)
+                           VALUES ($1, $2, $3);'''
+            await self.bot.pool.execute(add_query, guild.id, ctx.author, keyword)
+        except UniqueViolationError:
             await ctx.message.add_reaction('<:redTick:602811779474522113>')
-            return await ctx.send('You already have this keyword added!', delete_after=delete_after)
+            return await ctx.send('You already have this word added!', delete_after=delete_after)
         else:
-            member_hl.append(key)
-            self.update_regex(ctx, guild.id)
+            await self.update_regex(ctx, guild.id)
             await ctx.message.add_reaction('\U00002705')  # React with checkmark
             await ctx.send(f'Successfully added highlight key: `{key}` for `{guild}`', delete_after=delete_after)
 
@@ -224,27 +246,29 @@ class HighlightCog(commands.Cog, name='Highlight'):
             delete_after = 10
         else:
             delete_after = None
+
         key = keyword.lower()
-        guild_hl = self.data.get(guild.id)
-        if not guild_hl:
+        remove_query = '''DELETE FROM highlights
+                          WHERE guild = $1
+                          AND "user" = $2
+                          AND word = $3'''
+        result = await self.bot.pool.execute(remove_query, guild.id, ctx.author.id, keyword)
+        if result == 'DELETE 0':
             await ctx.message.add_reaction('<:redTick:602811779474522113>')
-            return await ctx.send(f'No highlights found for {guild}', delete_after=delete_after)
-        member_hl = guild_hl.get(ctx.author.id)
-        if member_hl is None:
-            await ctx.message.add_reaction('<:redTick:602811779474522113>')
-            return await ctx.send(f'Sorry, you do not seem to have any keywords added for {guild}', delete_after=delete_after)
-        if key not in member_hl:
-            await ctx.message.add_reaction('<:redTick:602811779474522113>')
-            return await ctx.send('Sorry, you do not seem to have this keyword added', delete_after=delete_after)
-        member_hl.remove(key)
-        if not member_hl:
-            del self.data[guild.id][ctx.author.id]
-            del self.highlights[guild.id][ctx.author.id]
-            if not self.data[guild.id]:
-                del self.data[guild.id]
-                del self.highlights[guild.id]
+            return await ctx.send('Sorry, you do not seem to have this word added', delete_after=delete_after)
+
         else:
-            self.update_regex(ctx, guild.id)
+            await self.update_regex(ctx, guild.id)
+            query = '''SELECT DISTINCT "user" 
+                       FROM highlights
+                       WHERE guild = $1;'''
+            records = await self.bot.pool.fetch(query, guild.id, ctx.author.id)
+
+            guild_records = [record['user'] for record in records]
+            if ctx.author.id not in guild_records:
+                del self.highlights[guild.id][ctx.author.id]
+                if not self.highlights[guild.id]:
+                    del self.highlights[guild.id]
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
         await ctx.send(f'Successfully removed  highlight key: `{key}` for `{guild}`', delete_after=delete_after)
 
@@ -256,14 +280,20 @@ class HighlightCog(commands.Cog, name='Highlight'):
         if g is None:
             g = discord.utils.get(self.bot.guilds, name=str(guild))
         if g is not None:
-            if g.id in self.data and ctx.author.id in self.data[g.id]:
-                guild_hl = self.data.setdefault(ctx.guild.id, {})
-                guild_hl[ctx.author.id] = self.data[g.id][ctx.author.id]
-                self.update_regex(ctx)
-                await ctx.message.add_reaction('\U00002705')  # React with checkmark
-                await ctx.send(f'Imported your highlights from `{g}`', delete_after=7)
+            query = '''SELECT word
+                       FROM highlights
+                       WHERE guild = $1
+                       AND "user" = $2;'''
+            records = await self.bot.pool.fetch(query, g.id, ctx.author.id)
+            words = [(g.id, ctx.author.id, record["word"]) for record in records]
+            insert = '''INSERT INTO highlights(guild, "user", word)
+                        VALUES ($1, $2, $3);'''
+            await self.bot.pool.executemany(insert, words)
+            await self.update_regex(ctx)
+            await ctx.message.add_reaction('\U00002705')  # React with checkmark
+            await ctx.send(f'Imported your highlights from `{g}`', delete_after=10)
         else:
-            await ctx.send('Unable to find server with that name or ID', delete_after=7)
+            await ctx.send('Unable to find server with that name or ID', delete_after=10)
             await ctx.message.add_reaction('<:redTick:602811779474522113>')
 
     @highlight.command()
@@ -272,21 +302,37 @@ class HighlightCog(commands.Cog, name='Highlight'):
         If used in DM, all words from all guilds will be given"""
         delete_after = 15
         if ctx.guild is None:
+            query = '''SELECT guild, word
+                       FROM highlights
+                       WHERE "user" = $1'''
+            records = await self.bot.pool.fetch(query, ctx.author.id)
             all_hl = []
-            for guild in self.data:
-                if ctx.author.id in self.data[guild]:
-                    all_hl.append(f'**__{self.bot.get_guild(guild)}__**')
-                    all_hl.extend(self.data[guild][ctx.author.id])
-            keys = '\n'.join(all_hl)
+            collect_words = {}
+            for record in records:
+                gid = record['guild']
+                if gid in collect_words:
+                    collect_words[gid].append(record['word'])
+                else:
+                    collect_words[gid] = [record.get('word')]
+            for guild, words in collect_words.items():
+                all_hl.append(f'**__{self.bot.get_guild(guild)}__**')
+                all_hl.extend(words)
+            words = '\n'.join(all_hl)
             delete_after = None
-        elif ctx.guild.id in self.data and ctx.author.id in self.data[ctx.guild.id]:
-            keys = '\n'.join(self.data[ctx.guild.id][ctx.author.id])
-        else:
-            keys = 'You do not have any highlight words here'
 
+        else:
+            query = '''SELECT word
+                       FROM highlights
+                       WHERE guild = $1
+                       AND "user" = $2'''
+            records = await self.bot.pool.fetch(query, ctx.guild.id, ctx.author.id)
+            if records:
+                words = '\n'.join([record['word'] for record in records])
+            else:
+                words = 'You do not have any highlight words here'
         e = discord.Embed(color=discord.Color.dark_orange(),
                           title=f'Highlights for {(ctx.guild or ctx.author)}',
-                          description=keys)
+                          description=words)
         e.add_field(name='Mentions', value="ON" if ctx.author.id in self.mentions else "OFF")
         e.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
 
