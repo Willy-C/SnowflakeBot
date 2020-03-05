@@ -16,10 +16,6 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     def __init__(self, bot):
         self.bot = bot
-        with open('data/mentions.json') as f:
-            self.mentions = set(json.load(f))
-        with open('data/highlightignores.json') as f:
-            self.ignores = {int(k): v for k, v in json.load(f).items()}
         self.highlights = {}
         self.bot.loop.create_task(self.populate_cache())
         self.bot.loop.create_task(self.get_data())
