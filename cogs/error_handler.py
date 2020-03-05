@@ -88,7 +88,7 @@ class CommandErrorHandler(commands.Cog):
         fmt = "".join(tb)
         if len(fmt) >= 1950:
             url = await upload_hastebin(ctx, "".join(tb))
-            await ctx.send(f'Traceback too long. {url}')
+            await self.owner.send(f'Traceback too long. {url}')
         else:
             await self.owner.send(f'```py\n{"".join(tb)}```')
 

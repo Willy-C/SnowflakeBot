@@ -14,15 +14,15 @@ import itertools
 import math
 import random
 import re
-import json
 import wavelink
-from collections import deque
 from async_timeout import timeout
-from discord.ext import commands, tasks
+from discord.ext import commands
+from asyncpg import UniqueViolationError
+
 
 from utils.global_utils import confirm_prompt
 
-RURL = re.compile(r'https?:\/\/(?:www\.)?.+')
+RURL = re.compile(r'https?://(?:www\.)?.+')
 
 
 class SongTime(commands.Converter):
@@ -321,14 +321,6 @@ class Music(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.players = {}
-        with open('data/playlists.json') as f:
-            self._playlists = json.load(f)
-
-        with open('data/noafks.json') as f:
-            self.noafks = set(json.load(f))
-
-        self.save_playlists_to_json.start()
-
         if not hasattr(bot, 'wavelink'):
             self.bot.wavelink = wavelink.Client(bot)
 
@@ -344,9 +336,11 @@ class Music(commands.Cog):
                 if not player.is_connected:
                     self.bot.loop.create_task(player.destroy())
 
-        self.save_playlists_to_json.stop()
-        self.save_playlists()
-        self.save_noafks()
+    async def set_noafks(self):
+        query ='''SELECT * FROM noafks'''
+        records = await self.bot.pool.fetch(query)
+        ids = set(record.get('user') for record in records)
+        self.noafks = ids
 
     async def initiate_nodes(self):
         _main = self.bot.wavelink.get_node('MAIN')
@@ -1152,31 +1146,38 @@ class Music(commands.Cog):
         """Play/Add/Remove custom playlists"""
         if name is None:
             return await ctx.invoke(self.list)
-        url = self._playlists.get(name)
-        if url:
-            await ctx.invoke(self.play_, query=url)
-        else:
-            await ctx.send(f'Unable to find a saved playlist/song with that name. All saved playlists are listed here:')
+        name = name.lower()
+        query = '''SELECT url
+                  FROM playlists
+                  WHERE (private = FALSE OR "user" = $1) AND name = $2
+                  ORDER BY CASE WHEN "user" = $1 THEN 0 ELSE 1 END
+                  LIMIT 1;
+                  '''
+        record = await self.bot.pool.fetchrow(query, ctx.author.id, name)
+        if record is None:
+            await ctx.send(f'Unable to find a saved playlist/song with that name. All available playlists are listed here:')
             await ctx.invoke(self.list)
+        else:
+            await ctx.invoke(self.play_, query=record['url'])
 
     @playlist.command()
-    async def add(self, ctx, name, link):
+    async def add(self, ctx, name, link, private=False):
         """Add a new playlist/song to save.
         Names with multiple words must be quoted ex. add "cool playlist" youtube.com/...
         Example
         ------------
         %playlist add star youtube.com/..."""
         name = name.lower()
-        if name in self._playlists:
-            return await ctx.send('Sorry that name is already taken, please try again with a different name')
+        query = '''INSERT INTO playlists("user", name, url, private)
+                   VALUES($1, $2, $3, $4);'''
+        try:
+            await self.bot.pool.execute(query, ctx.author.id, name, link, private)
+        except UniqueViolationError:
+            return await ctx.send('Error: You already have a playlist saved with that name!')
         else:
-            try:
-                self._playlists[name] = link
-            except:
-                return await ctx.send('An error has occurred.')
-            else:
-                await ctx.message.add_reaction('\U00002705')  # React with checkmark
-                await ctx.send(f'Added playlist `{name}`, with link: `{link}`')
+            await ctx.message.add_reaction('\U00002705')
+            await ctx.send(f'Added playlist `{name}`, with link: `{link}`')
+
 
     @playlist.command()
     async def remove(self, ctx, *, name):
@@ -1184,20 +1185,36 @@ class Music(commands.Cog):
         Example
         ------------
         %playlist remove star"""
-        if name not in self._playlists:
-            return await ctx.send('Sorry, I am unable to find the playlist with that name.')
-        try:
-            del self._playlists[name]
-        except:
-            await ctx.send('An error has occurred.')
+        name = name.lower()
+        query = '''DELETE FROM playlists
+                   WHERE "user" = $1 
+                   AND name = $2;'''
+
+        result = await self.bot.pool.execute(query, ctx.author.id, name)
+        if result == 'DELETE 0':
+            return await ctx.send('Sorry, I am unable to find your playlist with that name.')
         else:
-            await ctx.message.add_reaction('\U00002705')  # React with checkmark
+            await ctx.message.add_reaction('\U00002705')
             await ctx.send(f'Removed playlist `{name}`')
 
     @playlist.command()
     async def list(self, ctx):
         """List all saved playlists/songs"""
-        formatted = '\n'.join([f'[{k}]({v})' for k, v in self._playlists.items()])
+        query = '''SELECT "user", name, url
+                  FROM playlists
+                  WHERE private = FALSE OR "user" = $1
+                  ORDER BY CASE WHEN "user" = $1 THEN 0 ELSE 1 END;
+                  '''
+        records = await self.bot.pool.fetch(query, ctx.author.id)
+        if not records:
+            return await ctx.send('No playlists found')
+
+        playlists = {}
+        for record in records:
+            if record['name'] not in playlists:
+                playlists[record['name']] = record['url']
+
+        formatted = '\n'.join([f'[{k}]({v})' for k, v in playlists.items()])
 
         e = discord.Embed(title="Saved Playlists",
                           colour=discord.Color.red(),
@@ -1205,43 +1222,25 @@ class Music(commands.Cog):
 
         await ctx.send(embed=e)
 
-    @playlist.command()
-    @commands.is_owner()
-    async def save(self, ctx):
-        try:
-            self.save_playlists()
-        except Exception as e:
-            await ctx.send(f'An error has occurred: `{e}` ')
-        else:
-            await ctx.message.add_reaction('\U00002705')
-
-    def save_playlists(self):
-        with open('data/playlists.json', 'w') as f:
-            json.dump(self._playlists, f, indent=2)
-
-    def save_noafks(self):
-        with open('data/noafks.json', 'w') as f:
-            json.dump(list(self.noafks), f, indent=2)
-
-    # noinspection PyCallingNonCallable
-    @tasks.loop(hours=24)
-    async def save_playlists_to_json(self):
-        self.save_playlists()
-        self.save_noafks()
-
     # Anti-afk
 
     @commands.command(name='noafk', hidden=True)
     async def no_afk_toggle(self, ctx):
         """Toggles anti-afk"""
-        if ctx.author.id in self.noafks:
-            self.noafks.remove(ctx.author.id)
+        query = '''SELECT *
+                   FROM noafks
+                   WHERE "user" = $1'''
+        exists = await self.bot.pool.fetchrow(query, ctx.author.id)
+        if exists:
+            toggle = '''DELETE FROM noafks
+                        WHERE "user" = $1'''
             await ctx.send('You will no longer be moved back when you AFK')
             await ctx.message.add_reaction('\U00002796')  # React with minus sign
         else:
-            self.noafks.add(ctx.author.id)
+            toggle = '''INSERT INTO noafks VALUES($1)'''
             await ctx.send('You be moved back when you AFK')
             await ctx.message.add_reaction('\U00002795')  # React with plus sign
+        await self.bot.pool.execute(toggle, ctx.author.id)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
