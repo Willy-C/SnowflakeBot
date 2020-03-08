@@ -147,13 +147,13 @@ class ReminderCog(commands.Cog, name='Reminders'):
         - "in 3 days study for exam"
 
         NOTE: Times are in UTC.
-        For absolute times, it is recommended to use the `local` version, see `%help remind local`
+        For absolute times (ex. 4pm), it is recommended to use the `local` version, see `%help remind local`
         """
         now = datetime.datetime.utcnow()
         await self.create_timer(time.dt, ctx.author, ctx.channel, ctx.message, time.arg, 'reminder', start=now)
         await ctx.send(f'Ok, in {human_timedelta(time.dt, source=now)}: {time.arg}')
 
-    @reminder.command(name='local')
+    @reminder.command(name='local', aliases=['l'])
     async def local_reminder(self, ctx, *, time: UserFriendlyTime(commands.clean_content)):
         """Similar to the normal `remind` command but tries to convert the end time to your local timezone
 

@@ -1,6 +1,5 @@
 python_version >= '3.7'
 discord.py[voice]
-google_images_search
 wavelink
 parsedatetime
 python-dateutil

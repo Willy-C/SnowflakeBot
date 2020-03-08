@@ -94,7 +94,7 @@ except Exception:
     traceback.print_exc()
     exit()
 else:
-    print('\nConnected to PostgreSQL')
+    print('\nConnected to PostgreSQL\n')
 
 bot = SnowflakeBot()
 bot.pool = pool
@@ -106,7 +106,7 @@ async def on_ready():
           f'Python Version: {platform.python_version()}\n'
           f'Library Version: {discord.__version__}\n')
 
-    print(f'Ready! {datetime.now()}\n')
+    print(f'Ready! {datetime.utcnow()}\n')
 
 
 total = len(startup_extensions)
