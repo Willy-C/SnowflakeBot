@@ -4,9 +4,8 @@ from discord.ext import commands
 import os
 import time
 import inspect
-import datetime
-import humanize
 
+from utils.time import human_timedelta
 from utils.global_utils import copy_context
 
 
@@ -38,16 +37,16 @@ class MetaCog(commands.Cog, name='Meta'):
                                f'Response time: `{(end - start)*1000:.2f}ms`')
 
     @commands.command()
-    async def invite(self, ctx, _id: int = None):
+    async def invite(self, ctx, id: int = None):
         """
         The invite link to add me to your server.
         """
-        if not _id:
+        if not id:
             user = 'me'
             url = f'https://discordapp.com/oauth2/authorize?client_id={self.bot.user.id}&permissions=8&scope=bot'
         else:
             try:
-                fetch = await self.bot.fetch_user(_id)
+                fetch = await self.bot.fetch_user(id)
                 if not fetch.bot:
                     return await ctx.send('That ID is not a bot!')
             except discord.NotFound:
@@ -57,7 +56,7 @@ class MetaCog(commands.Cog, name='Meta'):
             else:
                 user = str(fetch)
 
-            url = f'https://discordapp.com/oauth2/authorize?client_id={_id}&permissions=1024&guild_id={ctx.guild.id}&scope=bot'
+            url = f'https://discordapp.com/oauth2/authorize?client_id={id}&permissions=1024&guild_id={ctx.guild.id}&scope=bot'
 
         e = discord.Embed(title=f'Invite {user} to your server!',
                           color=discord.Colour(0x00FFFF),
@@ -65,20 +64,10 @@ class MetaCog(commands.Cog, name='Meta'):
         await ctx.send(embed=e)
 
     @commands.command()
-    async def uptime(self, ctx, simple: bool=True):
+    async def uptime(self, ctx, simple: bool = False):
         """Returns the bot's uptime
-        Pass in False to view more detailed time"""
-        delta = (datetime.datetime.utcnow() - self.bot.starttime)
-
-        if simple:
-            return await ctx.send(f'Uptime: {humanize.naturaldelta(delta)}')
-
-        seconds = abs(delta.seconds)
-        d = delta.days
-        h = int(seconds // 3600)
-        m = int((seconds % 3600) // 60)
-        s = int((seconds % 3600) % 60)
-        await ctx.send(f'Uptime: {d}d {h}h {m}m {s}s')
+        Pass in True to view simplified time"""
+        await ctx.send(f'Uptime: {human_timedelta(self.bot.starttime, accuracy=None, brief=simple, suffix=False)}')
 
     @commands.command(name='shared')
     async def shared_guilds(self, ctx, member: discord.Member=None):
