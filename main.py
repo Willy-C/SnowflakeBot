@@ -37,7 +37,8 @@ startup_extensions = ['jishaku',
                       'cogs.waifu2x',
                       'cogs.help',
                       'cogs.reminder',
-                      'cogs.timezone']
+                      'cogs.timezone',
+                      'cogs.tracker']
 
 
 def get_prefix(bot, message):
