@@ -2,8 +2,8 @@ import discord
 from discord.ext import commands
 
 import json
-import humanize
 from datetime import datetime
+from utils.time import human_timedelta
 
 GUILD_ID = 645121189815255058
 VERIFIED_ROLE = 645122149023219712
@@ -50,7 +50,7 @@ class GatekeepCog(commands.Cog):
 
         e.add_field(name='Verified', value=verified)
         e.add_field(name='ID', value=member.id)
-        e.add_field(name='Created', value=f'{humanize.naturaldelta((datetime.utcnow() - member.created_at))} ago')
+        e.add_field(name='Created', value=human_timedelta(member.created_at))
 
         await join_channel.send(embed=e)
 
@@ -71,7 +71,7 @@ class GatekeepCog(commands.Cog):
 
         e.add_field(name='Verified', value=verified)
         e.add_field(name='ID', value=member.id)
-        e.add_field(name='Created', value=f'{humanize.naturaldelta((datetime.utcnow() - member.created_at))} ago')
+        e.add_field(name='Created', value=human_timedelta(member.created_at))
 
         await self.bot.get_channel(JOIN_CHANNEL).send(embed=e)
 

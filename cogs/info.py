@@ -1,11 +1,10 @@
 import discord
 from discord.ext import commands
 
-import humanize
-from datetime import datetime
 from typing import Union
 
 from utils.global_utils import bright_color
+from utils.time import human_timedelta
 
 
 class InfoCog(commands.Cog, name='Info'):
@@ -30,7 +29,7 @@ class InfoCog(commands.Cog, name='Info'):
         e.add_field(name='Region', value=guild.region)
         e.add_field(name='Members', value=guild.member_count)
         e.add_field(name='Channels', value=f'{text_channels} Text | {voice_channels} Voice')
-        e.add_field(name='Created', value=f'{humanize.naturaldelta((datetime.utcnow() - guild.created_at))} ago')
+        e.add_field(name='Created', value=human_timedelta(guild.created_at))
         e.add_field(name='Roles', value=roles)
 
         await ctx.send(embed=e)
@@ -49,9 +48,9 @@ class InfoCog(commands.Cog, name='Info'):
         if isinstance(user, discord.Member) and user.nick:
             e.add_field(name='Nick', value=user.nick)
         e.add_field(name='Shared', value=sum(g.get_member(user.id) is not None for g in self.bot.guilds))
-        e.add_field(name='Created', value=f'{humanize.naturaldelta((datetime.utcnow() - user.created_at))} ago')
+        e.add_field(name='Created', value=human_timedelta(user.created_at))
         if isinstance(user, discord.Member):
-            e.add_field(name='Joined', value=f'{humanize.naturaldelta((datetime.utcnow() - user.joined_at))} ago')
+            e.add_field(name='Joined', value=human_timedelta(user.joined_at))
             roles = ['@everyone']
             roles.extend(r.mention for r in user.roles[1:])
             e.add_field(name='Roles', value=', '.join(roles))

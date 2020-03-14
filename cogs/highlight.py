@@ -194,14 +194,15 @@ class HighlightCog(commands.Cog, name='Highlight'):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if message.author.bot or message.guild is None or message.guild.id not in self.highlights or message.webhook_id is not None:
+        if message.author.bot or message.guild is None or message.webhook_id is not None:
             return
-        for mid, regex in self.highlights[message.guild.id].items():
-            if not self.ignore_check(message, mid):
-                continue
-            match = regex.search(message.content)
-            if match:
-                self.bot.loop.create_task(self.dm_highlight(message, mid, match.group()))
+        if message.guild.id in self.highlights:
+            for mid, regex in self.highlights[message.guild.id].items():
+                if not self.ignore_check(message, mid):
+                    continue
+                match = regex.search(message.content)
+                if match:
+                    self.bot.loop.create_task(self.dm_highlight(message, mid, match.group()))
 
         for user in message.mentions:
             if user.id in self.mentions and user != message.author:

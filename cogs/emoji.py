@@ -11,7 +11,7 @@ class EmojiCog(commands.Cog, name='Emoji'):
 
     @commands.command(name='bigemoji')
     async def get_emoji_url(self, ctx, emoji: Union[discord.Emoji, discord.PartialEmoji, str]):
-        """Returns a given emoji's URL"""
+        """Sends a big version of an emoji and it's URL of available"""
         if isinstance(emoji, (discord.Emoji, discord.PartialEmoji)):
             await ctx.send(str(emoji.url))
         else:
@@ -58,7 +58,8 @@ class EmojiCog(commands.Cog, name='Emoji'):
 
     @commands.command(name='getemoji', aliases=['findemoji'])
     async def get_emoji(self, ctx, *, name):
-        """Find all emojis with the given name along with its ID and guild"""
+        """Find all emojis with the given name
+        Also gives its ID and guild"""
         if len(name) < 3 and not self.bot.is_owner(ctx.author):
             return await ctx.send('Name too short! Please enter at least 3 characters to search')
         name = name.lower()

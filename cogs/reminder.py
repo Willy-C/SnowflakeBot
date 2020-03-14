@@ -166,7 +166,7 @@ class ReminderCog(commands.Cog, name='Reminders'):
         Example of __relative time__: `%remind me in 5 seconds...` this will NOT trigger in 5 seconds if your timezone is not set to UTC"""
         tz = await get_user_timezone(ctx, ctx.author)
         if tz is None:
-            await ctx.send('No timezone found, defaulting to UTC. See `%help timezone` to set a timezone', delete_after=10)
+            return await ctx.send('No timezone found. See `%help timezone set` on how to set a timezone')
         await ctx.invoke(self.reminder, time=time)
 
     @reminder.command(name='list')

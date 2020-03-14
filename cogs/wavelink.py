@@ -519,9 +519,6 @@ class Music(commands.Cog):
     @commands.command(name='play', aliases=['p'])
     async def play_(self, ctx, *, query: str = None):
         """Queue a song or playlist for playback.
-        Aliases
-        ---------
-            sing
         Parameters
         ------------
         query: simple, URL [Required]
@@ -614,9 +611,6 @@ class Music(commands.Cog):
     @commands.command(name='pause')
     async def pause_(self, ctx):
         """Pause the currently playing song.
-        Examples
-        ----------
-        %pause
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
         if not player:
@@ -643,9 +637,6 @@ class Music(commands.Cog):
     @commands.command(name='resume')
     async def resume_(self, ctx):
         """Resume a currently paused song.
-        Examples
-        ----------
-        %resume
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
@@ -669,9 +660,6 @@ class Music(commands.Cog):
     @commands.command(name='skip')
     async def skip_(self, ctx, amount = 1):
         """Skip the current song.
-        Examples
-        ----------
-        %skip
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
@@ -697,9 +685,6 @@ class Music(commands.Cog):
     @commands.command(name='stop')
     async def stop_(self, ctx):
         """Stop the player, disconnect and clear the queue.
-        Example
-        ----------
-        %stop
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
@@ -729,7 +714,7 @@ class Music(commands.Cog):
             Members with manage guild can override it to be value over 100
         Example
         ----------
-        %volume 50
+        %vol 50
         """
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
