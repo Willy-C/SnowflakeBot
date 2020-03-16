@@ -60,7 +60,7 @@ class EmojiCog(commands.Cog, name='Emoji'):
     async def get_emoji(self, ctx, *, name):
         """Find all emojis with the given name
         Also gives its ID and guild"""
-        if len(name) < 3 and not self.bot.is_owner(ctx.author):
+        if len(name) < 3 and not await self.bot.is_owner(ctx.author):
             return await ctx.send('Name too short! Please enter at least 3 characters to search')
         name = name.lower()
         found = [emoji for guild in self.bot.guilds for emoji in guild.emojis

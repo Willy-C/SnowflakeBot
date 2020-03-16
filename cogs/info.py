@@ -11,6 +11,16 @@ class InfoCog(commands.Cog, name='Info'):
     def __init__(self, bot):
         self.bot = bot
 
+    async def get_join_date(self, member: discord.Member):
+        query = '''SELECT time
+                   FROM first_join
+                   WHERE guild = $1
+                   AND "user" = $2;'''
+        record = await self.bot.pool.fetchrow(query, member.guild.id, member.id)
+        if record is None:
+            return member.joined_at
+        return record['time']
+
     @commands.command(name='serverinfo', aliases=['guildinfo'])
     @commands.guild_only()
     async def guild_info(self, ctx):
@@ -47,10 +57,10 @@ class InfoCog(commands.Cog, name='Info'):
         e.add_field(name='ID', value=user.id)
         if isinstance(user, discord.Member) and user.nick:
             e.add_field(name='Nick', value=user.nick)
-        e.add_field(name='Shared', value=sum(g.get_member(user.id) is not None for g in self.bot.guilds))
+        e.add_field(name='Severs Shared', value=sum(g.get_member(user.id) is not None for g in self.bot.guilds))
         e.add_field(name='Created', value=human_timedelta(user.created_at))
         if isinstance(user, discord.Member):
-            e.add_field(name='Joined', value=human_timedelta(user.joined_at))
+            e.add_field(name='Joined', value=human_timedelta(await self.get_join_date(user)))
             roles = ['@everyone']
             roles.extend(r.mention for r in user.roles[1:])
             e.add_field(name='Roles', value=', '.join(roles))
