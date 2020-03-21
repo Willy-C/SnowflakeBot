@@ -13,15 +13,16 @@ class TimezoneCog(commands.Cog, name='Timezones'):
         self.bot = bot
 
     @commands.group(name='timezone', aliases=['tz'], invoke_without_command=True, case_insensitive=True)
-    async def tz_group(self, ctx, arg: Union[discord.User, Timezone] = 1):
+    async def tz_group(self, ctx, arg: Union[discord.User, Timezone] = 0):
         """Timezone settings
         Setting your timezone allows for reminders to use your timezone
 
         Ex: `%remind local do homework at 4pm tomorrow`
         Will trigger at 4pm in your timezone if set, otherwise it will trigger at 4pm UTC
         """
-        if isinstance(arg, discord.User) or arg == 1:  # Should never be able to input 1
-            await ctx.invoke(self.get_timezone, (arg, ctx.author))
+        # Should never be able to input 0, using 0 here instead of None because Timezone can return None
+        if isinstance(arg, discord.User) or arg == 0:
+            await ctx.invoke(self.get_timezone, (arg or ctx.author))
         elif arg is None:
             await ctx.invoke(self.list_timezones)
         else:
