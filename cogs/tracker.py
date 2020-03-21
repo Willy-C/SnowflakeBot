@@ -41,6 +41,17 @@ class TrackerCog(commands.Cog):
         except UniqueViolationError:
             pass
 
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild):
+        for member in guild.members:
+            query = '''INSERT INTO first_join(guild, "user", time)
+                   VALUES($1, $2, $3);'''
+            join_time = member.joined_at or datetime.utcnow()
+            try:
+                await self.bot.pool.execute(query, member.guild.id, member.id, join_time)
+            except Exception:
+                traceback.print_exc()
+
 
 def setup(bot):
     bot.add_cog(TrackerCog(bot))
