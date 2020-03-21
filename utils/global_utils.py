@@ -105,6 +105,17 @@ async def upload_hastebin(ctx, content, url='https://hastebin.com'):
         traceback.print_exc()
 
 
+async def send_or_hastebin(ctx, content, code=None, url='https://hastebin.com'):
+    """Sends to ctx.channel if possible, upload to hastebin if too long"""
+    if code is not None:
+        content = f'```{code}\n{content}\n```'
+    if len(content) <= 2000:
+        await ctx.send(content)
+    else:
+        hastebin_url = await upload_hastebin(ctx, content, url)
+        await ctx.send(f'Output too long to send to discord, uploaded here instead: {hastebin_url}')
+
+
 async def get_user_timezone(ctx, user):
     """Returns a pytz.timezone for a user if set, returns None otherwise"""
     query = '''SELECT tz
