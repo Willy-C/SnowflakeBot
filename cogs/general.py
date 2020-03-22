@@ -1,10 +1,21 @@
 import discord
 from discord.ext import commands
 
+import io
 import random
 import datetime
 import unicodedata
+from PIL import Image
 from typing import Optional
+from utils.global_utils import last_image, is_image
+
+
+def make_more_jpeg(content):
+    img = Image.open(content)
+    buffer = io.BytesIO()
+    img.convert('RGB').save(buffer, "jpeg", quality=random.randrange(1, 8))
+    buffer.seek(0)
+    return buffer
 
 
 class GeneralCog(commands.Cog, name='General'):
@@ -115,6 +126,18 @@ class GeneralCog(commands.Cog, name='General'):
             await ctx.message.delete()
         except (discord.Forbidden, discord.HTTPException):
             pass
+
+    @commands.command(name='needsmorejpeg', aliases=['needsmorejpg', 'morejpeg', 'morejpg'])
+    async def needs_more_jpeg(self, ctx, url=None):
+        url = url or await last_image(ctx)
+        if url is None:
+            return await ctx.send('Unable to find an image')
+        if not await is_image(ctx, url):
+            return await ctx.send('That is not a valid image url')
+        async with self.bot.session.get(url) as resp:
+            data = io.BytesIO(await resp.read())
+        jpeg = await self.bot.loop.run_in_executor(None, make_more_jpeg, data)
+        await ctx.send(file=discord.File(jpeg, filename='more_jpeg.jpg'))
 
     @commands.Cog.listener()
     async def on_message(self, message):

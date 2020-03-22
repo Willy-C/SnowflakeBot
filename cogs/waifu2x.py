@@ -1,9 +1,7 @@
 import discord
 from discord.ext import commands
 
-import aiohttp
-
-from utils.global_utils import bright_color, last_image
+from utils.global_utils import bright_color, last_image, is_image
 from config import DEEPAI_API_KEY
 
 API_URL = 'https://api.deepai.org/api/waifu2x'
@@ -14,21 +12,12 @@ class Waifu2x(commands.Cog, command_attrs={'hidden': True}):
     def __init__(self, bot):
         self.bot = bot
 
-    async def is_image(self, url):
-        image_formats = ('image/png', 'image/jpeg', 'image/jpg')
-        try:
-            async with self.bot.session.head(url) as resp:
-                return resp.headers['Content-Type'] in image_formats
-        except (aiohttp.InvalidURL, KeyError):
-            return False
-
     @commands.command(hidden=True)
     async def upscale(self, ctx, url=None):
+        url = url or await last_image(ctx)
         if url is None:
-            url = await last_image(ctx)
-            if url is None:
-                return await ctx.send('Unable to find an image')
-        if not await self.is_image(url):
+            return await ctx.send('Unable to find an image')
+        if not await is_image(ctx, url):
             return await ctx.send('That is not a valid image url')
         data = {
             'image': url

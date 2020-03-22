@@ -7,7 +7,7 @@ import random
 import pytz
 import traceback
 from asyncio import TimeoutError
-from aiohttp import ClientConnectionError
+from aiohttp import ClientConnectionError, InvalidURL
 
 
 async def copy_context(ctx: commands.Context, *, author=None, channel=None, **kwargs):
@@ -90,6 +90,15 @@ async def last_image(ctx):
         for attachment in message.attachments:
             if attachment.proxy_url:
                 return attachment.proxy_url
+
+
+async def is_image(ctx, url):
+    image_formats = ('image/png', 'image/jpeg', 'image/jpg')
+    try:
+        async with ctx.bot.session.head(url) as resp:
+            return resp.headers['Content-Type'] in image_formats
+    except (InvalidURL, KeyError):
+        return False
 
 
 async def upload_hastebin(ctx, content, url='https://hastebin.com'):
