@@ -609,8 +609,8 @@ class ModCog(commands.Cog, name='Mod'):
             color = 0x55dd55
             muted = False
 
-        if config.get('welcome_ch') is not None:
-            join_channel = member.guild.get_channel(config.get('welcome_ch'))
+        if config.get('join_ch') is not None:
+            join_channel = member.guild.get_channel(config.get('join_ch'))
             e = discord.Embed(title='New Member Join',
                               color=color,
                               timestamp=datetime.utcnow())
