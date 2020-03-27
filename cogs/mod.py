@@ -1,10 +1,11 @@
 import discord
 from discord.ext import commands
 
-from utils.global_utils import confirm_prompt
-
-from collections import Counter
 import asyncio
+from collections import Counter
+from datetime import datetime
+from utils.global_utils import confirm_prompt
+from utils.time import human_timedelta
 
 
 # Checks
@@ -291,24 +292,29 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.guild_only()
     async def create_mute_role(self, ctx):
         """Creates a role name 'Muted' and denies Send Message permission to all text channels"""
-        muted_role = discord.utils.get(ctx.guild.roles, name='Muted')
-        if muted_role is not None:
-            return await ctx.send(f'A Muted role already exist! Please use `{ctx.prefix}updatemute` to apply permission overwrites.')
+        query = '''SELECT mute_role
+                   FROM guild_mod_config
+                   WHERE id = $1'''
+        config = await self.bot.pool.fetchrow(query, ctx.guild.id)
+        if config is not None and ctx.guild.get_role(config.get('mute_role')) is not None:
+            role = ctx.guild.get_role(config.get('mute_role'))
+            return await ctx.send(f'`{role}` is already set as your mute role!\n'
+                                  f'You can use `{ctx.prefix}config role mute` to remove this setting\n'
+                                  f'or `{ctx.prefix}updatemute` to apply permissions again for `{role}`')
 
         cont = await confirm_prompt(ctx, 'You are about to create the `Muted` role')
         if not cont:
             return
 
         try:
-            muted_role = await ctx.guild.create_role(name='Muted',
-                                                     reason=f'Muted role created. Done by: {ctx.author} ({ctx.author.id})')
+            mute_role = await ctx.guild.create_role(name='Muted',
+                                                    reason=f'Mute role created. Done by: {ctx.author} ({ctx.author.id})')
         except discord.HTTPException as e:
             return await ctx.send(f'An unknown error has occurred..\n'
                                   f'{e}')
         else:
-            await ctx.send('Success! Mute role created')
-
-        await self.set_muterole_perms(ctx, muted_role)
+            await ctx.invoke(self.bot.get_command('config role mute', role=mute_role))
+            await self.set_muterole_perms(ctx, mute_role)
 
     @commands.command()
     @commands.bot_has_permissions(manage_channels=True)
@@ -319,13 +325,18 @@ class ModCog(commands.Cog, name='Mod'):
         Denies Send Message permissions to all text channels.
         Useful if permissions failed to set on role creation, when new channels were created or role was manually created
         """
+        query = '''SELECT mute_role
+                   FROM guild_mod_config
+                   WHERE id = $1'''
+        config = await self.bot.pool.fetchrow(query, ctx.guild.id)
 
-        role = discord.utils.get(ctx.guild.roles, name='Muted')
-        if role is None:
-            return await ctx.send(f'Unable to find `Muted` role, if you believe this is an error please contact my owner\n'
-                                  f'Use {ctx.prefix}createmute to create the role and set the appropriate permissions')
+        if config is None or ctx.guild.get_role(config.get('mute_role')) is None:
+            return await ctx.send(f'Unable to find mute role, please use {ctx.prefix}createmute to create the role with the appropriate permissions\n'
+                                  f'or use `{ctx.prefix}config role mute` to set an existing role as your mute role'
+                                  f'If you believe this is an error please contact my owner')
 
-        cont = await confirm_prompt(ctx, 'You are about to update permissions for the `Muted` role in all text channels')
+        role = ctx.guild.get_role(config.get('mute_role'))
+        cont = await confirm_prompt(ctx, f'You are about to update permissions for {role} in all text channels')
         if not cont:
             return
 
@@ -336,17 +347,22 @@ class ModCog(commands.Cog, name='Mod'):
     @can_mute()
     @commands.guild_only()
     async def mute(self, ctx, member: discord.Member, *, reason=None):
-        role = discord.utils.get(ctx.guild.roles, name='Muted')
+        query = '''SELECT mute_role
+                   FROM guild_mod_config
+                   WHERE id = $1'''
+        config = await self.bot.pool.fetchrow(query, ctx.guild.id)
 
-        if role is None:
-            return await ctx.send(f'Unable to find Muted role, please use {ctx.prefix}createmute to create the role and set the appropriate permissions\n'
-                                  f'If you believe this is an error please contact my owner')
+        if config is None or ctx.guild.get_role(config.get('mute_role')) is None:
+            return await ctx.send(f'Unable to find mute role!\n'
+                                  f'Please use `{ctx.prefix}createmute` to create the role with the appropriate permissions\n'
+                                  f'or use `{ctx.prefix}config role mute` to set an existing role as your mute role')
+        role = ctx.guild.get_role(config.get('mute_role'))
 
         if not hierarchy_check(ctx, ctx.author, member):
             return await ctx.send('You cannot mute this person due to role hierarchy')
 
         if ctx.me.top_role < role:
-            return await ctx.send(f'Unable to mute, please move my role above the Muted role')
+            return await ctx.send(f'Unable to mute, please move my role above the mute role `({role})`')
 
         if reason is None:
             reason = f'Muted. Done by: {ctx.author} ({ctx.author.id})'
@@ -364,10 +380,16 @@ class ModCog(commands.Cog, name='Mod'):
     @can_mute()
     @commands.guild_only()
     async def unmute(self, ctx, member: discord.Member, *, reason=None):
-        role = discord.utils.get(ctx.guild.roles, name='Muted')
-        if role is None:
-            return await ctx.send(f'Unable to find `Muted` role\n'
-                                  f'If you believe this is an error please contact my owner')
+        query = '''SELECT mute_role
+                   FROM guild_mod_config
+                   WHERE id = $1'''
+        config = await self.bot.pool.fetchrow(query, ctx.guild.id)
+
+        if config is None or ctx.guild.get_role(config.get('mute_role')) is None:
+            return await ctx.send(f'Unable to find mute role!\n'
+                                  f'Please use `{ctx.prefix}createmute` to create the role with the appropriate permissions\n'
+                                  f'or use `{ctx.prefix}config role mute` to set an existing role as your mute role')
+        role = ctx.guild.get_role(config.get('mute_role'))
 
         if ctx.me.top_role < role:
             return await ctx.send(f'Unable to unmute, please move my role above the Muted role')
@@ -531,7 +553,6 @@ class ModCog(commands.Cog, name='Mod'):
         await self.purge_messages(ctx, limit, lambda m: m.author == member)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
-
     @purge.command(name='bot', aliases=['bots'])
     async def bots(self, ctx, limit=20, prefix=None):
         """Deletes messages from bots and messages that begin with prefix if given
@@ -567,6 +588,39 @@ class ModCog(commands.Cog, name='Mod'):
             return
         await self.purge_messages(ctx, limit, lambda m: True)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
+        query = '''SELECT *
+                   FROM guild_mod_config
+                   WHERE id = $1'''
+        config = await self.bot.pool.fetchrow(query, member.guild.id)
+        if config is None:
+            return
+        if config.get('mute_role') is not None and member.id in config.get('muted', []):
+            color = 0xFAA935
+            muted = True
+            try:
+                await member.add_roles(discord.Object(id=config.get('mute_role')),
+                                       reason='User was previously muted')
+            except discord.Forbidden:
+                pass
+        else:
+            color = 0x55dd55
+            muted = False
+
+        if config.get('welcome_ch') is not None:
+            join_channel = member.guild.get_channel(config.get('welcome_ch'))
+            e = discord.Embed(title='New Member Join',
+                              color=color,
+                              timestamp=datetime.utcnow())
+            e.set_author(icon_url=member.avatar_url, name=member)
+            e.add_field(name='ID', value=member.id)
+            e.add_field(name='Created', value=human_timedelta(member.created_at))
+            if muted:
+                e.description = 'User was previously muted!'
+
+            await join_channel.send(embed=e)
 
 
 def setup(bot):
