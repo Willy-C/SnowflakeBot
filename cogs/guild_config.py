@@ -4,6 +4,18 @@ from discord.ext import commands
 import traceback
 
 
+def get_mention(ctx, record, obj):
+    if record.get(obj) is None:
+        return
+    id = record.get(obj)
+    channel = ctx.guild.get_channel(id)
+    role = ctx.guild.get_role(id)
+    if channel is not None:
+        return channel.mention
+    elif role is not None:
+        return role.mention
+
+
 class GuildConfig(commands.Cog, name='Settings'):
     def __init__(self, bot):
         self.bot = bot
@@ -18,23 +30,23 @@ class GuildConfig(commands.Cog, name='Settings'):
         """Set server config"""
         query = '''SELECT * FROM
                    guild_config g FULL OUTER JOIN guild_mod_config m ON g.id = m.id
-                   WHERE id=$1'''
+                   WHERE g.id=$1 OR m.id=$1'''
         record = await self.bot.pool.fetchrow(query, ctx.guild.id)
         if record is None:
             record = {}
         e = discord.Embed(title='Server Config',
                           colour=discord.Colour.blue())
 
-        roles = f'Human: {ctx.guild.get_role(record.get("human_join_role"))}\n' \
-                f'Bots: {ctx.guild.get_role(record.get("bot_join_role"))}\n' \
-                f'Mute: {ctx.guild.get_role(record.get("mute_role"))}'
+        roles = f'Human: {get_mention(ctx, record, "human_join_role")}\n' \
+                f'Bots: {get_mention(ctx, record, "bot_join_role")}\n' \
+                f'Mute: {get_mention(ctx, record, "mute_role")}'
 
-        channels = f'Welcome: {ctx.guild.get_channel(record.get("join_ch"))}\n' \
-                   f'Leave: {ctx.guild.get_channel(record.get("leave_ch"))}'
+        channels = f'Welcome: {get_mention(ctx, record, "join_ch")}\n' \
+                   f'Leave: {get_mention(ctx, record, "leave_ch")}'
 
         e.add_field(name='Roles', value=roles)
         e.add_field(name='Channels', value=channels)
-        e.set_footer(text=f'see{ctx.prefix}help config for more info')
+        e.set_footer(text=f'see "{ctx.prefix}help config" for more info')
         await ctx.send(embed=e)
 
     @guild_config.group(name='role', case_insensitive=True)
@@ -107,7 +119,7 @@ class GuildConfig(commands.Cog, name='Settings'):
             await ctx.send('An error occurred')
             traceback.print_exc()
         else:
-            await ctx.send(f'Mute Role is now set to: {role}')
+            await ctx.send(f'Mute role is now set to: {role}')
 
     @guild_config.group(name='channel', case_insensitive=True)
     async def set_channel(self, ctx):
