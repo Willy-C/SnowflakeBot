@@ -127,10 +127,10 @@ class GuildCog(commands.Cog, name='Guild'):
         for page in paginator.pages:
             await ctx.send(page)
 
-    @commands.command(hidden=True)
+    @commands.command()
     async def waitfor(self, ctx, channel: Optional[discord.TextChannel], user: discord.Member = None):
-        """Get a DM when someone sends a message to your channel
-        Useful for when you want to wait for a reply
+        """Wait for a reply to your channel
+        Will send you a DM when I see a reply
 
         - Will not trigger on messages by you or bots
         - Only waits for a max of 24 hours
@@ -169,6 +169,29 @@ class GuildCog(commands.Cog, name='Guild'):
                 await ctx.author.send(embed=e)
             except discord.Forbidden:
                 pass
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        query = '''SELECT *
+                   FROM guild_config
+                   WHERE id = $1'''
+        config = await self.bot.pool.fetchrow(query, member.guild.id)
+        if config is None:
+            return
+        if not member.bot:
+            if config.get('human_join_role') is not None:
+                try:
+                    await member.add_roles(discord.Object(id=config.get('human_join_role')),
+                                           reason='Auto human join role')
+                except discord.Forbidden:
+                    pass
+        else:
+            if config.get('bot_join_role') is not None:
+                try:
+                    await member.add_roles(discord.Object(id=config.get('bot_join_role')),
+                                           reason='Auto bot join role')
+                except discord.Forbidden:
+                    pass
 
 
 def setup(bot):
