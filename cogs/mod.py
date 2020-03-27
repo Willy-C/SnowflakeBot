@@ -597,7 +597,7 @@ class ModCog(commands.Cog, name='Mod'):
         config = await self.bot.pool.fetchrow(query, member.guild.id)
         if config is None:
             return
-        if config.get('mute_role') is not None and member.id in config.get('muted', []):
+        if config.get('mute_role') is not None and member.id in (config.get('muted') or ()):
             color = 0xFAA935
             muted = True
             try:
