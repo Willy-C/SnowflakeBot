@@ -17,9 +17,11 @@ class GuildConfig(commands.Cog, name='Settings'):
     async def guild_config(self, ctx):
         """Set server config"""
         query = '''SELECT * FROM
-                   guild_config NATURAL JOIN guild_mod_config
+                   guild_config g FULL OUTER JOIN guild_mod_config m ON g.id = m.id
                    WHERE id=$1'''
         record = await self.bot.pool.fetchrow(query, ctx.guild.id)
+        if record is None:
+            record = {}
         e = discord.Embed(title='Server Config',
                           colour=discord.Colour.blue())
 
