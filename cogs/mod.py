@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 
 import asyncio
+import traceback
 from collections import Counter
 from datetime import datetime
 from utils.global_utils import confirm_prompt
@@ -87,6 +88,12 @@ class ModCog(commands.Cog, name='Mod'):
 
     def __init__(self, bot):
         self.bot = bot
+
+    async def get_mod_config(self, id):
+        query = '''SELECT *
+                   FROM guild_mod_config
+                   WHERE id = $1'''
+        return await self.bot.pool.fetchrow(query, id)
 
     @commands.command(name='delmsg', hidden=True)
     @commands.bot_has_permissions(manage_messages=True)
@@ -313,7 +320,7 @@ class ModCog(commands.Cog, name='Mod'):
             return await ctx.send(f'An unknown error has occurred..\n'
                                   f'{e}')
         else:
-            await ctx.invoke(self.bot.get_command('config role mute', role=mute_role))
+            await ctx.invoke(self.bot.get_command('config role mute'), role=mute_role)
             await self.set_muterole_perms(ctx, mute_role)
 
     @commands.command()
@@ -374,6 +381,10 @@ class ModCog(commands.Cog, name='Mod'):
             await ctx.send('\U0001f44e')
         else:
             await ctx.send('\U0001f44d')
+            add_query = '''UPDATE guild_mod_config
+                           SET muted = array_append(muted, $2)
+                           WHERE id = $1;'''
+            await self.bot.pool.execute(add_query, ctx.guild.id, member.id)
 
     @commands.command()
     @commands.bot_has_permissions(manage_roles=True)
@@ -412,6 +423,10 @@ class ModCog(commands.Cog, name='Mod'):
             await ctx.send('\U0001f44e')
         else:
             await ctx.send('\U0001f44d')
+            remove_query = '''UPDATE guild_mod_config
+                           SET muted = array_remove(muted, $2)
+                           WHERE id = $1;'''
+            await self.bot.pool.execute(remove_query, ctx.guild.id, member.id)
 
     @commands.command()
     @commands.bot_has_permissions(manage_channels=True)
@@ -591,15 +606,14 @@ class ModCog(commands.Cog, name='Mod'):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        query = '''SELECT *
-                   FROM guild_mod_config
-                   WHERE id = $1'''
-        config = await self.bot.pool.fetchrow(query, member.guild.id)
+        config = await self.get_mod_config(member.guild.id)
         if config is None:
             return
         if config.get('mute_role') is not None and member.id in (config.get('muted') or ()):
             color = 0xFAA935
-            muted = True
+            title = 'Muted Member Join'
+            descr = 'User was previously muted!'
+
             try:
                 await member.add_roles(discord.Object(id=config.get('mute_role')),
                                        reason='User was previously muted')
@@ -607,20 +621,84 @@ class ModCog(commands.Cog, name='Mod'):
                 pass
         else:
             color = 0x55dd55
-            muted = False
+            title = 'New Member Join'
+            descr = discord.Embed.Empty
 
-        if config.get('join_ch') is not None:
+        if member.guild.get_channel(config.get('join_ch')) is not None:
             join_channel = member.guild.get_channel(config.get('join_ch'))
-            e = discord.Embed(title='New Member Join',
+            e = discord.Embed(title=title,
                               color=color,
+                              timestamp=datetime.utcnow(),
+                              description=descr)
+            e.set_author(icon_url=member.avatar_url, name=member)
+            e.add_field(name='ID', value=member.id)
+            e.add_field(name='Created', value=human_timedelta(member.created_at))
+
+            await join_channel.send(embed=e)
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        config = await self.get_mod_config(member.guild.id)
+        if config is None:
+            return
+
+        if member.guild.get_channel(config.get('leave_ch')) is not None:
+            join_channel = member.guild.get_channel(config.get('leave_ch'))
+            e = discord.Embed(title='Member leave',
+                              color=0xff0000,
                               timestamp=datetime.utcnow())
             e.set_author(icon_url=member.avatar_url, name=member)
             e.add_field(name='ID', value=member.id)
             e.add_field(name='Created', value=human_timedelta(member.created_at))
-            if muted:
-                e.description = 'User was previously muted!'
+            e.add_field(name='Last Joined', value=human_timedelta(member.joined_at))
+            if self.bot.get_cog('Info') is not None:
+                first_join = await self.bot.get_cog('Info').get_join_date(member)
+                e.add_field(name='First Joined', value=human_timedelta(first_join))
 
             await join_channel.send(embed=e)
+
+    @commands.Cog.listener()
+    async def on_guild_role_delete(self, role):
+        config = await self.get_mod_config(role.guild.id)
+        if config is None or config.get('mute_role') != role.id:
+            return
+
+        query = '''UPDATE guild_mod_config
+                   SET mute_role = NULL
+                   WHERE id = $1'''
+        await self.bot.pool.execute(query, role.guild.id)
+
+    @commands.Cog.listener()
+    async def on_member_update(self, before, after):
+        if before.roles == after.roles:
+            return
+        config = await self.get_mod_config(before.guild.id)
+        if config is None or config.get('mute_role') is None or before.guild.get_role(config.get('mute_role')) is None:
+            return
+
+        role = before.guild.get_role(config.get('mute_role'))
+        had = role in before.roles
+        has = role in after.roles
+
+        if had == has:
+            # mute role not changed
+            return
+
+        if has:
+            # added mute role
+            query = '''UPDATE guild_mod_config
+                       SET muted = array_append(muted, $2)
+                       WHERE id = $1;'''
+        else:
+            # removed mute role
+            query = '''UPDATE guild_mod_config
+                       SET muted = array_remove(muted, $2)
+                       WHERE id = $1;'''
+        try:
+            await self.bot.pool.execute(query, before.guild.id, before.id)
+        except:
+            print(traceback.print_exc)
+            raise
 
 
 def setup(bot):
