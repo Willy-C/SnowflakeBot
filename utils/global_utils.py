@@ -81,8 +81,7 @@ def cleanup_code(content):
 
 
 async def last_image(ctx):
-    """Tries to find the last image in chat and return its url.
-    Raises BadArgument if no image found within limit."""
+    """Tries to find the last image in chat and return its url."""
     async for message in ctx.channel.history(limit=50):
         for embed in message.embeds:
             if embed.thumbnail and embed.thumbnail.proxy_url:

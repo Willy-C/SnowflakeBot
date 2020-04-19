@@ -76,7 +76,7 @@ class GuildCog(commands.Cog, name='Guild'):
         await ctx.send(embed=e)
 
     @commands.command(name='sharescreen', aliases=['share', 'ss', 'video'])
-    async def video_inVC(self, ctx, *, channel: Optional[discord.VoiceChannel] = None):
+    async def video_in_VC(self, ctx, *, channel: Optional[discord.VoiceChannel] = None):
         """Enables video call in a voice channel.
         Defaults to your current voice channel or you can specify a voice channel"""
         author = ctx.message.author

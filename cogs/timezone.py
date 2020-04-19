@@ -95,6 +95,10 @@ class TimezoneCog(commands.Cog, name='Timezones'):
             await ctx.send('Unknown timezone!')
             await ctx.invoke(self.list_timezones)
 
+    @commands.command(name='time')
+    async def get_user_time(self, ctx, user: discord.Member = None):
+        await ctx.invoke(self.get_timezone, (user or ctx.author))
+
 
 def setup(bot):
     bot.add_cog(TimezoneCog(bot))

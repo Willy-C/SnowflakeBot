@@ -135,7 +135,7 @@ class ReminderCog(commands.Cog, name='Reminders'):
             pass
 
     @commands.group(name='remind', aliases=['reminder', 'timer'], invoke_without_command=True, case_insensitive=True)
-    async def reminder(self, ctx, *, time: UserFriendlyTime(commands.clean_content)):
+    async def reminder(self, ctx, *, time: UserFriendlyTime(commands.clean_content, default='\u2026')):
         """Set a reminder that sends a message after a certain amount of time.
 
         The input can be any direct date (e.g. YYYY-MM-DD) or a human
@@ -166,7 +166,7 @@ class ReminderCog(commands.Cog, name='Reminders'):
         Example of __relative time__: `%remind me in 5 seconds...` this will NOT trigger in 5 seconds if your timezone is not set to UTC"""
         tz = await get_user_timezone(ctx, ctx.author)
         if tz is None:
-            return await ctx.send('No timezone found. See `%help timezone set` on how to set a timezone')
+            return await ctx.send('No timezone found. See `%help tz set` on how to set a timezone')
         await ctx.invoke(self.reminder, time=time)
 
     @reminder.command(name='list')

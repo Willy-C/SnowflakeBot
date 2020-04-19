@@ -104,7 +104,7 @@ class HighlightCog(commands.Cog, name='Highlight'):
         now = datetime.utcnow()
         prev_msgs = await message.channel.history(after=(now-timedelta(minutes=5))).flatten()  # Grabs all messages from the last 5 minutes
         msg_context = []
-        recent_msgs = [msg for msg in prev_msgs[:-1] if (now - msg.created_at).seconds <= 60]  # List of messages from last 60 seconds
+        recent_msgs = [msg for msg in prev_msgs[:-1] if (now - msg.created_at).seconds <= 45]  # List of messages from last 45 seconds
 
         if not is_mention:
             if self.is_active(recent_msgs, member_id, word):

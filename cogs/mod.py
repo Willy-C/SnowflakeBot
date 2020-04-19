@@ -520,13 +520,17 @@ class ModCog(commands.Cog, name='Mod'):
             if members is None:
                 return await ctx.send('Please specify users or join a voice channel')
 
+        total = len(members)
+        success = 0
         for member in members:
             try:
                 await member.move_to(channel)
             except discord.HTTPException as e:
                 await ctx.send(f'Unable to move {member} - `{e}`', delete_after=7)
             else:
+                success += 1
                 await ctx.message.add_reaction('\U00002705')  # React with checkmark
+        await ctx.send(f'Moved {success}/{total} users', delete_after=10)
 
     # Purge group:
 

@@ -84,7 +84,7 @@ class SnowflakeBot(commands.Bot):
     async def close(self):
         await self.session.close()
         await super().close()
-        await asyncio.wait_for(self.pool.close(), timeout=60)
+        await asyncio.wait_for(self.pool.close(), timeout=20)
 
 
 loop = asyncio.get_event_loop()
