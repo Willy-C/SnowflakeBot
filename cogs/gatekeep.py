@@ -1,20 +1,24 @@
 import discord
 from discord.ext import commands
 
-import json
 from datetime import datetime
 from utils.time import human_timedelta
 
 GUILD_ID = 645121189815255058
 VERIFIED_ROLE = 645122149023219712
 JOIN_CHANNEL = 645121189815255062
+GENERAL = 645122256892198922
 
 
-class GatekeepCog(commands.Cog):
+class Gatekeep(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        with open('data/verified.json') as f:
-            self.verified = set(json.load(f))
+        bot.loop.create_task(self.get_verified_ids())
+
+    async def get_verified_ids(self):
+        query = '''SELECT id FROM gatekeep;'''
+        records = await self.bot.pool.fetch(query)
+        self.verified = {record.get('id') for record in records}
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -76,7 +80,7 @@ class GatekeepCog(commands.Cog):
         await self.bot.get_channel(JOIN_CHANNEL).send(embed=e)
 
     @commands.command(hidden=True)
-    async def verify(self, ctx, member: discord.Member):
+    async def verify(self, ctx, *, member: discord.Member):
         if ctx.guild is None or ctx.guild.id != GUILD_ID:
             return
         if ctx.author.id not in self.verified:
@@ -84,8 +88,39 @@ class GatekeepCog(commands.Cog):
             return
         role = discord.Object(id=VERIFIED_ROLE)
         await member.add_roles(role, reason=f'Manual Verification by {ctx.author}')
+        await ctx.guild.get_channel(GENERAL).send(f'<:member_join:602811779831037952> {ctx.author.mention} added {member.mention}')
+        query = '''INSERT INTO gatekeep(id, by)
+                   VALUES($1, $2);'''
+        await self.bot.pool.execute(query, member.id, ctx.author.id)
+
+    @commands.command(hidden=True)
+    async def unverify(self, ctx, *, member: discord.Member):
+        if ctx.guild is None or ctx.guild.id != GUILD_ID:
+            return
+        if ctx.author.id not in self.verified:
+            await ctx.send('Sorry, you do not have permission to do that!')
+            return
+        if member.id not in self.verified:
+            await ctx.send('Sorry, that person is not verified!')
+            return
+
+        perms_query = '''SELECT * FROM gatekeep WHERE id=$1'''
+        record = self.bot.pool.fetchrow(perms_query, ctx.author.id)
+        if record.get('level') is None:
+            await ctx.send('Sorry, you do not have permission to unverify users.')
+            return
+
+        try:
+            role = discord.Object(id=VERIFIED_ROLE)
+            await member.remove_roles(role, reason=f'Manual Unverification by {ctx.author}')
+        except discord.HTTPException:
+            pass
+        await ctx.guild.get_channel(GENERAL).send(f'{ctx.author.mention} removed {member.mention}')
+        query = '''DELETE FROM gatekeep WHERE id=$1'''
+        await self.bot.pool.execute(query, member.id)
 
     @verify.error
+    @unverify.error
     async def verify_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
             ctx.local_handled = True
@@ -100,4 +135,4 @@ class GatekeepCog(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(GatekeepCog(bot))
+    bot.add_cog(Gatekeep(bot))
