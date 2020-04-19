@@ -116,9 +116,11 @@ async def upload_hastebin(ctx, content, url='https://hastebin.com'):
 async def send_or_hastebin(ctx, content, code=None, url='https://hastebin.com'):
     """Sends to ctx.channel if possible, upload to hastebin if too long"""
     if code is not None:
-        content = f'```{code}\n{content}\n```'
-    if len(content) <= 2000:
-        await ctx.send(content)
+        cb = f'```{code}\n{content}\n```'
+    else:
+        cb = content
+    if len(cb) <= 2000:
+        await ctx.send(cb)
     else:
         hastebin_url = await upload_hastebin(ctx, content, url)
         await ctx.send(f'Output too long to send to discord, uploaded here instead: {hastebin_url}')

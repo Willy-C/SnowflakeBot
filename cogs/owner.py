@@ -11,7 +11,7 @@ from collections import Counter
 from typing import Optional
 from contextlib import redirect_stdout
 
-from utils.global_utils import confirm_prompt, cleanup_code, copy_context, upload_hastebin
+from utils.global_utils import confirm_prompt, cleanup_code, copy_context, upload_hastebin, send_or_hastebin
 
 
 class OwnerCog(commands.Cog, name='Owner'):
@@ -126,10 +126,10 @@ class OwnerCog(commands.Cog, name='Owner'):
 
             if ret is None:
                 if value:
-                    await ctx.send(f'```py\n{value}\n```')
+                    await send_or_hastebin(ctx, content=value, code='py')
             else:
                 self._last_result = ret
-                await ctx.send(f'```py\n{value}{ret}\n```')
+                await send_or_hastebin(ctx, f'{value}{ret}', code='py')
 
     @commands.command(name='as')
     async def _sudo(self, ctx, channel: Optional[discord.TextChannel], target: discord.User, *, command: str):
