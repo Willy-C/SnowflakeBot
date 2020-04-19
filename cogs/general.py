@@ -7,7 +7,7 @@ import datetime
 import unicodedata
 from PIL import Image
 from typing import Optional
-from utils.global_utils import last_image, is_image
+from utils.global_utils import last_image, is_image, upload_hastebin
 
 
 def make_more_jpeg(content):
@@ -138,6 +138,31 @@ class GeneralCog(commands.Cog, name='General'):
             data = io.BytesIO(await resp.read())
         jpeg = await self.bot.loop.run_in_executor(None, make_more_jpeg, data)
         await ctx.send(file=discord.File(jpeg, filename='more_jpeg.jpg'))
+
+    async def get_txt_from_file(self, ctx, messages=[]):
+        for msg in messages:
+            if msg.attachments:
+                for attachment in msg.attachments:
+                    if attachment.filename.endswith('.txt') and attachment.height is None and attachment.url.endswith('.txt'):
+                        try:
+                            async with ctx.bot.session.get(attachment.url) as resp:
+                                content = await resp.text()
+                        except:
+                            pass
+                        else:
+                            return content
+
+    @commands.command(name='filetopaste', aliases=['f2p'])
+    async def txt_to_pastebin(self, ctx, message: discord.Message = None):
+        messages = []
+        if message:
+            messages.append(message)
+        messages.extend(await ctx.channel.history(limit=25).flatten())
+        content = await self.get_txt_from_file(ctx, messages)
+        if content is None:
+            return await ctx.send('Unable to find a txt file within last 25 message. Try specifying a message URL or ID')
+        url = await upload_hastebin(ctx, content)
+        await ctx.send(url)
 
     @commands.Cog.listener()
     async def on_message(self, message):
