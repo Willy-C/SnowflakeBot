@@ -4,10 +4,11 @@ from discord.ext import commands
 import io
 import random
 import datetime
+import googletrans
 import unicodedata
 from PIL import Image
 from typing import Optional
-from utils.global_utils import last_image, is_image, upload_hastebin
+from utils.global_utils import last_image, is_image, upload_hastebin, bright_color
 
 
 def make_more_jpeg(content):
@@ -21,6 +22,7 @@ def make_more_jpeg(content):
 class GeneralCog(commands.Cog, name='General'):
     def __init__(self, bot):
         self.bot = bot
+        self.translator = googletrans.Translator()
 
     @commands.command(name='avatar', aliases=['ava', 'pfp'])
     async def get_avatar(self, ctx, *, user: discord.Member = None):
@@ -164,13 +166,21 @@ class GeneralCog(commands.Cog, name='General'):
         url = await upload_hastebin(ctx, content)
         await ctx.send(url)
 
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.guild is None or message.author.bot:
-            return
-        if message.content == '@someone':
-            humans = [m for m in message.guild.members if not m.bot]
-            await message.channel.send(random.choice(humans).mention)
+    @commands.command()
+    async def translate(self, ctx, *, text: commands.clean_content):
+        """Translates a message to English using Google translate."""
+        loop = self.bot.loop
+        try:
+            res = await loop.run_in_executor(None, self.translator.translate, text)
+        except Exception as e:
+            return await ctx.send(f'An error occurred: {e.__class__.__name__}: {e}')
+
+        embed = discord.Embed(title='Translated', colour=bright_color())
+        src = googletrans.LANGUAGES.get(res.src, '(auto-detected)').title()
+        dest = googletrans.LANGUAGES.get(res.dest, 'Unknown').title()
+        embed.add_field(name=f'From {src}', value=res.origin, inline=False)
+        embed.add_field(name=f'To {dest}', value=res.text, inline=False)
+        await ctx.send(embed=embed)
 
 
 def to_emoji(c):
