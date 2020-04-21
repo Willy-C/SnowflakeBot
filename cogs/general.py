@@ -167,8 +167,13 @@ class GeneralCog(commands.Cog, name='General'):
         await ctx.send(url)
 
     @commands.command()
-    async def translate(self, ctx, *, text: commands.clean_content):
+    async def translate(self, ctx, *, text: commands.clean_content=None):
         """Translates a message to English using Google translate."""
+        if text is None:
+            async for message in ctx.channel.history(limit=25, before=ctx.message):
+                if message.content:
+                    text = message.content
+                    break
         loop = self.bot.loop
         try:
             res = await loop.run_in_executor(None, self.translator.translate, text)
