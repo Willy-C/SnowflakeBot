@@ -514,7 +514,10 @@ class Music(commands.Cog):
         try:
             await message.edit(suppress=True)
         except:
-            pass
+            return
+        else:
+            await asyncio.sleep(500)
+            await message.edit(suppress=False)
 
     @commands.command(name='play', aliases=['p'])
     async def play_(self, ctx, *, query: str = None):
@@ -573,7 +576,7 @@ class Music(commands.Cog):
         try:
             if player.controller_message and ctx.message.id != player.controller_message.id:
                 self.bot.loop.create_task(self._suppress_link(ctx.message))
-        except (discord.HTTPException, AttributeError):
+        except (discord.HTTPException, discord.Forbidden, AttributeError):
             pass
         finally:
             await ctx.message.add_reaction('\U00002705')
