@@ -3,6 +3,7 @@ from discord.ext import commands
 
 from datetime import datetime
 from utils.time import human_timedelta
+from utils.converters import CaseInsensitiveMember
 
 GUILD_ID = 645121189815255058
 VERIFIED_ROLE = 645122149023219712
@@ -80,7 +81,7 @@ class Gatekeep(commands.Cog):
         await self.bot.get_channel(JOIN_CHANNEL).send(embed=e)
 
     @commands.command(hidden=True)
-    async def verify(self, ctx, *, member: discord.Member):
+    async def verify(self, ctx, *, member: CaseInsensitiveMember):
         if ctx.guild is None or ctx.guild.id != GUILD_ID:
             return
         if ctx.author.id not in self.verified:
@@ -94,7 +95,7 @@ class Gatekeep(commands.Cog):
         await self.bot.pool.execute(query, member.id, ctx.author.id)
 
     @commands.command(hidden=True)
-    async def unverify(self, ctx, *, member: discord.Member):
+    async def unverify(self, ctx, *, member: CaseInsensitiveMember):
         if ctx.guild is None or ctx.guild.id != GUILD_ID:
             return
         if ctx.author.id not in self.verified:
@@ -118,20 +119,6 @@ class Gatekeep(commands.Cog):
         await ctx.guild.get_channel(GENERAL).send(f'{ctx.author.mention} removed {member.mention}')
         query = '''DELETE FROM gatekeep WHERE id=$1'''
         await self.bot.pool.execute(query, member.id)
-
-    @verify.error
-    @unverify.error
-    async def verify_error(self, ctx, error):
-        if isinstance(error, commands.BadArgument):
-            ctx.local_handled = True
-            return await ctx.send('```No user found on this server matching that name.\n'
-                                  'I will search in this order: \n'
-                                  '1. By ID                     (ex. 5429519026699)\n'
-                                  '2. By Mention                (ex. @Snowflake)\n'
-                                  '3. By Name#Discrim           (ex. Snowflake#7321)\n'
-                                  '4. By Name                   (ex. Snowflake)\n'
-                                  '5. By Nickname               (ex. BeepBoop)\n'
-                                  'Note: Names are Case-sensitive!```')
 
 
 def setup(bot):

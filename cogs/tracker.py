@@ -31,7 +31,7 @@ class TrackerCog(commands.Cog):
         print(f'Added {new} new members\' join date')
 
     @commands.Cog.listener()
-    async def on_member_join(self, member: discord.Member):
+    async def on_member_join(self, member):
         query = '''INSERT INTO first_join(guild, "user", time)
                    VALUES($1, $2, $3);'''
         # In the rare case that it is None, default to utcnow

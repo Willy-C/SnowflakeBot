@@ -265,15 +265,3 @@ def human_timedelta(dt, *, source=None, accuracy=3, brief=False, suffix=True):
             return ' '.join(output) + suffix
 
 
-class Timezone(commands.Converter):
-    async def convert(self, ctx, argument):
-        if argument.lower() in ('pst', 'pdt'):
-            argument = 'US/Pacific'
-
-        try:
-            tz = pytz.timezone(argument)
-        except pytz.UnknownTimeZoneError:
-            url = 'https://gist.githubusercontent.com/Willy-C/a511d95f1d28c1562332e487924f0d66/raw/5e6dfb0f1db4852eeaf1eb35ae4b1be92ca919e2/pytz_all_timezones.txt'
-            raise commands.BadArgument(f'Unknown timezone. Please enter one of the following timezone names:\n<{url}>')
-
-        return tz

@@ -8,6 +8,7 @@ import googletrans
 import unicodedata
 from PIL import Image
 from typing import Optional
+from utils import converters
 from utils.global_utils import last_image, is_image, upload_hastebin, bright_color
 
 
@@ -25,7 +26,7 @@ class GeneralCog(commands.Cog, name='General'):
         self.translator = googletrans.Translator()
 
     @commands.command(name='avatar', aliases=['ava', 'pfp'])
-    async def get_avatar(self, ctx, *, user: discord.Member = None):
+    async def get_avatar(self, ctx, *, user: converters.CaseInsensitiveMember = None):
         """Retrieves the avatar of a user.
         Defaults to author if no user is provided."""
 
@@ -39,21 +40,8 @@ class GeneralCog(commands.Cog, name='General'):
 
         await ctx.send(embed=embed)
 
-    @get_avatar.error
-    async def get_avatar_error(self, ctx, error):
-        if isinstance(error, commands.BadArgument):
-            ctx.local_handled = True
-            return await ctx.send('```No user found on this server matching that name.\n'
-                                  'I will search in this order: \n'
-                                  '1. By ID                     (ex. 5429519026699)\n'
-                                  '2. By Mention                (ex. @Snowflake)\n'
-                                  '3. By Name#Discrim           (ex. Snowflake#7321)\n'
-                                  '4. By Name                   (ex. Snowflake)\n'
-                                  '5. By Nickname               (ex. BeepBoop)\n'
-                                  'Note: Names are Case-sensitive!```')
-
     @commands.command()
-    async def quote(self, ctx, user: discord.Member, *, message: commands.clean_content()):
+    async def quote(self, ctx, user: converters.CaseInsensitiveMember, *, message: commands.clean_content()):
         """Send a message as someone else"""
         webhook = await ctx.channel.create_webhook(name=user.display_name)
         await webhook.send(message, avatar_url=user.avatar_url_as(format='png'))
@@ -168,12 +156,15 @@ class GeneralCog(commands.Cog, name='General'):
 
     @commands.command()
     async def translate(self, ctx, *, text: commands.clean_content=None):
-        """Translates a message to English using Google translate."""
+        """Translates a message to English using Google translate.
+        If no message is given, I will try and find the last message with text"""
         if text is None:
             async for message in ctx.channel.history(limit=25, before=ctx.message):
                 if message.content:
                     text = message.content
                     break
+            if text is None:
+                return await ctx.send('Unable to find text to translate!')
         loop = self.bot.loop
         try:
             res = await loop.run_in_executor(None, self.translator.translate, text)

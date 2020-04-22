@@ -10,7 +10,7 @@ import traceback
 from collections import Counter
 from typing import Optional
 from contextlib import redirect_stdout
-
+from utils.converters import CaseInsensitiveUser
 from utils.global_utils import confirm_prompt, cleanup_code, copy_context, upload_hastebin, send_or_hastebin
 
 
@@ -132,7 +132,7 @@ class OwnerCog(commands.Cog, name='Owner'):
                 await send_or_hastebin(ctx, f'{value}{ret}', code='py')
 
     @commands.command(name='as')
-    async def _sudo(self, ctx, channel: Optional[discord.TextChannel], target: discord.User, *, command: str):
+    async def _sudo(self, ctx, channel: Optional[discord.TextChannel], target: CaseInsensitiveUser, *, command: str):
         """
         Run a command as someone else.
         Try to resolve to a Member, if possible.

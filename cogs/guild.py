@@ -7,6 +7,7 @@ from datetime import datetime
 from collections import Counter
 
 from utils.global_utils import bright_color
+from utils.converters import CaseInsensitiveMember
 
 
 class GuildCog(commands.Cog, name='Guild'):
@@ -20,7 +21,7 @@ class GuildCog(commands.Cog, name='Guild'):
         return True
 
     @commands.command()
-    async def joined(self, ctx, *, member: discord.Member = None):
+    async def joined(self, ctx, *, member: CaseInsensitiveMember = None):
         """Looks up when a member joined the server."""
         if not member:
             member = ctx.author
@@ -46,7 +47,7 @@ class GuildCog(commands.Cog, name='Guild'):
         await ctx.send(embed=e)
 
     @commands.command(name='shortperms', hidden=True)
-    async def get_permissions(self, ctx, *, member: discord.Member = None):
+    async def get_permissions(self, ctx, *, member: CaseInsensitiveMember = None):
         """Lists permissions of a member.
         If a member is not provided, the author will be checked."""
 
@@ -64,7 +65,7 @@ class GuildCog(commands.Cog, name='Guild'):
         await ctx.send(embed=e)
 
     @commands.command(name='perms')
-    async def get_all_permissions(self, ctx, *, member: discord.Member = None):
+    async def get_all_permissions(self, ctx, *, member: CaseInsensitiveMember = None):
         """Lists all permissions of a member.
         If a member is not provided, the author will be checked."""
         member = member or ctx.author
@@ -128,7 +129,7 @@ class GuildCog(commands.Cog, name='Guild'):
             await ctx.send(page)
 
     @commands.command()
-    async def waitfor(self, ctx, channel: Optional[discord.TextChannel], user: discord.Member = None):
+    async def waitfor(self, ctx, channel: Optional[discord.TextChannel], user: CaseInsensitiveMember = None):
         """Wait for a reply to your channel
         Will send you a DM when I see a reply
 
@@ -171,7 +172,7 @@ class GuildCog(commands.Cog, name='Guild'):
                 pass
 
     @commands.Cog.listener()
-    async def on_member_join(self, member: discord.Member):
+    async def on_member_join(self, member):
         query = '''SELECT *
                    FROM guild_config
                    WHERE id = $1'''

@@ -7,6 +7,7 @@ import inspect
 
 from utils.time import human_timedelta
 from utils.global_utils import copy_context
+from utils.converters import CaseInsensitiveMember
 
 
 class MetaCog(commands.Cog, name='Meta'):
@@ -70,7 +71,7 @@ class MetaCog(commands.Cog, name='Meta'):
         await ctx.send(f'Uptime: {human_timedelta(self.bot.starttime, accuracy=None, brief=simple, suffix=False)}')
 
     @commands.command(name='shared')
-    async def shared_guilds(self, ctx, member: discord.Member=None):
+    async def shared_guilds(self, ctx, member: CaseInsensitiveMember=None):
         """Returns the number of guilds a member shares with the bot"""
         member = member or ctx.author
         count = 0

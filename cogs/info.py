@@ -5,6 +5,7 @@ from typing import Union
 
 from utils.global_utils import bright_color
 from utils.time import human_timedelta
+from utils.converters import CaseInsensitiveMember
 
 
 class InfoCog(commands.Cog, name='Info'):
@@ -45,7 +46,7 @@ class InfoCog(commands.Cog, name='Info'):
         await ctx.send(embed=e)
 
     @commands.command()
-    async def userinfo(self, ctx, *, user: Union[discord.Member, discord.User] = None):
+    async def userinfo(self, ctx, *, user: Union[CaseInsensitiveMember, discord.User] = None):
         user = user or ctx.author
         if user.color is discord.Color.default():
             color = bright_color()
@@ -74,7 +75,7 @@ class InfoCog(commands.Cog, name='Info'):
             return await ctx.send('Unable to find that person')
 
     @commands.command()
-    async def device(self, ctx, member: discord.Member = None):
+    async def device(self, ctx, member: CaseInsensitiveMember = None):
         member = member or ctx.author
         statuses = {
             discord.Status.online: '<:status_online:602811779948740627> Online',

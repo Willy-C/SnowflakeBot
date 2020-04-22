@@ -5,7 +5,7 @@ import discord
 import re
 
 from utils.global_utils import upload_hastebin
-from utils.errors import NoBlacklist
+from utils.errors import NoBlacklist, TimezoneNotFound
 from .latex import TexRenderError
 
 
@@ -28,7 +28,7 @@ class CommandErrorHandler(commands.Cog):
         if getattr(ctx, 'local_handled', False):
             return
 
-        ignored = (commands.CommandNotFound, commands.CommandOnCooldown)  # Tuple of errors to ignore
+        ignored = (commands.CommandNotFound, commands.CommandOnCooldown, NoBlacklist)  # Tuple of errors to ignore
         error = getattr(error, 'original', error)
 
         if isinstance(error, ignored):
@@ -39,6 +39,17 @@ class CommandErrorHandler(commands.Cog):
 
         elif isinstance(error, commands.NoPrivateMessage):
             return await ctx.author.send(f'The command `{ctx.command}` cannot be used in Private Messages.')
+
+        elif isinstance(error, TimezoneNotFound):
+            common = ['US/Eastern', 'US/Pacific', 'US/Central', 'US/Mountain']
+            url = 'https://gist.githubusercontent.com/Willy-C/a511d95f1d28c1562332e487924f0d66/raw/5e6dfb0f1db4852eeaf1eb35ae4b1be92ca919e2/pytz_all_timezones.txt'
+            e = discord.Embed(title='Timezones',
+                              description=f'A full list of timezones can be found [here]({url})\n\n'
+                                          f'Some common timezones include:\n '
+                                          f'```{" | ".join(common)}```\n\n'
+                                          f'Timezones are not case-sensitive',
+                              colour=discord.Colour.blue())
+            await ctx.send('Unable to find a timezone with that name', embed=e)
 
         elif isinstance(error, commands.BadArgument):
             return await ctx.send(error)
@@ -57,9 +68,6 @@ class CommandErrorHandler(commands.Cog):
 
         elif isinstance(error, commands.CheckFailure):
             return await ctx.send('Sorry, you cannot use this command')
-
-        elif isinstance(error, NoBlacklist):
-            return await ctx.send('You are blacklisted and cannot use this bot.')
 
         elif isinstance(error, TexRenderError):
             if error.logs is None:

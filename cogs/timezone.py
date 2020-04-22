@@ -4,8 +4,8 @@ from discord.ext import commands
 import datetime
 from pytz import utc
 from typing import Union
-from utils.time import Timezone
 from utils.global_utils import get_user_timezone
+from utils.converters import CaseInsensitiveMember, Timezone
 
 
 class TimezoneCog(commands.Cog, name='Timezones'):
@@ -13,7 +13,7 @@ class TimezoneCog(commands.Cog, name='Timezones'):
         self.bot = bot
 
     @commands.group(name='timezone', aliases=['tz'], invoke_without_command=True, case_insensitive=True)
-    async def tz_group(self, ctx, arg: Union[discord.User, Timezone] = 0):
+    async def tz_group(self, ctx, arg: Union[CaseInsensitiveMember, Timezone] = 0):
         """Timezone settings
         Setting your timezone allows for reminders to use your timezone
 
@@ -21,7 +21,7 @@ class TimezoneCog(commands.Cog, name='Timezones'):
         Will trigger at 4pm in your timezone if set, otherwise it will trigger at 4pm UTC
         """
         # Should never be able to input 0, using 0 here instead of None because Timezone can return None
-        if isinstance(arg, discord.User) or arg == 0:
+        if isinstance(arg, discord.Member) or arg == 0:
             await ctx.invoke(self.get_timezone, (arg or ctx.author))
         elif arg is None:
             await ctx.invoke(self.list_timezones)
@@ -29,7 +29,7 @@ class TimezoneCog(commands.Cog, name='Timezones'):
             await ctx.invoke(self.set_timezone, arg)
 
     @tz_group.command(name='get')
-    async def get_timezone(self, ctx, user: discord.User = None):
+    async def get_timezone(self, ctx, user: CaseInsensitiveMember = None):
         """Retrieve your timezone setting
         Pass in a user to retrieve someone else's timezone"""
         user = user or ctx.author
@@ -90,13 +90,12 @@ class TimezoneCog(commands.Cog, name='Timezones'):
     @set_timezone.error
     @timezone_info.error
     async def set_tz_error(self, ctx, error):
-        if isinstance(error, commands.BadArgument):
+        if isinstance(error, commands.BadUnionArgument):
             ctx.local_handled = True
-            await ctx.send('Unknown timezone!')
-            await ctx.invoke(self.list_timezones)
+            await ctx.send('Unable to find that person/timezone')
 
     @commands.command(name='time')
-    async def get_user_time(self, ctx, user: discord.Member = None):
+    async def get_user_time(self, ctx, user: CaseInsensitiveMember = None):
         await ctx.invoke(self.get_timezone, (user or ctx.author))
 
 
