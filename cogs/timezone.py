@@ -87,8 +87,7 @@ class TimezoneCog(commands.Cog, name='Timezones'):
         now = utc.localize(datetime.datetime.utcnow())
         await ctx.send(f'Current time in {timezone.zone}: {now.astimezone(timezone).strftime("%Y-%m-%d %H:%M")}')
 
-    @set_timezone.error
-    @timezone_info.error
+    @tz_group.error
     async def set_tz_error(self, ctx, error):
         if isinstance(error, commands.BadUnionArgument):
             ctx.local_handled = True
