@@ -13,7 +13,7 @@ class TimezoneCog(commands.Cog, name='Timezones'):
         self.bot = bot
 
     @commands.group(name='timezone', aliases=['tz'], invoke_without_command=True, case_insensitive=True)
-    async def tz_group(self, ctx, arg: Union[CaseInsensitiveMember, Timezone] = 0):
+    async def tz_group(self, ctx, *, arg: Union[CaseInsensitiveMember, Timezone] = 0):
         """Timezone settings
         Setting your timezone allows for reminders to use your timezone
 
@@ -22,14 +22,14 @@ class TimezoneCog(commands.Cog, name='Timezones'):
         """
         # Should never be able to input 0, using 0 here instead of None because Timezone can return None
         if isinstance(arg, discord.Member) or arg == 0:
-            await ctx.invoke(self.get_timezone, (arg or ctx.author))
+            await ctx.invoke(self.get_timezone, user=(arg or ctx.author))
         elif arg is None:
             await ctx.invoke(self.list_timezones)
         else:
             await ctx.invoke(self.set_timezone, arg)
 
     @tz_group.command(name='get')
-    async def get_timezone(self, ctx, user: CaseInsensitiveMember = None):
+    async def get_timezone(self, ctx, *, user: CaseInsensitiveMember = None):
         """Retrieve your timezone setting
         Pass in a user to retrieve someone else's timezone"""
         user = user or ctx.author
@@ -89,7 +89,7 @@ class TimezoneCog(commands.Cog, name='Timezones'):
 
     @tz_group.error
     async def set_tz_error(self, ctx, error):
-        if isinstance(error, commands.BadUnionArgument):
+        if isinstance(error, (commands.BadUnionArgument, commands.BadArgument)):
             ctx.local_handled = True
             await ctx.send('Unable to find that person/timezone')
 
