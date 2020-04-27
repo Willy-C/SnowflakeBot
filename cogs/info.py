@@ -61,11 +61,12 @@ class InfoCog(commands.Cog, name='Info'):
         e.add_field(name='Severs Shared', value=sum(g.get_member(user.id) is not None for g in self.bot.guilds))
         e.add_field(name='Created', value=human_timedelta(user.created_at))
         if isinstance(user, discord.Member):
-            e.add_field(name='First Joined', value=human_timedelta(await self.get_join_date(user)))
-            e.add_field(name='Last Joined', value=user.joined_at)
+            e.add_field(name='First Joined**', value=human_timedelta(await self.get_join_date(user)))
+            e.add_field(name='Last Joined', value=human_timedelta(user.joined_at))
             roles = ['@everyone']
             roles.extend(r.mention for r in user.roles[1:])
             e.add_field(name='Roles', value=', '.join(roles))
+            e.set_footer(text='**I can only get the earliest join date since I was added to the server')
 
         await ctx.send(embed=e)
 
