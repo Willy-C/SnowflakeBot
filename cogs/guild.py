@@ -76,7 +76,7 @@ class GuildCog(commands.Cog, name='Guild'):
         e.set_author(icon_url=member.avatar_url, name=member)
         await ctx.send(embed=e)
 
-    @commands.command(name='sharescreen', aliases=['share', 'ss', 'video'])
+    @commands.command(name='sharescreen', aliases=['share', 'ss', 'video'], hidden=True)
     async def video_in_VC(self, ctx, *, channel: Optional[discord.VoiceChannel] = None):
         """Enables video call in a voice channel.
         Defaults to your current voice channel or you can specify a voice channel"""
@@ -96,7 +96,7 @@ class GuildCog(commands.Cog, name='Guild'):
 
         await ctx.send(embed=e)
 
-    @commands.command(name='shareall')
+    @commands.command(name='shareall', hidden=True)
     async def sharescreen_all(self, ctx):
         """Returns all voice channel's video links"""
 
@@ -184,14 +184,14 @@ class GuildCog(commands.Cog, name='Guild'):
                 try:
                     await member.add_roles(discord.Object(id=config.get('human_join_role')),
                                            reason='Auto human join role')
-                except discord.Forbidden:
+                except (discord.Forbidden, discord.HTTPException):
                     pass
         else:
             if config.get('bot_join_role') is not None:
                 try:
                     await member.add_roles(discord.Object(id=config.get('bot_join_role')),
                                            reason='Auto bot join role')
-                except discord.Forbidden:
+                except (discord.Forbidden, discord.HTTPException):
                     pass
 
 
