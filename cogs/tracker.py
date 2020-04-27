@@ -10,6 +10,8 @@ class TrackerCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.bot.loop.create_task(self.add_join_dates())
+        self.bot.loop.create_task(self.add_avatar())
+        self.bot.loop.create_task(self.add_names())
 
     async def add_join_dates(self):
         await self.bot.wait_until_ready()
@@ -31,6 +33,30 @@ class TrackerCog(commands.Cog):
                         new += 1
         print(f'Added {new} new members\' join date')
 
+    async def add_avatar(self):
+        await self.bot.wait_until_ready()
+        query = '''SELECT id, hash FROM avatar_changes'''
+        records = await self.bot.pool.fetch(query)
+        data = {(record['id'], record['hash']) for record in records}
+        new = 0
+        for user in self.bot.users:
+            if (user.id, user.avatar) not in data and (user.id, user.default_avatar.name) not in data:
+                await self.log_avatar(user)
+                new += 1
+        print(f'Added {new} untracked avatars')
+
+    async def add_names(self):
+        await self.bot.wait_until_ready()
+        query = '''SELECT DISTINCT id FROM name_changes'''
+        records = await self.bot.pool.fetch(query)
+        data = {record['id'] for record in records}
+        new = 0
+        for user in self.bot.users:
+            if user.id not in data:
+                await self.log_username(user)
+                new += 1
+        print(f'Added {new} users\' names\n')
+
     @commands.Cog.listener()
     async def on_member_join(self, member):
         query = '''INSERT INTO first_join(guild, "user", time)
@@ -41,6 +67,9 @@ class TrackerCog(commands.Cog):
             await self.bot.pool.execute(query, member.guild.id, member.id, join_time)
         except UniqueViolationError:
             pass
+        check = '''SELECT * FROM name_changes WHERE id = $1;'''
+        if await self.bot.pool.fetchrow(check, member.id) is None:
+            await self.log_username(member)
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
@@ -65,17 +94,17 @@ class TrackerCog(commands.Cog):
         if before.nick != after.nick and after.nick is not None:
             await self.log_nickname(after)
 
-    async def log_nickname(self, member: discord.Member):
-        query = '''INSERT INTO nick_changes(id, guild, name, changed_at)
-                   VALUES($1, $2, $3, $4);'''
-        await self.bot.pool.execute(query, member.id, member.guild.id, member.nick, datetime.utcnow())
-
     @commands.Cog.listener()
     async def on_user_update(self, before: discord.User, after: discord.User):
         if before.name != after.name or before.discriminator != after.discriminator:
             await self.log_username(after)
         if before.avatar != after.avatar:
             await self.log_avatar(after)
+
+    async def log_nickname(self, member: discord.Member):
+        query = '''INSERT INTO nick_changes(id, guild, name, changed_at)
+                   VALUES($1, $2, $3, $4);'''
+        await self.bot.pool.execute(query, member.id, member.guild.id, member.nick, datetime.utcnow())
 
     async def log_username(self, user: discord.User):
         query = '''INSERT INTO name_changes(id, name, discrim, changed_at)
