@@ -105,12 +105,13 @@ async def upload_hastebin(ctx, content, url='https://hastebin.com'):
     try:
         async with ctx.bot.session.post(f'{url}/documents', data=content.encode('utf-8')) as post:
             return f'{url}/{(await post.json())["key"]}'
-    except ClientConnectionError:
-        url = 'https://mystb.in'
-        async with ctx.bot.session.post(f'{url}/documents', data=content.encode('utf-8')) as post:
-            return f'{url}/{(await post.json())["key"]}'
-    except Exception:
-        traceback.print_exc()
+    except:
+        try:
+            url = 'https://mystb.in'
+            async with ctx.bot.session.post(f'{url}/documents', data=content.encode('utf-8')) as post:
+                return f'{url}/{(await post.json())["key"]}'
+        except:
+            traceback.print_exc()
 
 
 async def send_or_hastebin(ctx, content, code=None, url='https://hastebin.com'):

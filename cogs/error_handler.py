@@ -103,7 +103,11 @@ class CommandErrorHandler(commands.Cog):
     async def on_error(self, event, *args, **kwargs):
         await self.bot.wait_until_ready()
         await self.owner.send(f'An error occurred in event `{event}`')
-        await self.owner.send(f'```py\n{"".join(traceback.format_exc())}```')
+        try:
+            await self.owner.send(f'```py\n{"".join(traceback.format_exc())}```')
+        except:
+            async with self.bot.session.post('https://mystb.in/documents', data="".join(traceback.format_exc()).encode('utf-8')) as post:
+                await self.owner.send(f'Traceback too long. https://mystb.in/{(await post.json())["key"]}')
 
 
 def setup(bot):

@@ -30,6 +30,18 @@ class CaseInsensitiveUser(commands.UserConverter):
         return user
 
 
+class UserID(commands.Converter):
+    async def convert(self, ctx, argument):
+        try:
+            user = ctx.bot.get_user(int(argument))
+        except ValueError:
+            raise commands.BadArgument('That is not a valid ID')
+
+        if user is None:
+            raise commands.BadArgument(f'Unable to find User with ID {argument}')
+        return user
+
+
 class Timezone(commands.Converter):
     async def convert(self, ctx, argument):
         if argument.lower() in ('pst', 'pdt'):

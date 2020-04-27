@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 
+import datetime
 from typing import Union
 
 from utils.global_utils import bright_color
@@ -21,6 +22,25 @@ class InfoCog(commands.Cog, name='Info'):
         if record is None:
             return member.joined_at
         return record['time']
+
+    async def get_usernames(self, user: discord.User):
+        query = '''SELECT DISTINCT name, discrim
+                   FROM name_changes
+                   WHERE id = $1
+                   AND changed_at < (CURRENT_DATE + $2::interval) ORDER BY changed_at;'''
+        records = await self.bot.pool.fetch(query, user.id, datetime.timedelta(days=90))
+        fullnames = [f"{record['name']}#{record['discrim']}" for record in records]
+        return ', '.join(fullnames)
+
+    async def get_nicknames(self, member: discord.Member):
+        query = '''SELECT DISTINCT name
+                   FROM nick_changes
+                   WHERE id = $1
+                   AND guild = $2
+                   AND changed_at < (CURRENT_DATE + $3::interval) ORDER BY changed_at;'''
+        records = await self.bot.pool.fetch(query, member.id, member.guild.id, datetime.timedelta(days=90))
+        names = [record['name'] for record in records]
+        return ', '.join(names)
 
     @commands.command(name='serverinfo', aliases=['guildinfo'])
     @commands.guild_only()
@@ -60,6 +80,7 @@ class InfoCog(commands.Cog, name='Info'):
             e.add_field(name='Nick', value=user.nick)
         e.add_field(name='Severs Shared', value=sum(g.get_member(user.id) is not None for g in self.bot.guilds))
         e.add_field(name='Created', value=human_timedelta(user.created_at))
+        e.add_field(name='Previous names (within 90days)', value=(await self.get_usernames(user) or str(user)))
         if isinstance(user, discord.Member):
             e.add_field(name='First Joined**', value=human_timedelta(await self.get_join_date(user)))
             e.add_field(name='Last Joined', value=human_timedelta(user.joined_at))
@@ -67,6 +88,9 @@ class InfoCog(commands.Cog, name='Info'):
             roles.extend(r.mention for r in user.roles[1:])
             e.add_field(name='Roles', value=', '.join(roles))
             e.set_footer(text='**I can only get the earliest join date since I was added to the server')
+            nicks = await self.get_nicknames(user)
+            if nicks:
+                e.add_field(name='Previous Nicknames(within 90days)', value=nicks)
 
         await ctx.send(embed=e)
 
