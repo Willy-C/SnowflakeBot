@@ -6,7 +6,7 @@ from typing import Union
 
 from utils.global_utils import bright_color
 from utils.time import human_timedelta
-from utils.converters import CaseInsensitiveMember
+from utils.converters import CaseInsensitiveMember, CachedUserID
 
 
 class InfoCog(commands.Cog, name='Info'):
@@ -66,7 +66,7 @@ class InfoCog(commands.Cog, name='Info'):
         await ctx.send(embed=e)
 
     @commands.command()
-    async def userinfo(self, ctx, *, user: Union[CaseInsensitiveMember, discord.User] = None):
+    async def userinfo(self, ctx, *, user: Union[CaseInsensitiveMember, CachedUserID] = None):
         user = user or ctx.author
         if user.color is discord.Color.default():
             color = bright_color()
@@ -94,12 +94,6 @@ class InfoCog(commands.Cog, name='Info'):
 
         await ctx.send(embed=e)
 
-    @userinfo.error
-    async def userinfo_error(self, ctx, error):
-        if isinstance(error, commands.errors.BadUnionArgument):
-            ctx.local_handled = True
-            return await ctx.send('Unable to find that person')
-
     @commands.command()
     async def device(self, ctx, member: CaseInsensitiveMember = None):
         member = member or ctx.author
@@ -116,6 +110,40 @@ class InfoCog(commands.Cog, name='Info'):
         e.add_field(name='Web Status', value=statuses[member.web_status])
 
         await ctx.send(embed=e)
+
+    @commands.command()
+    async def names(self, ctx, member: Union[CaseInsensitiveMember, CachedUserID] = None):
+        member = member or ctx.author
+        query = '''SELECT name, discrim
+                   FROM name_changes
+                   WHERE id = $1
+                   ORDER BY changed_at'''
+        records = await self.bot.pool.fetch(query, member.id)
+        names = {f"{record['name']}#{record['discrim']}" for record in records}
+        await ctx.send(f'Names of {member}:\n'
+                       f'{", ".join(names)}')
+
+    @commands.command()
+    @commands.guild_only()
+    async def nicks(self, ctx, member: CaseInsensitiveMember = None):
+        member = member or ctx.author
+        query = '''SELECT name
+                   FROM nick_changes
+                   WHERE id = $1
+                   AND guild = $2;'''
+        records = await self.bot.pool.fetch(query, member.id, ctx.guild.id)
+        names = {record['name'] for record in records}
+        if not names:
+            return await ctx.send(f'Unable to find nicknames for {member} in this server')
+        await ctx.send(f'Names of {member}:\n'
+                       f'{", ".join(names)}')
+
+    @userinfo.error
+    @names.error
+    async def userinfo_error(self, ctx, error):
+        if isinstance(error, commands.errors.BadUnionArgument):
+            ctx.local_handled = True
+            return await ctx.send('Unable to find that person')
 
 
 def setup(bot):

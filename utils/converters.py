@@ -18,6 +18,14 @@ class CaseInsensitiveMember(commands.MemberConverter):
         return member
 
 
+class Member(commands.MemberConverter):
+    async def convert(self, ctx, argument):
+        try:
+            await super().convert(ctx, argument)
+        except commands.BadArgument:
+            raise errors.MemberNotFound
+
+
 class CaseInsensitiveUser(commands.UserConverter):
     async def convert(self, ctx, argument):
         try:
@@ -30,7 +38,7 @@ class CaseInsensitiveUser(commands.UserConverter):
         return user
 
 
-class UserID(commands.Converter):
+class CachedUserID(commands.Converter):
     async def convert(self, ctx, argument):
         try:
             user = ctx.bot.get_user(int(argument))

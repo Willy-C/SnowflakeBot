@@ -1,10 +1,9 @@
 import discord
 from discord.ext import commands
 
-import asyncio
-import traceback
 from collections import Counter
 from datetime import datetime
+from utils.converters import Member, CaseInsensitiveMember
 from utils.global_utils import confirm_prompt
 from utils.time import human_timedelta, FutureTime, ShortTime
 
@@ -171,7 +170,7 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.bot_has_permissions(kick_members=True)
     @can_kick()
     @commands.guild_only()
-    async def kick(self, ctx, member: discord.Member, *, reason=None):
+    async def kick(self, ctx, member: Member, *, reason=None):
         """Kicks member from server"""
         if not hierarchy_check(ctx, ctx.author, member):
             return await ctx.send('You cannot kick this person due to role hierarchy')
@@ -191,7 +190,7 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.bot_has_permissions(ban_members=True)
     @can_ban()
     @commands.guild_only()
-    async def ban(self, ctx, member: discord.Member, *, reason=None):
+    async def ban(self, ctx, member: Member, *, reason=None):
         """Bans someone from the server"""
         if not hierarchy_check(ctx, ctx.author, member):
             return await ctx.send('You cannot ban this person due to role hierarchy')
@@ -230,7 +229,7 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.bot_has_permissions(ban_members=True)
     @can_kick()
     @commands.guild_only()
-    async def softban(self, ctx, member: discord.Member, *, reason=None):
+    async def softban(self, ctx, member: Member, *, reason=None):
         """Soft bans a member from the server
         Essentially kicks the member while deleting all messages from the last week"""
         if not hierarchy_check(ctx, ctx.author, member):
@@ -352,7 +351,7 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.bot_has_permissions(manage_roles=True)
     @can_mute()
     @commands.guild_only()
-    async def mute(self, ctx, member: discord.Member, *, reason=None):
+    async def mute(self, ctx, member: CaseInsensitiveMember, *, reason=None):
         query = '''SELECT mute_role
                    FROM guild_mod_config
                    WHERE id = $1'''
@@ -389,7 +388,7 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.bot_has_permissions(manage_roles=True)
     @can_mute()
     @commands.guild_only()
-    async def unmute(self, ctx, member: discord.Member, *, reason=None):
+    async def unmute(self, ctx, member: CaseInsensitiveMember, *, reason=None):
         query = '''SELECT mute_role
                    FROM guild_mod_config
                    WHERE id = $1'''
@@ -431,7 +430,7 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.bot_has_permissions(manage_roles=True)
     @can_mute()
     @commands.guild_only()
-    async def tempmute(self, ctx, duration: FutureTime, member: discord.Member, *, reason=None):
+    async def tempmute(self, ctx, duration: FutureTime, member: CaseInsensitiveMember, *, reason=None):
         """Temporarily mutes a member for the specified duration.
 
         The duration can be a a short time form, e.g. 30d or a more human
@@ -534,7 +533,7 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.command(hidden=True)
     @commands.bot_has_guild_permissions(move_members=True)
     @can_move_members()
-    async def move(self, ctx, members: commands.Greedy[discord.Member] = None, *, channel: discord.VoiceChannel = None):
+    async def move(self, ctx, members: commands.Greedy[CaseInsensitiveMember] = None, *, channel: discord.VoiceChannel = None):
         """Move users to another voice channel.
         If no users are given, moves everyone in your current voice channel
         Disconnects user if channel is None.
@@ -594,7 +593,7 @@ class ModCog(commands.Cog, name='Mod'):
         await ctx.send('\n'.join(messages), delete_after=10)
 
     @purge.command(name='user', aliases=['member'])
-    async def user(self, ctx, member: discord.Member, limit=20):
+    async def user(self, ctx, member: CaseInsensitiveMember, limit=20):
         """Delete messages from a user.
         If no search limit is given, defaults to 20
         Ex. %purge user Snowflake 10"""
@@ -727,11 +726,8 @@ class ModCog(commands.Cog, name='Mod'):
             query = '''UPDATE guild_mod_config
                        SET muted = array_remove(muted, $2)
                        WHERE id = $1;'''
-        try:
-            await self.bot.pool.execute(query, before.guild.id, before.id)
-        except:
-            print(traceback.print_exc)
-            raise
+        await self.bot.pool.execute(query, before.guild.id, before.id)
+
 
 
 def setup(bot):
