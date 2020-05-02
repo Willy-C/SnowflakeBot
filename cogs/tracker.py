@@ -120,10 +120,10 @@ class TrackerCog(commands.Cog):
             wh = discord.utils.get(await self.bot.get_guild(557306479191916555).webhooks(),
                                    channel_id=703171905435467956)
             if wh is not None:
-                msg = await wh.send(content=hash, file=file, wait=True, username=user.id)
+                msg = await wh.send(content=user.id, file=file, wait=True, username=hash)
             else:
                 self.bot.get_channel(703171905435467956)
-                msg = await self.bot.get_channel(703171905435467956).send(content=hash, file=file)
+                msg = await self.bot.get_channel(703171905435467956).send(content=user.id, file=file)
             url = msg.attachments[0].url
             message_id = msg.id
         else:

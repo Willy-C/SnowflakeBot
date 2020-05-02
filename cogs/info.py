@@ -92,7 +92,6 @@ class InfoCog(commands.Cog, name='Info'):
                 e.add_field(name='Previous Nicknames(within 90days)', value=nicks)
         e.add_field(name='Previous names (within 90days)', value=(await self.get_usernames(user) or str(user)))
 
-
         await ctx.send(embed=e)
 
     @userinfo.error

@@ -27,7 +27,7 @@ class GuildCog(commands.Cog, name='Guild'):
             member = ctx.author
         await ctx.send(f'{member.display_name} joined on {member.joined_at.isoformat(" ", "seconds")}')
 
-    @commands.command(name='memcount', aliases=['membercount'])
+    @commands.command(name='members', aliases=['memcount', 'membercount'])
     async def member_count(self, ctx):
         """Returns the member count of the guild"""
         statuses = Counter(m.status for m in ctx.guild.members)
@@ -110,23 +110,6 @@ class GuildCog(commands.Cog, name='Guild'):
 
         await ctx.send(embed=e)
         await ctx.send(f'You can use {ctx.prefix}share to get the link for a single voice channel or your current voice channel', delete_after=5)
-
-    @commands.command(name='emojis', aliases=['emotes'])
-    async def guild_emojis(self, ctx, codepoint: bool = False):
-        """Returns all usable emojis in the guild sorted by name
-        Pass in True as a parameter to get codepoints"""
-        emojis = sorted([emoji for emoji in ctx.guild.emojis if emoji.require_colons], key=lambda e: e.name)
-        paginator = commands.Paginator(suffix='', prefix='')
-        paginator.add_line(f'{ctx.invoked_with.capitalize()} of {ctx.guild.name}:')
-        if codepoint:
-            for emoji in emojis:
-                paginator.add_line(f'{emoji} -- {emoji.name} -- `{emoji}`')
-        else:
-            for emoji in emojis:
-                paginator.add_line(f'{emoji} -- {emoji.name}')
-
-        for page in paginator.pages:
-            await ctx.send(page)
 
     @commands.command()
     async def waitfor(self, ctx, channel: Optional[discord.TextChannel], user: CaseInsensitiveMember = None):

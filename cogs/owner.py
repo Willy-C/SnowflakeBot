@@ -184,6 +184,15 @@ class OwnerCog(commands.Cog, name='Owner'):
         await ctx.message.add_reaction('\U0001f620')
         await ctx.bot.logout()
 
+    @commands.command(name='guilds')
+    async def get_shared_guilds(self, ctx, user: discord.User):
+        shared = []
+        for guild in self.bot.guilds:
+            if guild.get_member(user.id) is not None:
+                shared.append(guild)
+        fmt = "\n".join([f"{guild.name} - {guild.id}" for guild in shared])
+        await ctx.send(f'```\nShared guilds with {user}\n{fmt}\n```')
+
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
         bots = sum([1 for m in guild.members if m.bot])
