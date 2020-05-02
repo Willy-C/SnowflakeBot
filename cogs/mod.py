@@ -6,7 +6,7 @@ import traceback
 from collections import Counter
 from datetime import datetime
 from utils.global_utils import confirm_prompt
-from utils.time import human_timedelta
+from utils.time import human_timedelta, FutureTime, ShortTime
 
 
 # Checks
@@ -248,7 +248,6 @@ class ModCog(commands.Cog, name='Mod'):
         else:
             await ctx.send('\U0001f44d')
 
-
     async def set_muterole_perms(self, ctx, role):
         reason = f'Setting mute role permissions. Done by: {ctx.author} ({ctx.author.id})'
         done = 0
@@ -406,7 +405,7 @@ class ModCog(commands.Cog, name='Mod'):
             return await ctx.send(f'Unable to unmute, please move my role above the Muted role')
 
         if not hierarchy_check(ctx, ctx.author, member):
-            return await ctx.send('You cannot mute this person due to role hierarchy')
+            return await ctx.send('You cannot unmute this person due to role hierarchy')
 
         if role not in member.roles:
             return await ctx.send(f'{member} is not muted.\n'
@@ -429,78 +428,108 @@ class ModCog(commands.Cog, name='Mod'):
             await self.bot.pool.execute(remove_query, ctx.guild.id, member.id)
 
     @commands.command()
-    @commands.bot_has_permissions(manage_channels=True)
-    @can_manage_channels()
+    @commands.bot_has_permissions(manage_roles=True)
+    @can_mute()
     @commands.guild_only()
-    async def block(self, ctx, member: discord.Member, *, reason=None):
-        """Blocks a user from sending messages to the current channel"""
+    async def tempmute(self, ctx, duration: FutureTime, member: discord.Member, *, reason=None):
+        """Temporarily mutes a member for the specified duration.
+
+        The duration can be a a short time form, e.g. 30d or a more human
+        duration such as "until thursday at 3PM" or a more concrete time
+        such as "2024-12-31".
+
+        Note: Times are in UTC.
+        """
+        query = '''SELECT mute_role
+                   FROM guild_mod_config
+                   WHERE id = $1'''
+        config = await self.bot.pool.fetchrow(query, ctx.guild.id)
+
+        if config is None or ctx.guild.get_role(config.get('mute_role')) is None:
+            return await ctx.send(f'Unable to find mute role!\n'
+                                  f'Please use `{ctx.prefix}createmute` to create the role with the appropriate permissions\n'
+                                  f'or use `{ctx.prefix}config role mute` to set an existing role as your mute role')
+        role = ctx.guild.get_role(config.get('mute_role'))
+        if ctx.me.top_role < role:
+            return await ctx.send(f'Unable to mute, please move my role above the Muted role')
+
+        if not hierarchy_check(ctx, ctx.author, member):
+            return await ctx.send('You cannot mute this person due to role hierarchy')
+
+        timer = self.bot.get_cog('Reminders')
+        if timer is None:
+            return await ctx.send('Sorry this command is not available at the moment')
 
         if reason is None:
-            reason = f'Blocked {member}. Done by: {ctx.author} ({ctx.author.id})'
+            reason = f'Tempmuted. Done by: {ctx.author} ({ctx.author.id})'
         else:
             reason = f'{ctx.author} ({ctx.author.id}): {reason}'
-
-
-        try:
-            ow = ctx.channel.overwrites_for(member)
-            ow.send_messages = False
-            ow.add_reactions = False
-            await ctx.channel.set_permissions(member, overwrite=ow, reason=reason)
-        except:
-            await ctx.send('\U0001f44e') # Thumbs Down
-        else:
-            await ctx.send('\U0001f44d') # Thumbs Up
+        await member.add_roles(role, reason=reason)
+        now = datetime.utcnow()
+        await timer.create_timer(duration.dt, member, ctx.guild.id, ctx.author.id, reason, 'tempmute', start=now)
+        await ctx.send(f'Muted {member} for {human_timedelta(duration.dt)}')
 
     @commands.command()
-    @commands.bot_has_permissions(manage_channels=True)
-    @can_manage_channels()
+    @commands.bot_has_permissions(manage_roles=True)
     @commands.guild_only()
-    async def unblock(self, ctx, member: discord.Member, *, reason=None):
-        """Unblocks a user from the current channel"""
+    async def selfmute(self, ctx, *, duration: ShortTime):
+        """Temporarily mutes yourself for the specified duration.
 
-        if reason is None:
-            reason = f'Unblocked {member}. Done by: {ctx.author} ({ctx.author.id})'
-        else:
-            reason = f'{ctx.author} ({ctx.author.id}): {reason}'
+        The duration must be in a short time form, e.g. 4h
+        """
+        query = '''SELECT mute_role
+                   FROM guild_mod_config
+                   WHERE id = $1'''
+        config = await self.bot.pool.fetchrow(query, ctx.guild.id)
 
+        if config is None or ctx.guild.get_role(config.get('mute_role')) is None:
+            return await ctx.send(f'Unable to find mute role!\n'
+                                  f'Please use `{ctx.prefix}createmute` to create the role with the appropriate permissions\n'
+                                  f'or use `{ctx.prefix}config role mute` to set an existing role as your mute role')
+        role = ctx.guild.get_role(config.get('mute_role'))
+        if ctx.me.top_role < role:
+            return await ctx.send(f'Unable to mute, please move my role above the Muted role')
+
+        timer = self.bot.get_cog('Reminders')
+        if timer is None:
+            return await ctx.send('Sorry this command is not available at the moment')
+
+        time = human_timedelta(duration.dt)
+        if not await confirm_prompt(ctx, f'Are you sure you want to self-mute for **{time}**?'):
+            return
+        reason = f'Self-mute for {time}'
+        await ctx.author.add_roles(role, reason=reason)
+        await timer.create_timer(duration.dt, ctx.author, ctx.guild.id, ctx.author.id, reason, 'tempmute')
+        await ctx.send(f'Ok, you are muted for {time}')
+
+    @commands.Cog.listener()
+    async def on_tempmute_complete(self, timer):
         try:
-            ow = ctx.channel.overwrites_for(member)
-            ow.send_messages = None
-            ow.add_reactions = None
-            await ctx.channel.set_permissions(member, overwrite=ow, reason=reason) # Doing this first instead of just deleting when empty so it shows up on audit logs
-            if ow.is_empty():
-                await ctx.channel.set_permissions(member, overwrite=None) # reason does not work here
+            guild = self.bot.get_guild(timer['channel'])
+            if guild is None:
+                return
+            member = guild.get_member(timer['user'])
+            if member is None:
+                return
+            query = '''SELECT mute_role
+                       FROM guild_mod_config
+                       WHERE id = $1'''
+            config = await self.bot.pool.fetchrow(query, guild.id)
+            if config is None or guild.get_role(config.get('mute_role')) is None:
+                return
+            role = guild.get_role(config.get('mute_role'))
+            if timer['message'] == timer['user']:
+                reason = 'Self-mute expired'
+            else:
+                reason = f'Tempmute expired'
+            await member.remove_roles(role, reason=reason)
         except:
-            await ctx.send('\U0001f44e') # Thumbs Down
-        else:
-            await ctx.send('\U0001f44d') # Thumbs Up
-
-    @commands.command(hidden=True)
-    @commands.bot_has_permissions(manage_channels=True)
-    @can_manage_channels()
-    @commands.guild_only()
-    async def tempblock(self, ctx, member: discord.Member, seconds: int, *, reason=None):
-        if reason is None:
-            reason = f'Tempblocked {member} for {seconds}s. Done by: {ctx.author} ({ctx.author.id})'
-        else:
-            reason = f'{ctx.author} ({ctx.author.id}) tempblock for {seconds}s: {reason}'
-
-        try:
-            ow = ctx.channel.overwrites_for(member)
-            ow.send_messages = False
-            await ctx.channel.set_permissions(member, overwrite=ow, reason=reason)
-        except:
-            await ctx.send('\U0001f44e') # Thumbs Down
-        else:
-            await ctx.send('\U0001f44d') # Thumbs Up
-
-        await asyncio.sleep(seconds)
-
-        ow = ctx.channel.overwrites_for(member)
-        ow.send_messages = None
-        await ctx.channel.set_permissions(member, overwrite=ow, reason=f'{member} auto unblocked after {seconds}s | by {ctx.author} ({ctx.author.id})')
-        if ow.is_empty():
-            await ctx.channel.set_permissions(member, overwrite=None)
+            pass
+        finally:
+            remove_query = '''UPDATE guild_mod_config
+                           SET muted = array_remove(muted, $2)
+                           WHERE id = $1;'''
+            await self.bot.pool.execute(remove_query, guild.id, timer['user'])
 
     @commands.command(hidden=True)
     @commands.bot_has_guild_permissions(move_members=True)

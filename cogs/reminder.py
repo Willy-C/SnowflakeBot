@@ -75,14 +75,15 @@ class ReminderCog(commands.Cog, name='Reminders'):
 
     async def create_timer(self, end, user, channel, message, content=None, event='reminder', start=None):
         now = start or datetime.datetime.utcnow()
-        channel_id = channel.id if isinstance(channel, discord.TextChannel) else None
+        channel_id = channel if isinstance(channel, int) else getattr(channel, 'id', None)
+        message_id = message if isinstance(message, int) else getattr(message, 'id', None)
         delta = (end - now).total_seconds()
         if delta <= 60:
-            self.bot.loop.create_task(self.short_timer(delta, user.id, channel_id, message.id, content, event))
+            self.bot.loop.create_task(self.short_timer(delta, user.id, channel_id, message_id, content, event))
             return
         query = """INSERT INTO reminders (start, "end", "user", channel, message, content, event)
                    VALUES ($1, $2, $3, $4, $5, $6, $7);"""
-        await self.bot.pool.execute(query, now, end, user.id, channel_id, message.id, content, event)
+        await self.bot.pool.execute(query, now, end, user.id, channel_id, message_id, content, event)
         if delta <= (86400 * 40):  # 40 days
             self.have_timer.set()
 
