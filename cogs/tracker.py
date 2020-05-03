@@ -55,7 +55,7 @@ class TrackerCog(commands.Cog):
             if user.id not in data:
                 await self.log_username(user)
                 new += 1
-        print(f'Added {new} users\' names\n')
+        print(f'Added {new} users\' names')
 
     @commands.Cog.listener()
     async def on_member_join(self, member):

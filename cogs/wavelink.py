@@ -93,18 +93,16 @@ class Player(wavelink.Player):
         self._updater = bot.loop.create_task(self.updater())
 
     async def destroy(self):
+        self._loop.cancel()
         try:
-            self._loop.cancel()
-        except asyncio.TimeoutError:
-            pass
-        finally:
             self._loop.exception()
-        try:
-            self._updater.cancel()
-        except asyncio.TimeoutError:
+        except asyncio.InvalidStateError:
             pass
-        finally:
+        self._updater.cancel()
+        try:
             self._updater.exception()
+        except asyncio.InvalidStateError:
+            pass
         return await super().destroy()
 
     @property
@@ -543,7 +541,7 @@ class Music(commands.Cog):
         try:
             if not player.is_connected or (player.is_connected and ctx.author.voice and ctx.author.voice.channel != ctx.guild.me.voice.channel):
                 await ctx.invoke(self.connect_)
-        except AttributeError: # try-except here because for some reason it can be connected but .voice is None
+        except AttributeError:  # try-except here because for some reason it can be connected but .voice is None
             await ctx.invoke(self.connect_)
 
         if not player.is_connected:
