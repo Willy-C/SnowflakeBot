@@ -97,10 +97,14 @@ class Player(wavelink.Player):
             self._loop.cancel()
         except asyncio.TimeoutError:
             pass
+        finally:
+            self._loop.exception()
         try:
             self._updater.cancel()
         except asyncio.TimeoutError:
             pass
+        finally:
+            self._updater.exception()
         return await super().destroy()
 
     @property
@@ -322,7 +326,7 @@ class Music(commands.Cog):
         self.bot = bot
         self.players = {}
         if not hasattr(bot, 'wavelink'):
-            self.bot.wavelink = wavelink.Client(bot)
+            self.bot.wavelink = wavelink.Client(bot=bot)
 
         bot.loop.create_task(self.initiate_nodes())
         bot.loop.create_task(self.set_noafks())
