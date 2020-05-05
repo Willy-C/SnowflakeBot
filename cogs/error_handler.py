@@ -95,19 +95,18 @@ class CommandErrorHandler(commands.Cog):
         await self.owner.send(embed=e)
         fmt = "".join(tb)
         if len(fmt) >= 1980:
-            url = await upload_hastebin(ctx, "".join(tb))
+            url = await upload_hastebin(ctx, fmt)
             await self.owner.send(f'Traceback too long. {url}')
         else:
-            await self.owner.send(f'```py\n{"".join(tb)}```')
+            await self.owner.send(f'```py\n{fmt}```')
 
     async def on_error(self, event, *args, **kwargs):
         await self.bot.wait_until_ready()
         await self.owner.send(f'An error occurred in event `{event}`')
-        try:
-            await self.owner.send(f'```py\n{"".join(traceback.format_exc())}```')
-        except:
-            async with self.bot.session.post('https://mystb.in/documents', data="".join(traceback.format_exc()).encode('utf-8')) as post:
-                await self.owner.send(f'Traceback too long. https://mystb.in/{(await post.json())["key"]}')
+        tb = "".join(traceback.format_exc())
+        if len(tb) >= 1980:
+            url = await upload_hastebin(self.bot, tb)
+            await self.owner.send(f'Traceback too long. {url}')
 
 
 def setup(bot):

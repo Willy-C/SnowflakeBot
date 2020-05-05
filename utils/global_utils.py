@@ -100,21 +100,22 @@ async def is_image(ctx, url):
         return False
 
 
-async def upload_hastebin(ctx, content, url='https://hastebin.com'):
+async def upload_hastebin(ctx_or_bot, content, url='https://mystb.in'):
     """Uploads content to hastebin"""
+    bot = ctx_or_bot if isinstance(ctx_or_bot, commands.Bot) else ctx_or_bot.bot
     try:
-        async with ctx.bot.session.post(f'{url}/documents', data=content.encode('utf-8')) as post:
+        async with bot.session.post(f'{url}/documents', data=content.encode('utf-8')) as post:
             return f'{url}/{(await post.json())["key"]}'
     except:
         try:
-            url = 'https://mystb.in'
-            async with ctx.bot.session.post(f'{url}/documents', data=content.encode('utf-8')) as post:
+            url = 'https://hastebin.com'
+            async with bot.session.post(f'{url}/documents', data=content.encode('utf-8')) as post:
                 return f'{url}/{(await post.json())["key"]}'
         except:
             traceback.print_exc()
 
 
-async def send_or_hastebin(ctx, content, code=None, url='https://hastebin.com'):
+async def send_or_hastebin(ctx, content, code=None, url='https://mystb.in'):
     """Sends to ctx.channel if possible, upload to hastebin if too long"""
     if code is not None:
         cb = f'```{code}\n{content}\n```'
