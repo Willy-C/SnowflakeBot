@@ -62,30 +62,81 @@ class OwnerCog(commands.Cog, name='Owner'):
         else:
             await ctx.send(f'**`SUCCESS`** reloaded {cog}')
 
-    @commands.command(name='presence')
-    async def change_presence(self, ctx, _type: str, *, name: Optional[str]):
-        activities = {'L': discord.Activity(name=name, type=discord.ActivityType.listening),
-                      'P': discord.Game(name=name),
-                      'S': discord.Streaming(name=name, url='https://www.twitch.tv/directory'),
-                      'W': discord.Activity(name=name, type=discord.ActivityType.watching),
-                      'N': None,
-                      'Default': discord.Activity(type=discord.ActivityType.listening, name='you :)')}
+    @commands.group(name='presence', invoke_without_command=True, case_insensitive=True)
+    async def change_presence(self, ctx):
+        await ctx.send_help(ctx.command)
 
-        statuses = {'Online': discord.Status.online,
-                    'Offline': discord.Status.invisible,
-                    'Idle': discord.Status.idle,
-                    'DND': discord.Status.dnd}
-
-        if _type in activities:
-            await self.bot.change_presence(activity=activities[_type])
-            await ctx.send('Changing my activity...')
-        elif _type in statuses:
-            await self.bot.change_presence(status=statuses[_type])
-            await ctx.send('Changing my status...')
+    @change_presence.command(name='listen', aliases=['l'])
+    async def listen(self, ctx, *, name):
+        if ctx.guild is None:
+            botmember = self.bot.guilds[0].me
         else:
-            await ctx.send('The specified presence cannot be found\n'
-                           '```Activity: L | P | S | W | N | Default\n'
-                           'Status: Online | Offline | Idle | DND```')
+            botmember = ctx.me
+        status = botmember.status
+        await self.bot.change_presence(activity=discord.Activity(name=name, type=discord.ActivityType.listening),
+                                       status=status)
+        await ctx.message.add_reaction('\u2705')
+
+    @change_presence.command(name='playing', aliases=['play', 'p'])
+    async def playing(self, ctx, *, name):
+        if ctx.guild is None:
+            botmember = self.bot.guilds[0].me
+        else:
+            botmember = ctx.me
+        status = botmember.status
+        await self.bot.change_presence(activity=discord.Game(name=name), status=status)
+        await ctx.message.add_reaction('\u2705')
+
+    @change_presence.command(name='streaming', aliases=['s'])
+    async def streaming(self, ctx, name, url=None):
+        if ctx.guild is None:
+            botmember = self.bot.guilds[0].me
+        else:
+            botmember = ctx.me
+        status = botmember.status
+        url = url or 'https://www.twitch.tv/directory'
+        await self.bot.change_presence(discord.Streaming(name=name, url=url), status=status)
+        await ctx.message.add_reaction('\u2705')
+
+    @change_presence.command(name='watching', aliases=['w'])
+    async def watching(self, ctx, *, name):
+        if ctx.guild is None:
+            botmember = self.bot.guilds[0].me
+        else:
+            botmember = ctx.me
+        status = botmember.status
+        await self.bot.change_presence(activity=discord.Activity(name=name, type=discord.ActivityType.watching),
+                                       status=status)
+        await ctx.message.add_reaction('\u2705')
+
+    @change_presence.command(name='status')
+    async def status(self, ctx, status):
+        statuses = {'online': discord.Status.online,
+                    'offline': discord.Status.invisible,
+                    'invis': discord.Status.invisible,
+                    'invisible': discord.Status.invisible,
+                    'idle': discord.Status.idle,
+                    'dnd': discord.Status.dnd}
+        status = status.lower()
+        if status not in statuses:
+            return await ctx.send(f'Not a valid status! Choose: [{", ".join(statuses.keys())}]')
+        if ctx.guild is None:
+            botmember = self.bot.guilds[0].me
+        else:
+            botmember = ctx.me
+        activity = botmember.activity
+        await self.bot.change_presence(status=statuses[status], activity=activity)
+        await ctx.message.add_reaction('\u2705')
+
+    @change_presence.command()
+    async def clear(self, ctx):
+        await self.bot.change_presence()
+        await ctx.message.add_reaction('\u2705')
+
+    @change_presence.command()
+    async def reset(self, ctx):
+        await self.bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name='you :)'))
+        await ctx.message.add_reaction('\u2705')
 
     @commands.command(name='eval')
     async def _eval(self, ctx, *, code: str):

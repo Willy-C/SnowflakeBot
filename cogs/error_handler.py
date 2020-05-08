@@ -107,6 +107,8 @@ class CommandErrorHandler(commands.Cog):
         if len(tb) >= 1980:
             url = await upload_hastebin(self.bot, tb)
             await self.owner.send(f'Traceback too long. {url}')
+        else:
+            await self.owner.send(f'```py\n{tb}```')
 
 
 def setup(bot):
