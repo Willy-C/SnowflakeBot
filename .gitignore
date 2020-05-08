@@ -109,3 +109,4 @@ venv.bak/
 config.py
 logger.py
 /deprecated/googleimage.py
+avatars.py

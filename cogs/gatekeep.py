@@ -5,10 +5,10 @@ from datetime import datetime
 from utils.time import human_timedelta
 from utils.converters import CaseInsensitiveMember
 
-GUILD_ID = 645121189815255058
-VERIFIED_ROLE = 645122149023219712
-JOIN_CHANNEL = 645121189815255062
-GENERAL = 645122256892198922
+GUILD_ID = 561073510127108096
+VERIFIED_ROLE = 708140426951131186
+JOIN_CHANNEL = 708165506972123168
+GENERAL = 708144311711039549
 
 
 class Gatekeep(commands.Cog):
@@ -107,7 +107,7 @@ class Gatekeep(commands.Cog):
 
         perms_query = '''SELECT * FROM gatekeep WHERE id=$1'''
         record = self.bot.pool.fetchrow(perms_query, ctx.author.id)
-        if record.get('level') is None:
+        if record.get('level') is None or record.get('level') != 'admin':
             await ctx.send('Sorry, you do not have permission to unverify users.')
             return
 

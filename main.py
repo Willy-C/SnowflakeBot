@@ -30,7 +30,7 @@ startup_extensions = ['jishaku',
                       'cogs.wavelink',
                       'cogs.wash',
                       # 'cogs.vi',
-                      # 'cogs.gatekeep',
+                      'cogs.gatekeep',
                       'cogs.reddit',
                       'cogs.emoji',
                       'cogs.waifu2x',
@@ -38,7 +38,8 @@ startup_extensions = ['jishaku',
                       'cogs.reminder',
                       'cogs.timezone',
                       'cogs.tracker',
-                      'cogs.guild_config']
+                      'cogs.guild_config',
+                      'cogs.avatars']
 
 
 def get_prefix(bot, message):
