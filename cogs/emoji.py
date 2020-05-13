@@ -38,7 +38,7 @@ class EmojiCog(commands.Cog, name='Emoji'):
     @commands.guild_only()
     async def create_emoji(self, ctx, name, url):
         url = url.split('?')[0]
-        if not is_image(ctx, url, gif=True):
+        if not await is_image(ctx, url, gif=True):
             return await ctx.send('Invalid file type! Must be one of the following: `.png .jpeg .jpg .gif`')
 
         if url.endswith('.gif'):
