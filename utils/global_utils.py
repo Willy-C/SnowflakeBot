@@ -91,8 +91,10 @@ async def last_image(ctx):
                 return attachment.proxy_url
 
 
-async def is_image(ctx, url):
+async def is_image(ctx, url, gif=False):
     image_formats = ('image/png', 'image/jpeg', 'image/jpg')
+    if gif:
+        image_formats += ('image/gif',)
     try:
         async with ctx.bot.session.head(url) as resp:
             return resp.headers['Content-Type'] in image_formats

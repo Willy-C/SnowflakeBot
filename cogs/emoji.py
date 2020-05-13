@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 
+from utils.global_utils import is_image
 import random
 from typing import Union
 
@@ -37,7 +38,7 @@ class EmojiCog(commands.Cog, name='Emoji'):
     @commands.guild_only()
     async def create_emoji(self, ctx, name, url):
         url = url.split('?')[0]
-        if not url.endswith(('.png', '.jpeg', '.jpg', '.gif')):
+        if not is_image(ctx, url, gif=True):
             return await ctx.send('Invalid file type! Must be one of the following: `.png .jpeg .jpg .gif`')
 
         if url.endswith('.gif'):
