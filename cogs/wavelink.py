@@ -93,15 +93,15 @@ class Player(wavelink.Player):
         self._updater = bot.loop.create_task(self.updater())
 
     async def destroy(self):
-        self._loop.cancel()
         try:
+            self._loop.cancel()
             self._loop.exception()
-        except asyncio.InvalidStateError:
+        except (asyncio.InvalidStateError, asyncio.CancelledError):
             pass
-        self._updater.cancel()
         try:
+            self._updater.cancel()
             self._updater.exception()
-        except asyncio.InvalidStateError:
+        except (asyncio.InvalidStateError, asyncio.CancelledError):
             pass
         return await super().destroy()
 
@@ -984,7 +984,7 @@ class Music(commands.Cog):
         if eq.upper() not in player.equalizers:
             return await ctx.send(f'`{eq}` - Is not a valid equalizer!\nTry Flat, Boost, Metal, Piano.')
 
-        await player.set_eq(eq)
+        await player.set_eq(player.equalizers.get(eq.upper()))
         player.eq = eq.capitalize()
         await ctx.send(f'The player Equalizer was set to - {eq.capitalize()} - {ctx.author.mention}')
         if not player.updating and not player.update:
