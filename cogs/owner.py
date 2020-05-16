@@ -305,7 +305,7 @@ class OwnerCog(commands.Cog, name='Owner'):
         query = '''DELETE FROM blacklist
                    WHERE id = $1;'''
         await self.bot.pool.execute(query, member_or_guild.id)
-        if isinstance(member_or_guild, discord.User):
+        if isinstance(member_or_guild, (discord.User, discord.Member)):
             try:
                 self._blacklist.remove(member_or_guild.id)
             except KeyError:
