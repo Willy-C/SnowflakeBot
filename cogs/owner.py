@@ -254,7 +254,7 @@ class OwnerCog(commands.Cog, name='Owner'):
                    FROM blacklist
                    WHERE type="user";'''
         records = await self.bot.fetch(query)
-        self.blacklist = {record['id'] for record in records}
+        self._blacklist = {record['id'] for record in records}
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
@@ -316,7 +316,7 @@ class OwnerCog(commands.Cog, name='Owner'):
             return await ctx.send('Unable to find that person/guild')
 
     async def bot_check(self, ctx):
-        if ctx.author.id in self.blacklist:
+        if ctx.author.id in self._blacklist:
             raise BlacklistedUser
         return True
 
