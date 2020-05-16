@@ -249,11 +249,10 @@ class OwnerCog(commands.Cog, name='Owner'):
     # Blacklist stuff
 
     async def get_blacklist(self):
-        await self.bot.wait_until_ready()
         query = '''SELECT id
                    FROM blacklist
-                   WHERE type="user";'''
-        records = await self.bot.fetch(query)
+                   WHERE type='user';'''
+        records = await self.bot.pool.fetch(query)
         self._blacklist = {record['id'] for record in records}
 
     @commands.Cog.listener()
@@ -297,6 +296,7 @@ class OwnerCog(commands.Cog, name='Owner'):
         query = '''INSERT INTO blacklist(id, type, reason)
                    VALUES($1, 'user', $2);'''
         await self.bot.pool.execute(query, member.id, reason)
+        self._blacklist.add(member.id)
         await ctx.send(f'Ignoring {member}')
         await ctx.message.add_reaction('\U00002705')
 
@@ -305,6 +305,11 @@ class OwnerCog(commands.Cog, name='Owner'):
         query = '''DELETE FROM blacklist
                    WHERE id = $1;'''
         await self.bot.pool.execute(query, member_or_guild.id)
+        if isinstance(member_or_guild, discord.User):
+            try:
+                self._blacklist.remove(member_or_guild.id)
+            except KeyError:
+                pass
         await ctx.send(f'Unignoring {member_or_guild}')
         await ctx.message.add_reaction('\U00002705')
 
