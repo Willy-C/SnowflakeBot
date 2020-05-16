@@ -457,8 +457,11 @@ class Music(commands.Cog):
         player = self.bot.wavelink.get_player(ctx.guild.id, cls=Player)
 
         if player.is_connected:
-            if ctx.author.voice.channel == ctx.guild.me.voice.channel:
-                return
+            try:
+                if ctx.author.voice.channel == ctx.guild.me.voice.channel:
+                    return
+            except AttributeError:
+                pass
 
         await player.connect(channel.id)
 
@@ -872,6 +875,8 @@ class Music(commands.Cog):
         if vol > 100:
             vol = 100
             await ctx.send('Maximum volume reached', delete_after=7)
+            if player.volume >= 100:
+                return
         else:
             await ctx.send(f'{ctx.author.mention} has raised the volume!', delete_after=7)
 

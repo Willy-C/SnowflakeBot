@@ -10,7 +10,7 @@ class EmojiCog(commands.Cog, name='Emoji'):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.group(invoke_without_command=True, case_insensitive=True)
+    @commands.group(invoke_without_command=True, case_insensitive=True, aliases=['emotes'])
     async def emoji(self, ctx):
         await ctx.send_help(ctx.command)
 
@@ -63,7 +63,7 @@ class EmojiCog(commands.Cog, name='Emoji'):
             else:
                 await ctx.message.add_reaction('\U00002705')
 
-    @emoji.command(name='list', aliases=['emotes'])
+    @emoji.command(name='list')
     async def guild_emojis(self, ctx, codepoint: bool = False):
         """Returns all usable emojis in the guild sorted by name
         Pass in True as a parameter to get codepoints"""
@@ -72,7 +72,7 @@ class EmojiCog(commands.Cog, name='Emoji'):
             return
         emojis = sorted([emoji for emoji in ctx.guild.emojis if emoji.require_colons], key=lambda e: e.name)
         paginator = commands.Paginator(suffix='', prefix='')
-        paginator.add_line(f'{ctx.invoked_with.capitalize()} of {ctx.guild.name}:')
+        paginator.add_line(f'Emojis of {ctx.guild.name}:')
         if codepoint:
             for emoji in emojis:
                 paginator.add_line(f'{emoji} -- {emoji.name} -- `{emoji}`')

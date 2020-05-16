@@ -11,7 +11,7 @@ from asyncpg import UniqueViolationError
 from utils.global_utils import confirm_prompt
 
 
-class HighlightCog(commands.Cog, name='Highlight'):
+class HighlightCog(commands.Cog, name='Highlights'):
 
     def __init__(self, bot):
         self.bot = bot

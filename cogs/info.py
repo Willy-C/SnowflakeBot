@@ -135,7 +135,7 @@ class InfoCog(commands.Cog, name='Info'):
         names = {record['name'] for record in records}
         if not names:
             return await ctx.send(f'Unable to find nicknames for {member} in this server')
-        await ctx.send(f'Names of {member}:\n'
+        await ctx.send(f'Nicknames of {member} on `{ctx.guild}`:\n'
                        f'{", ".join(names)}')
 
     @userinfo.error
