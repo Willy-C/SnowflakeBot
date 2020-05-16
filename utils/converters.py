@@ -50,6 +50,18 @@ class CachedUserID(commands.Converter):
         return user
 
 
+class CachedGuildID(commands.Converter):
+    async def convert(self, ctx, argument):
+        try:
+            guild = ctx.bot.get_guild(int(argument))
+        except ValueError:
+            raise commands.BadArgument('That is not a valid ID')
+
+        if guild is None:
+            raise commands.BadArgument(f'Unable to find Guild with ID {argument}')
+        return guild
+
+
 class Timezone(commands.Converter):
     async def convert(self, ctx, argument):
         if argument.lower() in ('pst', 'pdt'):

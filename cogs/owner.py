@@ -8,9 +8,10 @@ import textwrap
 import tabulate
 import traceback
 from collections import Counter
-from typing import Optional
+from typing import Optional, Union
 from contextlib import redirect_stdout
-from utils.converters import CaseInsensitiveUser
+from utils.errors import BlacklistedUser
+from utils.converters import CaseInsensitiveUser, CaseInsensitiveMember, CachedUserID, CachedGuildID
 from utils.global_utils import confirm_prompt, cleanup_code, copy_context, upload_hastebin, send_or_hastebin
 
 
@@ -18,6 +19,7 @@ class OwnerCog(commands.Cog, name='Owner'):
     def __init__(self, bot):
         self.bot = bot
         self._last_result = None
+        bot.loop.create_task(self.get_blacklist())
 
     # Applies commands.is_owner() check for all methods in this cog
     async def cog_check(self, ctx):
@@ -244,11 +246,21 @@ class OwnerCog(commands.Cog, name='Owner'):
         fmt = "\n".join([f"{guild.name} - {guild.id}" for guild in shared])
         await ctx.send(f'```\nShared guilds with {user}\n{fmt}\n```')
 
+    # Blacklist stuff
+
+    async def get_blacklist(self):
+        await self.bot.wait_until_ready()
+        query = '''SELECT id
+                   FROM blacklist
+                   WHERE type="user";'''
+        records = await self.bot.fetch(query)
+        self.blacklist = {record['id'] for record in records}
+
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
         bots = sum([1 for m in guild.members if m.bot])
         bot_ratio = (bots / guild.member_count) * 100
-        if guild.member_count > 25 and bot_ratio > 50:
+        if guild.member_count > 25 and bot_ratio > 70:
             try:
                 await guild.owner.send(f'The server `{guild}` has been flagged as a bot collection/farm. I will now leave the server.\n'
                                        f'If you believe this is a mistake please contact my owner.')
@@ -259,6 +271,54 @@ class OwnerCog(commands.Cog, name='Owner'):
                                                   f'If you believe this is a mistake please contact my owner.')
             finally:
                 await guild.leave()
+
+            query = '''INSERT INTO blacklist(id, type, reason)
+                       VALUES($1, 'guild', 'bot farm');'''
+            await self.bot.execute(query)
+            return
+        query = '''SELECT id
+                   FROM blacklist
+                   WHERE id=$1 AND type='guild';'''
+        record = await self.bot.pool.fetch(query, guild.id)
+        if record:
+            try:
+                await guild.owner.send(f'This server is blacklisted, I will now leave.\n'
+                                       f'If you believe this is a mistake please contact my owner.')
+            except discord.Forbidden:
+                for channel in guild.text_channels:
+                    if channel.permissions_for(guild.me).send_messages:
+                        return await channel.send(f'This server is blacklisted, I will now leave.\n'
+                                                  f'If you believe this is a mistake please contact my owner.')
+            finally:
+                await guild.leave()
+
+    @commands.command(aliases=['ignore'])
+    async def blacklist(self, ctx, member: Union[CaseInsensitiveMember, CachedUserID], *, reason=None):
+        query = '''INSERT INTO blacklist(id, type, reason)
+                   VALUES($1, 'user', $2);'''
+        await self.bot.pool.execute(query, member.id, reason)
+        await ctx.send(f'Ignoring {member}')
+        await ctx.message.add_reaction('\U00002705')
+
+    @commands.command(aliases=['unignore'])
+    async def unblacklist(self, ctx, *, member_or_guild: Union[CaseInsensitiveMember, CachedUserID, CachedGuildID]):
+        query = '''DELETE FROM blacklist
+                   WHERE id = $1;'''
+        await self.bot.pool.execute(query, member_or_guild.id)
+        await ctx.send(f'Unignoring {member_or_guild}')
+        await ctx.message.add_reaction('\U00002705')
+
+    @blacklist.error
+    @unblacklist.error
+    async def blacklist_error(self, ctx, error):
+        if isinstance(error, commands.errors.BadUnionArgument):
+            ctx.local_handled = True
+            return await ctx.send('Unable to find that person/guild')
+
+    async def bot_check(self, ctx):
+        if ctx.author.id in self.blacklist:
+            raise BlacklistedUser
+        return True
 
 
 def setup(bot):

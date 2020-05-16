@@ -5,7 +5,7 @@ import discord
 import re
 
 from utils.global_utils import upload_hastebin
-from utils.errors import NoBlacklist, TimezoneNotFound
+from utils.errors import BlacklistedUser, TimezoneNotFound
 from .latex import TexRenderError
 
 
@@ -28,7 +28,7 @@ class CommandErrorHandler(commands.Cog):
         if getattr(ctx, 'local_handled', False):
             return
 
-        ignored = (commands.CommandNotFound, commands.CommandOnCooldown, NoBlacklist)  # Tuple of errors to ignore
+        ignored = (commands.CommandNotFound, commands.CommandOnCooldown, BlacklistedUser)  # Tuple of errors to ignore
         error = getattr(error, 'original', error)
 
         if isinstance(error, ignored):
