@@ -461,6 +461,7 @@ class Music(commands.Cog):
                 if ctx.author.voice.channel == ctx.guild.me.voice.channel:
                     return
             except AttributeError:
+                # Sometimes player.is_connected is True when bot not connected ¯\_(ツ)_/¯
                 pass
 
         await player.connect(channel.id)
@@ -690,7 +691,7 @@ class Music(commands.Cog):
 
         await player.stop()
 
-    @commands.command(name='stop')
+    @commands.command(name='stop', aliases=['leave'])
     async def stop_(self, ctx):
         """Stop the player, disconnect and clear the queue.
         """

@@ -147,10 +147,11 @@ class GeneralCog(commands.Cog, name='General'):
         messages = []
         if message:
             messages.append(message)
-        messages.extend(await ctx.channel.history(limit=25).flatten())
+        else:
+            messages.extend(await ctx.channel.history(limit=25).flatten())
         content = await self.get_txt_from_file(ctx, messages)
         if content is None:
-            return await ctx.send('Unable to find a txt file within last 25 message. Try specifying a message URL or ID')
+            return await ctx.send('Unable to find a txt file. Try specifying a message URL or ID')
         url = await upload_hastebin(ctx, content)
         await ctx.send(url)
 

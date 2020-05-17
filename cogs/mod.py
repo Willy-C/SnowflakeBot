@@ -148,7 +148,7 @@ class ModCog(commands.Cog, name='Mod'):
 
     @commands.command()
     @can_manage_messages()
-    async def clean(self, ctx, limit: int = 10):
+    async def clean(self, ctx, limit: int = 25):
         """Clean's up the bot's messages"""
         if ctx.me.permissions_in(ctx.channel).manage_messages:
             spam = await self._good_clean(ctx, limit)
