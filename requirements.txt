@@ -6,3 +6,4 @@ parsedatetime
 python-dateutil
 tabulate
 pytz
+googletrans

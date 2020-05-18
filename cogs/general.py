@@ -31,8 +31,15 @@ class GeneralCog(commands.Cog, name='General'):
         Defaults to author if no user is provided."""
 
         user = ctx.author if user is None else user  # Defaults to invoker if no user is specified
-
         avatar_url = user.avatar_url_as(static_format='png')
+
+        if user.avatar:
+            query = '''SELECT url
+                       FROM avatar_changes
+                       WHERE hash = $1'''
+            record = await self.bot.pool.fetchrow(query, user.avatar)
+            if record:
+                avatar_url = record['url']
 
         embed = discord.Embed(colour=user.colour)
         embed.set_image(url=avatar_url)
