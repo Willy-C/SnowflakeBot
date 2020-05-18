@@ -95,13 +95,11 @@ class Player(wavelink.Player):
     async def destroy(self):
         try:
             self._loop.cancel()
-            self._loop.exception()
-        except (asyncio.InvalidStateError, asyncio.CancelledError):
+        except asyncio.CancelledError:
             pass
         try:
             self._updater.cancel()
-            self._updater.exception()
-        except (asyncio.InvalidStateError, asyncio.CancelledError):
+        except asyncio.CancelledError:
             pass
         return await super().destroy()
 
@@ -134,16 +132,12 @@ class Player(wavelink.Player):
             self.inactive = False
 
             try:
-                async with timeout(300):
+                with timeout(300):
                     song = await self.queue.get()
             except asyncio.TimeoutError:
                 await self.destroy_controller()
-                try:
-                    await self.destroy()
-                except (KeyError, asyncio.CancelledError):
-                    pass
+                self.bot.loop.create_task(self.destroy())
                 return
-
             if not song:
                 await self.destroy_controller()
                 continue
@@ -178,6 +172,7 @@ class Player(wavelink.Player):
         if track is None:
             return
         self.updating = True
+        self._channel = track.channel
 
         embed = discord.Embed(title='Music Controller',
                               description=f'{"<a:eq:628825184941637652> Now Playing:" if self.is_playing and not self.paused else "⏸ PAUSED"}```ini\n{track.title}\n\n'
@@ -373,7 +368,12 @@ class Music(commands.Cog):
         if isinstance(event, wavelink.TrackEnd):
             event.player.next_event.set()
         elif isinstance(event, wavelink.TrackException):
-            print(f'{event} - {event.error}')
+            try:
+                self.bot.loop.create_task(event.player._channel.send(f'An error occurred while trying to this track. Please try again later', delete_after=10))
+            except (AttributeError, discord.HTTPException):
+                pass
+            if event.player.looping:
+                event.player.queue._queue.pop()
 
     def required(self, player, invoked_with):
         """Calculate required votes."""
