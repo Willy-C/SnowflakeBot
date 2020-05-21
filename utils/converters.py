@@ -37,7 +37,7 @@ class CaseInsensitiveUser(commands.UserConverter):
             raise errors.CaseInsensitiveUserNotFound()
         return user
 
-
+# ID only
 class CachedUserID(commands.Converter):
     async def convert(self, ctx, argument):
         try:
@@ -49,7 +49,7 @@ class CachedUserID(commands.Converter):
             raise commands.BadArgument(f'Unable to find User with ID {argument}')
         return user
 
-
+# ID only
 class CachedGuildID(commands.Converter):
     async def convert(self, ctx, argument):
         try:
