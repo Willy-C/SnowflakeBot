@@ -15,7 +15,6 @@ class Gatekeep(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         bot.loop.create_task(self.get_verified_ids())
-        self.toggle = True
         self.twom_bf_notify_loop.start()
 
     async def get_verified_ids(self):
@@ -51,8 +50,7 @@ class Gatekeep(commands.Cog):
         Example usage: `%bf ON/OFF`
 
         If neither ON or OFF is specified then defaults to ON"""
-        if toggle is None:
-            toggle = not self.toggle
+        toggle = toggle or True
 
         if toggle:
             self.twom_bf_notify_loop.cancel()
@@ -70,7 +68,7 @@ class Gatekeep(commands.Cog):
     @twom_bf_notify_loop.before_loop
     async def before_bf_loop(self):
         await self.bot.wait_until_ready()
-        td = self.calculate_sleep_time()
+        td = self.calculate_next_interval()
         seconds = (td - datetime.datetime.utcnow()).total_seconds()
         await asyncio.sleep(seconds)
 
