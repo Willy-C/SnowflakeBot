@@ -32,6 +32,9 @@ class Gatekeep(commands.Cog):
         if isinstance(error, commands.CheckFailure):
             ctx.local_handled = True
 
+    def cog_unload(self):
+        self.twom_bf_notify_loop.cancel()
+
     @commands.Cog.listener()
     async def on_member_join(self, member):
         if member.guild.id != GUILD_ID:
@@ -53,8 +56,10 @@ class Gatekeep(commands.Cog):
         toggle = toggle or True
 
         if toggle:
-            self.twom_bf_notify_loop.cancel()
-            self.twom_bf_notify_loop.start()
+            try:
+                self.twom_bf_notify_loop.start()
+            except RuntimeError:
+                pass
             await ctx.send(f'Next notification is in {human_timedelta(self.calculate_next_interval())}')
         else:
             self.twom_bf_notify_loop.cancel()
