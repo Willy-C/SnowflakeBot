@@ -53,14 +53,15 @@ class Gatekeep(commands.Cog):
         Example usage: `%bf ON/OFF`
 
         If neither ON or OFF is specified then defaults to ON"""
-        toggle = toggle or True
+        if toggle is None:
+            toggle = True
 
         if toggle:
             try:
                 self.twom_bf_notify_loop.start()
             except RuntimeError:
                 pass
-            await ctx.send(f'Next notification is in {human_timedelta(self.calculate_next_interval())}')
+            await ctx.send(f'Next battlefield notification is in **{human_timedelta(self.calculate_next_interval())}**')
         else:
             self.twom_bf_notify_loop.cancel()
         await ctx.send(f'Battlefield notifications are now: {"ON" if toggle else "OFF"}')
@@ -68,13 +69,13 @@ class Gatekeep(commands.Cog):
     @tasks.loop(hours=2)
     async def twom_bf_notify_loop(self):
         channel = self.bot.get_channel(GENERAL)
-        await channel.send(f'<@&{BF_ROLE}> Its time for battlefield!')
+        await channel.send(f'<@&{BF_ROLE}> Its time for battlefield!', delete_after=600)
 
     @twom_bf_notify_loop.before_loop
     async def before_bf_loop(self):
         await self.bot.wait_until_ready()
-        td = self.calculate_next_interval()
-        seconds = (td - datetime.datetime.utcnow()).total_seconds()
+        bf_time = self.calculate_next_interval()
+        seconds = (bf_time - datetime.datetime.utcnow()).total_seconds()
         await asyncio.sleep(seconds)
 
     def calculate_next_interval(self):
@@ -83,8 +84,7 @@ class Gatekeep(commands.Cog):
             td = datetime.timedelta(minutes=55)
         else:
             td = datetime.timedelta(hours=1, minutes=55)
-        target = top_hour + td
-        return target
+        return top_hour + td
 
 
 def setup(bot):
