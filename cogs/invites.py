@@ -58,8 +58,12 @@ class InviteTracker(commands.Cog, name='Invites'):
                               color=discord.Colour.dark_purple(),
                               timestamp=datetime.utcnow())
             e.set_author(icon_url=member.avatar_url, name=member)
-            e.add_field(name='Invite created by:', value=f'{inviter} ({inviter.id})')
+            e.add_field(name='Joined with invite created by:', value=f'{inviter.mention}')
             await invite_channel.send(embed=e)
+
+    def prettify_invites(self):
+        """Converts our nested defaultdicts to dicts for print"""
+        return {k: dict(v) if isinstance(v, defaultdict) else v for (k, v) in self.cached_invites.items()}
 
 
 def setup(bot):

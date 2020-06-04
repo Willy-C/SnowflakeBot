@@ -42,7 +42,8 @@ class GuildConfig(commands.Cog, name='Settings'):
                 f'Mute: {get_mention(ctx, record, "mute_role")}'
 
         channels = f'Welcome: {get_mention(ctx, record, "join_ch")}\n' \
-                   f'Leave: {get_mention(ctx, record, "leave_ch")}'
+                   f'Leave: {get_mention(ctx, record, "leave_ch")}\n' \
+                   f'Invites: {get_mention(ctx, record, "invite_ch")}'
 
         e.add_field(name='Roles', value=roles)
         e.add_field(name='Channels', value=channels)
@@ -127,7 +128,7 @@ class GuildConfig(commands.Cog, name='Settings'):
 
     @guild_config.group(name='channel', case_insensitive=True)
     async def set_channel(self, ctx):
-        """Set channel for join and leave logs
+        """Set channel for join and leave logs or invite tracker
 
         NOTE: To remove a setting, don't provide a channel (Ex. `%config channel join`)"""
         if ctx.invoked_subcommand is None:
@@ -197,7 +198,7 @@ class GuildConfig(commands.Cog, name='Settings'):
             await ctx.send('An error occurred')
             traceback.print_exc()
         else:
-            await ctx.send(f'Join logs will now go to: {mention}')
+            await ctx.send(f'Invite tracker will now output to: {mention}')
 
 
 def setup(bot):
