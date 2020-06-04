@@ -4,6 +4,7 @@ from discord.ext import commands
 GUILD_ID = 528403806984077312
 CHANNEL_ID = 528405322168270849
 HAD_ID = 299205173878849537
+NOTIFY_ROLE = 715623011616555669
 
 
 class WASHCog(commands.Cog):
@@ -34,18 +35,21 @@ class WASHCog(commands.Cog):
         self.last_msg = message.created_at
 
     async def send_alert(self, message):
-        if message.author.id == HAD_ID:
+        if message.mentions:
             return
-        HD = self.bot.get_user(HAD_ID)
-        if HD is not None and HD.mentioned_in(message):
-            return
-        await message.channel.send(f'<@{HAD_ID}> A conversation just started!', delete_after=600)
+        await message.channel.send(f'<@&{NOTIFY_ROLE}> A conversation just started!', delete_after=60)
 
     # If a new conversation started, then ping
     # new conversation = new message where the previous message is over `self._timeout` seconds old
 
     @commands.command(name='setalert', hidden=True)
     async def set_timeout(self, ctx, time: int):
+        """Send a notification if a new conversation started.
+        New conversation = new message where the previous message is over `time` seconds old
+        If the new message contains a mention, then notification will not be sent
+
+        Example usage `%setalert 300` - sets the time to be 5 minutes
+        """
         if ctx.guild and ctx.guild.id != GUILD_ID:
             return
         if time < 0:

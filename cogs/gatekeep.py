@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 import datetime
 import asyncio
@@ -8,6 +8,7 @@ from utils.time import human_timedelta
 GUILD_ID = 709264610200649738
 VERIFIED_ROLE = 709265266709626881
 GENERAL = 709264610200649741
+BOT_CHANNEL = 709277913471647824
 BF_ROLE = 713953248226050058
 
 
@@ -15,7 +16,7 @@ class Gatekeep(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         bot.loop.create_task(self.get_verified_ids())
-        self.twom_bf_notify_loop.start()
+        self.twom_task = bot.loop.create_task(self.twom_bf_notification_loop())
 
     async def get_verified_ids(self):
         query = '''SELECT id FROM gatekeep;'''
@@ -33,7 +34,7 @@ class Gatekeep(commands.Cog):
             ctx.local_handled = True
 
     def cog_unload(self):
-        self.twom_bf_notify_loop.cancel()
+        self.twom_task.cancel()
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -47,7 +48,7 @@ class Gatekeep(commands.Cog):
             except (discord.HTTPException, AttributeError) as err:
                 pass
 
-    @commands.command(name='battlefield', aliases=['bf'])
+    @commands.command(name='bf')
     async def twom_bf_notify_toggle(self, ctx, toggle:bool=None):
         """Toggles TWOM battlefield notifications
         Example usage: `%bf ON/OFF`
@@ -57,29 +58,29 @@ class Gatekeep(commands.Cog):
             toggle = True
 
         if toggle:
-            try:
-                self.twom_bf_notify_loop.start()
-            except RuntimeError:
-                pass
+            if self.twom_task.done():
+                self.twom_task = self.bot.loop.create_task(self.twom_bf_notification_loop())
             await ctx.send(f'Next battlefield notification is in **{human_timedelta(self.calculate_next_interval())}**')
         else:
-            self.twom_bf_notify_loop.cancel()
+            self.twom_task.cancel()
         await ctx.send(f'Battlefield notifications are now: {"ON" if toggle else "OFF"}')
 
-    @tasks.loop(hours=2)
-    async def twom_bf_notify_loop(self):
-        channel = self.bot.get_channel(GENERAL)
-        await channel.send(f'<@&{BF_ROLE}> Its time for battlefield!', delete_after=600)
-
-    @twom_bf_notify_loop.before_loop
-    async def before_bf_loop(self):
+    async def twom_bf_notification_loop(self):
         await self.bot.wait_until_ready()
-        bf_time = self.calculate_next_interval()
-        seconds = (bf_time - datetime.datetime.utcnow()).total_seconds()
-        await asyncio.sleep(seconds)
+        channel = self.bot.get_channel(BOT_CHANNEL)
+        while not self.bot.is_closed():
+            bf_time = self.calculate_next_interval()
+            seconds = (bf_time - datetime.datetime.utcnow()).total_seconds()
+            await asyncio.sleep(seconds)
+            await channel.send(f'<@&{BF_ROLE}> Its time for battlefield!', delete_after=300)
+            await discord.utils.sleep_until(datetime.datetime.utcnow().replace(minute=59, second=0, microsecond=0))
+            await channel.send(f'<@&{BF_ROLE}> 1 minute left you weebtards', delete_after=60)
 
     def calculate_next_interval(self):
-        top_hour = datetime.datetime.utcnow().replace(minute=0, second=0, microsecond=0)
+        now = datetime.datetime.utcnow()
+        if now.hour % 2 == 0 and now >= now.replace(minute=55, second=0, microsecond=0):
+            now += datetime.timedelta(minutes=5)
+        top_hour = now.replace(minute=0, second=0, microsecond=0)
         if top_hour.hour % 2 == 0:
             td = datetime.timedelta(minutes=55)
         else:

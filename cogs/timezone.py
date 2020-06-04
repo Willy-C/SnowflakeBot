@@ -95,7 +95,7 @@ class TimezoneCog(commands.Cog, name='Timezones'):
 
     @commands.command(name='time')
     async def get_user_time(self, ctx, user: CaseInsensitiveMember = None):
-        await ctx.invoke(self.get_timezone, (user or ctx.author))
+        await ctx.invoke(self.get_timezone, user=(user or ctx.author))
 
 
 def setup(bot):
