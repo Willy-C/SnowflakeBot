@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import datetime
 
 
-class InviteTracker(commands.Cog):
+class InviteTracker(commands.Cog, name='Invites'):
     def __init__(self, bot):
         self.bot = bot
         self.cached_invites = defaultdict(lambda: defaultdict(int))

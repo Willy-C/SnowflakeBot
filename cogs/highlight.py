@@ -184,7 +184,7 @@ class HighlightCog(commands.Cog, name='Highlights'):
             try:
                 reactions = ['<a:angeryping:667541695755190282>',
                              '<a:hammerping:656983551429967896>',
-                             '<:eyes:644633489727291402>,',
+                             '<:eyes:644633489727291402>',
                              '<:dabJuicy:667892769053736981>',
                              '<:angryJuicy:669305873562206211>',
                              '<a:bap:667465646384218122>']
