@@ -149,7 +149,7 @@ class GeneralCog(commands.Cog, name='General'):
                         else:
                             return content
 
-    @commands.command(name='filetopaste', aliases=['f2p'])
+    @commands.command(name='filetopaste', aliases=['txttopaste'])
     async def txt_to_pastebin(self, ctx, message: discord.Message = None):
         messages = []
         if message:
@@ -182,8 +182,12 @@ class GeneralCog(commands.Cog, name='General'):
         embed = discord.Embed(title='Translated', colour=bright_color())
         src = googletrans.LANGUAGES.get(res.src, '(auto-detected)').title()
         dest = googletrans.LANGUAGES.get(res.dest, 'Unknown').title()
-        embed.add_field(name=f'From {src}', value=res.origin, inline=False)
-        embed.add_field(name=f'To {dest}', value=res.text, inline=False)
+        original = res.origin if len(res.origin) < 1024 else f'[Text too long to send, uploaded instead]({await upload_hastebin(ctx, res.origin)})'
+        translated = res.text if len(res.text) < 1024 else f'[Text too long to send, uploaded instead]({await upload_hastebin(ctx, res.text)})'
+        embed.add_field(name=f'From {src}', value=original, inline=False)
+        embed.add_field(name=f'To {dest}', value=translated, inline=False)
+        if len(res.origin) > 1024 or len(res.text) > 1024:
+            embed.description = 'Text too long to send, uploaded instead'
         await ctx.send(embed=embed)
 
 
