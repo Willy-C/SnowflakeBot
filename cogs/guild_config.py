@@ -49,6 +49,8 @@ class GuildConfig(commands.Cog, name='Settings'):
         e.set_footer(text=f'see "{ctx.prefix}help config" for more info')
         await ctx.send(embed=e)
 
+    # Roles
+
     @guild_config.group(name='role', case_insensitive=True)
     async def set_role(self, ctx):
         """Set join role for human or bots or set a mute role
@@ -121,6 +123,8 @@ class GuildConfig(commands.Cog, name='Settings'):
         else:
             await ctx.send(f'Mute role is now set to: {role}')
 
+    # Channels
+
     @guild_config.group(name='channel', case_insensitive=True)
     async def set_channel(self, ctx):
         """Set channel for join and leave logs
@@ -172,6 +176,28 @@ class GuildConfig(commands.Cog, name='Settings'):
             traceback.print_exc()
         else:
             await ctx.send(f'Leave logs will now go to: {mention}')
+
+    @set_channel.command(name='invite', aliases=['invites'])
+    async def set_invite_tracker_channel(self, ctx, *, channel: discord.TextChannel = None):
+        """Set channel for invite tracker"""
+        if channel is not None:
+            channel_id = channel.id
+            mention = channel.mention
+        else:
+            channel_id = None
+            mention = None
+        query = '''INSERT INTO guild_mod_config(id, join_ch)
+                   VALUES($1, $2)
+                   ON CONFLICT (id) DO UPDATE 
+                   SET invite_ch = $2; 
+                   '''
+        try:
+            await self.bot.pool.execute(query, ctx.guild.id, channel_id)
+        except:
+            await ctx.send('An error occurred')
+            traceback.print_exc()
+        else:
+            await ctx.send(f'Join logs will now go to: {mention}')
 
 
 def setup(bot):

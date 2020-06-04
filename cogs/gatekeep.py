@@ -42,14 +42,12 @@ class Gatekeep(commands.Cog):
             return
 
         if member.id in self.verified:
-            role = discord.Object(id=VERIFIED_ROLE)
-            try:
-                await member.add_roles(role, reason='Automatic verification')
-            except (discord.HTTPException, AttributeError) as err:
-                pass
+            await member.add_roles(discord.Object(id=VERIFIED_ROLE), reason='Automatic verification')
+            general = member.guild.get_channel(GENERAL)
+            await general.set_permissions(member, read_messages=True, read_message_history=True)
 
     @commands.command(name='bf')
-    async def twom_bf_notify_toggle(self, ctx, toggle:bool=None):
+    async def twom_bf_notify_toggle(self, ctx, toggle: bool=None):
         """Toggles TWOM battlefield notifications
         Example usage: `%bf ON/OFF`
 
