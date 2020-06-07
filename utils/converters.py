@@ -21,7 +21,7 @@ class CaseInsensitiveMember(commands.MemberConverter):
 class Member(commands.MemberConverter):
     async def convert(self, ctx, argument):
         try:
-            await super().convert(ctx, argument)
+            return await super().convert(ctx, argument)
         except commands.BadArgument:
             raise errors.MemberNotFound
 

@@ -149,7 +149,7 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.command()
     @can_manage_messages()
     async def clean(self, ctx, limit: int = 25):
-        """Clean's up the bot's messages"""
+        """Cleans up the bot's messages"""
         if ctx.me.permissions_in(ctx.channel).manage_messages:
             spam = await self._good_clean(ctx, limit)
         else:
@@ -487,7 +487,7 @@ class ModCog(commands.Cog, name='Mod'):
                                   f'or use `{ctx.prefix}config role mute` to set an existing role as your mute role')
         role = ctx.guild.get_role(config.get('mute_role'))
         if ctx.me.top_role < role:
-            return await ctx.send(f'Unable to mute, please move my role above the Muted role')
+            return await ctx.send(f'Unable to mute, please move my role above thwile Muted role')
 
         timer = self.bot.get_cog('Reminders')
         if timer is None:
