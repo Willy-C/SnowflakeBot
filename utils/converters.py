@@ -23,7 +23,7 @@ class Member(commands.MemberConverter):
         try:
             return await super().convert(ctx, argument)
         except commands.BadArgument:
-            raise errors.MemberNotFound
+            raise errors.MemberNotFound()
 
 
 class CaseInsensitiveUser(commands.UserConverter):
@@ -73,3 +73,28 @@ class Timezone(commands.Converter):
             raise errors.TimezoneNotFound()
 
         return tz
+
+
+class CaseInsensitiveTextChannel(commands.TextChannelConverter):
+    async def convert(self, ctx, argument):
+        try:
+            channel = await super().convert(ctx, argument)
+        except commands.BadArgument:
+            channel = discord.utils.find(lambda c: c.name.lower() == argument.lower(), ctx.guild.text_channels)
+
+        if channel is None:
+            raise errors.ChannelNotFound(f'Channel `{argument}` not found.')
+        return channel
+
+
+class CaseInsensitiveVoiceChannel(commands.VoiceChannelConverter):
+    async def convert(self, ctx, argument):
+        try:
+            channel = await super().convert(ctx, argument)
+        except commands.BadArgument:
+            channel = discord.utils.find(lambda c: c.name.lower() == argument.lower(), ctx.guild.voice_channels)
+
+        if channel is None:
+            raise errors.ChannelNotFound(f'Channel `{argument}` not found.')
+        return channel
+

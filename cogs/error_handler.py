@@ -25,7 +25,7 @@ class CommandErrorHandler(commands.Cog):
         ctx   : Context
         error : Exception"""
         await self.bot.wait_until_ready()
-        if getattr(ctx, 'local_handled', False):
+        if getattr(ctx, 'local_handled', False):  # Check if handled by local error handlers
             return
 
         ignored = (commands.CommandNotFound, commands.CommandOnCooldown, BlacklistedUser, commands.NotOwner)  # Tuple of errors to ignore

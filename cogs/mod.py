@@ -3,7 +3,7 @@ from discord.ext import commands
 
 from collections import Counter
 from datetime import datetime
-from utils.converters import Member, CaseInsensitiveMember
+from utils.converters import Member, CaseInsensitiveMember, CaseInsensitiveVoiceChannel
 from utils.global_utils import confirm_prompt
 from utils.time import human_timedelta, FutureTime, ShortTime
 
@@ -533,7 +533,7 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.command(hidden=True)
     @commands.bot_has_guild_permissions(move_members=True)
     @can_move_members()
-    async def move(self, ctx, members: commands.Greedy[CaseInsensitiveMember] = None, *, channel: discord.VoiceChannel = None):
+    async def move(self, ctx, members: commands.Greedy[CaseInsensitiveMember] = None, *, channel: CaseInsensitiveVoiceChannel = None):
         """Move users to another voice channel.
         If no users are given, moves everyone in your current voice channel
         Disconnects user if channel is None.
@@ -558,7 +558,7 @@ class ModCog(commands.Cog, name='Mod'):
             else:
                 success += 1
                 await ctx.message.add_reaction('\U00002705')  # React with checkmark
-        await ctx.send(f'Moved {success}/{total} users', delete_after=10)
+        await ctx.send(f'Moved {success}/{total} users')
 
     # Purge group:
 

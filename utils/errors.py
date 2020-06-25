@@ -47,7 +47,7 @@ class CaseInsensitiveUserNotFound(commands.BadArgument):
 
 class UserNotFound(commands.BadArgument):
     def __init__(self, message=None):
-        super().__init__(message or '```No user foundmatching that name.\n'
+        super().__init__(message or '```No user found matching that name.\n'
                                     'I will search in this order: \n'
                                     '1. By ID                     (ex. 54295190266996)\n'
                                     '2. By Mention                (ex. @Snowflake)\n'
@@ -59,3 +59,7 @@ class UserNotFound(commands.BadArgument):
 class TimezoneNotFound(commands.CommandError):
     pass
 
+
+class ChannelNotFound(commands.BadArgument):
+    def __init__(self, message=None):
+        super().__init__(message or 'No channel found with that name or ID')
