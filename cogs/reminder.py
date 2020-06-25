@@ -142,10 +142,10 @@ class ReminderCog(commands.Cog, name='Reminders'):
         The input can be any direct date (e.g. YYYY-MM-DD) or a human
         readable offset. Examples:
 
-        - "2d say happy birthday"
-        - "next thursday at 3pm buy milk"
-        - "do the homework tomorrow"
-        - "in 3 days study for exam"
+        - 2d say happy birthday
+        - next thursday buy milk
+        - do the homework tomorrow
+        - in 3 days study for exam
 
         NOTE: Times are in UTC.
         For absolute times (ex. 4pm), it is recommended to use the `local` version, see `%help remind local`

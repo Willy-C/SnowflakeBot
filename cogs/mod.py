@@ -69,7 +69,7 @@ def can_move_members():
     async def predicate(ctx):
         if await ctx.bot.is_owner(ctx.author):
             return True
-        if ctx.channel.permissions_for(ctx.author).move_members:
+        if ctx.author.guild_permissions.move_members or (ctx.author.voice and ctx.author.voice.channel.permissions_for(ctx.author).move_members):
             return True
         raise commands.MissingPermissions(['Move Members'])
     return commands.check(predicate)

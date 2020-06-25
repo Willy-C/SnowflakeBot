@@ -28,7 +28,7 @@ class CommandErrorHandler(commands.Cog):
         if getattr(ctx, 'local_handled', False):
             return
 
-        ignored = (commands.CommandNotFound, commands.CommandOnCooldown, BlacklistedUser)  # Tuple of errors to ignore
+        ignored = (commands.CommandNotFound, commands.CommandOnCooldown, BlacklistedUser, commands.NotOwner)  # Tuple of errors to ignore
         error = getattr(error, 'original', error)
 
         if isinstance(error, ignored):
@@ -54,8 +54,8 @@ class CommandErrorHandler(commands.Cog):
         elif isinstance(error, commands.BadArgument):
             return await ctx.send(error)
 
-        elif isinstance(error, commands.NotOwner):
-            return await ctx.send(f'Sorry, this command can only be used by my owner. If you believe this is a mistake, please contact @{self.owner}')
+        # elif isinstance(error, commands.NotOwner):
+        #     return await ctx.send(f'Sorry, this command can only be used by my owner. If you believe this is a mistake, please contact @{self.owner}')
 
         elif isinstance(error, commands.MissingRequiredArgument):
             return await ctx.send(f'Missing required argument: `{error.param.name}` See {ctx.prefix}help {ctx.command} for more info')

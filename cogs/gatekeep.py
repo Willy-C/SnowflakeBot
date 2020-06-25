@@ -7,6 +7,7 @@ from utils.time import human_timedelta
 
 GUILD_ID = 709264610200649738
 VERIFIED_ROLE = 709265266709626881
+GENERAL_ROLE = 714363973063016499
 GENERAL = 709264610200649741
 BOT_CHANNEL = 709277913471647824
 BF_ROLE = 713953248226050058
@@ -43,6 +44,7 @@ class Gatekeep(commands.Cog):
 
         if member.id in self.verified:
             await member.add_roles(discord.Object(id=VERIFIED_ROLE), reason='Automatic verification')
+            await member.add_roles(discord.Object(id=GENERAL_ROLE), reason='Automatic verification')
             general = member.guild.get_channel(GENERAL)
             await general.set_permissions(member, read_messages=True, read_message_history=True)
 
