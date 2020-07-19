@@ -50,6 +50,24 @@ class CachedUserID(commands.Converter):
         return user
 
 # ID only
+class CachedMemberID(commands.Converter):
+    """Gets member object from an ID, no guarantees which guild the member obj belongs to"""
+    async def convert(self, ctx, argument):
+        try:
+            _id = int(argument)
+            for guild in ctx.bot.guilds:
+                member = guild.get_member(_id)
+                if member is not None:
+                    break
+        except ValueError:
+            raise commands.BadArgument('That is not a valid ID')
+
+        if member is None:
+            raise commands.BadArgument(f'Unable to find Member with ID {argument}')
+        return member
+
+
+# ID only
 class CachedGuildID(commands.Converter):
     async def convert(self, ctx, argument):
         try:

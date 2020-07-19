@@ -64,7 +64,10 @@ async def confirm_prompt(ctx: commands.Context, msg):
     except discord.HTTPException:
         pass
     finally:
-        await prompt.delete()
+        try:
+            await prompt.delete()
+        except (discord.HTTPException, discord.NotFound):
+            pass
 
     if not cont:  # Author typed abort, don't continue
         await ctx.send('Aborting...', delete_after=5)

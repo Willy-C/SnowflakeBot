@@ -52,7 +52,7 @@ class CommandErrorHandler(commands.Cog):
             await ctx.send('Unable to find a timezone with that name', embed=e)
 
         elif isinstance(error, commands.BadArgument):
-            return await ctx.send(error)
+            return await ctx.send(f'Bad argument: {error}')
 
         # elif isinstance(error, commands.NotOwner):
         #     return await ctx.send(f'Sorry, this command can only be used by my owner. If you believe this is a mistake, please contact @{self.owner}')

@@ -1218,8 +1218,13 @@ class Music(commands.Cog):
 
         await ctx.send(embed=e)
 
-    # Anti-afk
+    # Special
+    @commands.command(hidden=True)
+    async def USSR(self, ctx):
+        if ctx.author.voice:
+            await ctx.invoke(self.play_, query='https://www.youtube.com/watch?v=U06jlgpMtQs')
 
+    # Anti-afk
     @commands.command(name='noafk', hidden=True)
     async def no_afk_toggle(self, ctx):
         """Toggles anti-afk"""

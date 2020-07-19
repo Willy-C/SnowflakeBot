@@ -6,7 +6,7 @@ from typing import Union
 
 from utils.global_utils import bright_color
 from utils.time import human_timedelta
-from utils.converters import CaseInsensitiveMember, CachedUserID
+from utils.converters import CaseInsensitiveMember, CachedUserID, CachedMemberID
 
 
 class InfoCog(commands.Cog, name='Info'):
@@ -95,7 +95,7 @@ class InfoCog(commands.Cog, name='Info'):
         await ctx.send(embed=e)
 
     @commands.command()
-    async def device(self, ctx, member: CaseInsensitiveMember = None):
+    async def device(self, ctx, member: Union[CaseInsensitiveMember, CachedMemberID] = None):
         member = member or ctx.author
         statuses = {
             discord.Status.online: '<:status_online:602811779948740627> Online',

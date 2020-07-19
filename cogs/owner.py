@@ -252,8 +252,12 @@ class OwnerCog(commands.Cog, name='Owner'):
         query = '''SELECT id
                    FROM blacklist
                    WHERE type='user';'''
-        records = await self.bot.pool.fetch(query)
-        self._blacklist = {record['id'] for record in records}
+        try:
+            records = await self.bot.pool.fetch(query)
+        except:
+            self._blacklist = []
+        else:
+            self._blacklist = {record['id'] for record in records}
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
