@@ -126,8 +126,11 @@ class TrackerCog(commands.Cog):
             if wh is not None:
                 try:
                     msg = await wh.send(content=user.id, file=file, wait=True, username=hash)
-                except discord.HTTPException:
-                    msg = await wh.send(content=f'{user.id}\n{user.avatar_url_as(static_format="png")}', wait=True, username=hash)
+                except discord.HTTPException as e:
+                    if 'Payload Too Large' in str(e):
+                        file = discord.File(BytesIO(await user.avatar_url_as(format='png').read()),
+                                            filename=f'{hash}.png')
+                        msg = await wh.send(content=user.id, file=file, wait=True, username=hash)
             else:
                 self.bot.get_channel(703171905435467956)
                 msg = await self.bot.get_channel(703171905435467956).send(content=user.id, file=file)
