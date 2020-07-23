@@ -71,6 +71,10 @@ class TrackerCog(commands.Cog):
         if await self.bot.pool.fetchrow(check, member.id) is None:
             await self.log_username(member)
 
+        ava = '''SELECT id FROM avatar_changes WHERE id = $1'''
+        if await self.bot.pool.fetchrow(ava, member.id) is None:
+            await self.log_avatar(member)
+
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         existing_ava = '''SELECT DISTINCT id FROM avatar_changes;'''
@@ -120,7 +124,10 @@ class TrackerCog(commands.Cog):
             wh = discord.utils.get(await self.bot.get_guild(557306479191916555).webhooks(),
                                    channel_id=703171905435467956)
             if wh is not None:
-                msg = await wh.send(content=user.id, file=file, wait=True, username=hash)
+                try:
+                    msg = await wh.send(content=user.id, file=file, wait=True, username=hash)
+                except discord.HTTPException:
+                    msg = await wh.send(content=f'{user.id}\n{user.avatar_url_as(static_format="png")}', wait=True, username=hash)
             else:
                 self.bot.get_channel(703171905435467956)
                 msg = await self.bot.get_channel(703171905435467956).send(content=user.id, file=file)
