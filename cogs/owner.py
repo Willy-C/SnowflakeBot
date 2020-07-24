@@ -29,40 +29,41 @@ class OwnerCog(commands.Cog, name='Owner'):
 
     @commands.command(name='load')
     async def load_cog(self, ctx, *, cog: str):
-        """Command which Loads a Module.
-        Remember to use dot path. e.g: cogs.owner"""
+        """Loads a Module.
+        Accepts dot path. e.g: cogs.owner"""
 
         try:
             self.bot.load_extension(cog)
         except Exception as e:
-            await ctx.send(f'**`ERROR:`** {type(e).__name__} - {e}')
+            await ctx.send(f'<:redTick:602811779474522113> {type(e).__name__} - {e}')
         else:
-            await ctx.send(f'**`SUCCESS:`** loaded {cog}')
+            await ctx.send(f'<:greenTick:602811779835494410> loaded {cog}')
 
     @commands.command(name='unload')
     async def unload_cog(self, ctx, *, cog: str):
-        """Command which Unloads a Module.
-        Remember to use dot path. e.g: cogs.owner"""
+        """ Unloads a Module.
+        Accepts dot path. e.g: cogs.owner"""
 
         try:
             self.bot.unload_extension(cog)
         except Exception as e:
-            await ctx.send(f'**`ERROR:`** {type(e).__name__} - {e}')
+            await ctx.send(f'<:redTick:602811779474522113> {type(e).__name__} - {e}')
         else:
-            await ctx.send(f'**`SUCCESS:`** unloaded {cog}')
+            await ctx.send(f'<:greenTick:602811779835494410> unloaded {cog}')
 
     @commands.command(name='reload')
     async def reload_cog(self, ctx, *, cog: str):
-        """Command which Reloads a Module.
-        Remember to use dot path. e.g: cogs.owner"""
-
+        """Reloads a Module.
+        Accepts dot path e.g: cogs.owner"""
         try:
-            self.bot.unload_extension(cog)
-            self.bot.load_extension(cog)
+            try:
+                self.bot.reload_extension(cog)
+            except commands.ExtensionNotLoaded:
+                self.bot.load_extension(cog)
         except Exception as e:
-            await ctx.send(f'**`ERROR:`** {type(e).__name__} - {e}')
+            await ctx.send(f'<:redTick:602811779474522113> {type(e).__name__} - {e}')
         else:
-            await ctx.send(f'**`SUCCESS`** reloaded {cog}')
+            await ctx.send(f'<:greenTick:602811779835494410> reloaded {cog}')
 
     @commands.group(name='presence', invoke_without_command=True, case_insensitive=True)
     async def change_presence(self, ctx):
