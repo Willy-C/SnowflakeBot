@@ -17,7 +17,6 @@ class Gatekeep(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         bot.loop.create_task(self.get_verified_ids())
-        self.twom_task = bot.loop.create_task(self.twom_bf_notification_loop())
 
     async def get_verified_ids(self):
         query = '''SELECT id FROM gatekeep;'''

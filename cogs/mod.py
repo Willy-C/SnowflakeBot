@@ -558,7 +558,7 @@ class ModCog(commands.Cog, name='Mod'):
             else:
                 success += 1
                 await ctx.message.add_reaction('\U00002705')  # React with checkmark
-        await ctx.send(f'Moved {success}/{total} users')
+        await ctx.send(f'{"Moved" if channel is not None else "Disconnected"} {success}/{total} users')
 
     # Purge group:
 

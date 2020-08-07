@@ -155,7 +155,7 @@ class ReminderCog(commands.Cog, name='Reminders'):
         await ctx.send(f'Ok, in {human_timedelta(time.dt, source=now)}: {time.arg}')
 
     @reminder.command(name='local', aliases=['l'])
-    async def local_reminder(self, ctx, *, time: UserFriendlyTime(commands.clean_content)):
+    async def local_reminder(self, ctx, *, time: UserFriendlyTime(commands.clean_content, default='\u2026')):
         """Similar to the normal `remind` command but tries to convert the end time to your local timezone
 
         Ex: `%remind local do homework at 4pm tomorrow`
