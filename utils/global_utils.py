@@ -143,3 +143,14 @@ async def get_user_timezone(ctx, user):
         return None
     else:
         return pytz.timezone(record.get('tz'))
+
+
+async def toggle_role(member, role):
+    if not isinstance(member, discord.Member):
+        raise commands.BadArgument(f'A member is expected but a {type(member)} is passed')
+
+    if role in member.roles:
+        await member.remove_roles(role)
+    else:
+        await member.add_roles(role)
+
