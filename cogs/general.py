@@ -149,8 +149,10 @@ class GeneralCog(commands.Cog, name='General'):
                         else:
                             return content
 
-    @commands.command(name='filetopaste', aliases=['txttopaste'])
+    @commands.command(name='filetopaste', aliases=['txttopaste', 'ftp'])
     async def txt_to_pastebin(self, ctx, message: discord.Message = None):
+        """Sending a .txt file because your message is too long?
+        Use this command to upload it so people dont have to download a file!"""
         messages = []
         if message:
             messages.append(message)

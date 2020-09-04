@@ -114,13 +114,13 @@ class HighlightCog(commands.Cog, name='Highlights'):
                 return
 
         for msg in prev_msgs[-4:-1]:
-            msg_context.append(f'`[-{str(abs(now-msg.created_at)).split(".")[0][3:]}]` {msg.author}: {msg.content}')
+            msg_context.append(f'`[-{str(abs(now-msg.created_at)).split(".")[0][3:]}]` {discord.utils.escape_markdown(str(msg.author))}: {msg.content}')
 
         if not is_mention:
             bolded = re.sub(f'({word})', r'**\1**', message.content, flags=re.IGNORECASE)
-            msg_context.append(f'**`[-----]`** {message.author}: {bolded}')
+            msg_context.append(f'**`[-----]`** {discord.utils.escape_markdown(str(message.author))}: {bolded}')
         else:
-            msg_context.append(f'**`[-----]`** {message.author}: {message.content}')
+            msg_context.append(f'**`[-----]`** {discord.utils.escape_markdown(str(message.author))}: {message.content}')
 
         after = []
         def check(msg):
