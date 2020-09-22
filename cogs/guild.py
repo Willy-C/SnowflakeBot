@@ -10,7 +10,7 @@ from utils.global_utils import bright_color
 from utils.converters import CaseInsensitiveMember
 
 
-class GuildCog(commands.Cog, name='Guild'):
+class GuildCog(commands.Cog, name='Server'):
     def __init__(self, bot):
         self.bot = bot
 

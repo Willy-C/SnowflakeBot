@@ -20,11 +20,11 @@ class PrefixCog(commands.Cog, name='Prefix'):
     @prefix.command()
     @commands.guild_only()
     async def set(self, ctx, *new_prefixes):
-        """Set my prefix(es) for this guild.
+        """Set my prefix(es) for this server.
         Separate multiple prefixes with spaces."""
         new = list(new_prefixes)
         self.bot.prefixes[ctx.guild.id] = new
-        await ctx.send(f'This guild\'s prefix is set to {", ".join(new_prefixes)}\n')
+        await ctx.send(f'This server\'s prefix is set to {", ".join(new_prefixes)}\n')
         await ctx.send(f'Note: Mentioning the bot will always be a valid prefix. Ex: {self.bot.user.mention} ping', delete_after=10)
         query = '''DELETE FROM prefixes WHERE guild = $1;'''
         await self.bot.pool.execute(query, ctx.guild.id)
@@ -36,20 +36,20 @@ class PrefixCog(commands.Cog, name='Prefix'):
     @prefix.command(aliases=['clear'])
     @commands.guild_only()
     async def reset(self, ctx):
-        """Reset my prefix for this guild to the default"""
+        """Reset my prefix for this server to the default"""
         try:
             del self.bot.prefixes[ctx.guild.id]
-            await ctx.send('Prefix for this guild has been reset. Default: %')
+            await ctx.send('Prefix for this server has been reset. Default: %')
             await ctx.send(f'Note: Mentioning the bot will always be a valid prefix. Ex: {self.bot.user.mention} ping', delete_after=10)
             query = '''DELETE FROM prefixes WHERE guild = $1;'''
             await self.bot.pool.execute(query, ctx.guild.id)
         except KeyError:
-            await ctx.send('This guild is already using the default prefix: %')
+            await ctx.send('This server is already using the default prefix: %')
 
     @prefix.command()
     @commands.guild_only()
     async def add(self, ctx, *new_prefixes):
-        """Add new prefix(es) for this guild.
+        """Add new prefix(es) for this server.
         Separate multiple prefixes with spaces."""
         # self.bot.prefixes.setdefault(ctx.guild.id, ['%']).extend(new_prefixes)
         was_empty = False
@@ -63,7 +63,7 @@ class PrefixCog(commands.Cog, name='Prefix'):
                 current.append(prefix)
                 added.append(prefix)
         if added:
-            await ctx.send(f'Added {", ".join(added)} to this guild\'s prefixes')
+            await ctx.send(f'Added {", ".join(added)} to this server\'s prefixes')
             query = '''INSERT INTO prefixes(guild, prefix)
                        VALUES ($1, $2);'''
             if was_empty:
@@ -76,9 +76,9 @@ class PrefixCog(commands.Cog, name='Prefix'):
     @prefix.command(aliases=['rem'])
     @commands.guild_only()
     async def remove(self, ctx, prefix_to_remove):
-        """Remove a prefix for this guild. """
+        """Remove a prefix for this server. """
         if ctx.guild.id not in self.bot.prefixes:
-            return await ctx.send('This guild does not have any custom prefix configured')
+            return await ctx.send('This server does not have any custom prefix configured')
         if prefix_to_remove in self.bot.prefixes[ctx.guild.id]:
             self.bot.prefixes[ctx.guild.id].remove(prefix_to_remove)
             if not self.bot.prefixes[ctx.guild.id]:

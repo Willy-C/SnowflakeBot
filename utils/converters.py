@@ -76,7 +76,7 @@ class CachedGuildID(commands.Converter):
             raise commands.BadArgument('That is not a valid ID')
 
         if guild is None:
-            raise commands.BadArgument(f'Unable to find Guild with ID {argument}')
+            raise commands.BadArgument(f'Unable to find server with ID {argument}')
         return guild
 
 
@@ -98,7 +98,11 @@ class CaseInsensitiveTextChannel(commands.TextChannelConverter):
         try:
             channel = await super().convert(ctx, argument)
         except commands.BadArgument:
-            channel = discord.utils.find(lambda c: c.name.lower() == argument.lower(), ctx.guild.text_channels)
+            if ctx.guild:
+                channel = discord.utils.find(lambda c: c.name.lower() == argument.lower(), ctx.guild.text_channels)
+            else:
+                # Doing case insensitive search across many guilds leads to too much ambiguity
+                raise errors.ChannelNotFound('A channel with that ID cannot be found')
 
         if channel is None:
             raise errors.ChannelNotFound(f'Channel `{argument}` not found.')
@@ -110,7 +114,11 @@ class CaseInsensitiveVoiceChannel(commands.VoiceChannelConverter):
         try:
             channel = await super().convert(ctx, argument)
         except commands.BadArgument:
-            channel = discord.utils.find(lambda c: c.name.lower() == argument.lower(), ctx.guild.voice_channels)
+            if ctx.guild:
+                channel = discord.utils.find(lambda c: c.name.lower() == argument.lower(), ctx.guild.voice_channels)
+            else:
+                # Doing case insensitive search across many guilds leads to too much ambiguity
+                raise errors.ChannelNotFound('A channel with that ID cannot be found')
 
         if channel is None:
             raise errors.ChannelNotFound(f'Channel `{argument}` not found.')
