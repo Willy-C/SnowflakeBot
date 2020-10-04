@@ -79,7 +79,8 @@ class SnowflakeBot(commands.Bot):
                          case_insensitive=True,
                          activity=discord.Activity(type=discord.ActivityType.listening, name='you :)'),
                          help_command=commands.MinimalHelpCommand(),
-                         allowed_mentions=discord.AllowedMentions(everyone=False))
+                         allowed_mentions=discord.AllowedMentions(everyone=False),
+                         intents=discord.Intents.all())
 
         self.starttime = datetime.utcnow()
         self.session = aiohttp.ClientSession(loop=self.loop)
