@@ -9,11 +9,12 @@ class Voice(commands.Cog):
         self.bot = bot
 
     @commands.command(hidden=True)
-    @commands.bot_has_guild_permissions(mute_members=True)
     async def secure(self, ctx, voicechannel: CaseInsensitiveVoiceChannel = None):
-        if not ctx.author.voice and voicechannel is None:
+        if (not ctx.guild or not ctx.author.voice) and voicechannel is None:
             return await ctx.send('You are not in a voice channel!')
         voicechannel = voicechannel or ctx.author.voice.channel
+        if not voicechannel.guild.me.guild_permissions.mute_members:
+            return await ctx.send('I do not have permission to mute!')
 
         await ctx.message.add_reaction('<a:typing:559157048919457801>')
 

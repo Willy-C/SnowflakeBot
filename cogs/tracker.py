@@ -1,9 +1,12 @@
 import discord
+import humanize
 import traceback
 from io import BytesIO
 from discord.ext import commands
-from datetime import datetime
+from collections import defaultdict
+from datetime import datetime, timedelta
 from asyncpg import UniqueViolationError
+from utils.converters import CaseInsensitiveVoiceChannel, CaseInsensitiveMember
 
 
 class TrackerCog(commands.Cog):
@@ -12,6 +15,9 @@ class TrackerCog(commands.Cog):
         self.bot.loop.create_task(self.add_join_dates())
         self.bot.loop.create_task(self.add_avatar())
         self.bot.loop.create_task(self.add_names())
+        self.vc_joins  = defaultdict(lambda: defaultdict(tuple))
+        self.vc_leaves = defaultdict(lambda: defaultdict(tuple))
+        # {guild: {channel: (member, datetime)}}
 
     async def add_join_dates(self):
         await self.bot.wait_until_ready()
@@ -80,6 +86,7 @@ class TrackerCog(commands.Cog):
         existing_ava = '''SELECT DISTINCT id FROM avatar_changes;'''
         records = await self.bot.pool.fetch(existing_ava)
         ava_ids = {record['id'] for record in records}
+
         for member in guild.members:
             query = '''INSERT INTO first_join(guild, "user", time)
                    VALUES($1, $2, $3);'''
@@ -143,6 +150,64 @@ class TrackerCog(commands.Cog):
         query = '''INSERT INTO avatar_changes(id, hash, url, message, changed_at)
                    VALUES($1, $2, $3, $4, $5);'''
         await self.bot.pool.execute(query, user.id, hash, url, message_id, datetime.utcnow())
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+        if before.channel == after.channel:
+            return
+        if before.channel is not None:
+            self.vc_leaves[member.guild.id][before.channel.id] = (member, datetime.utcnow())
+        if after.channel is not None:
+            self.vc_joins[member.guild.id][after.channel.id] = (member, datetime.utcnow())
+
+    @commands.command()
+    async def who(self, ctx, *, voicechannel: CaseInsensitiveVoiceChannel = None):
+        """See who last joined/left a voice channel
+        Can also provide a user to see when they last joined/left
+        Ex. `%who` - Will tell you who last joined/left your current voice channel
+        Ex. `%who voice1` - Will tell you who last joined/left voice1 (Requires `Move Members` permission to view other voice channels
+        Ex. `%who voice1 @Bob` - Will tell you when Bob last joined/left (Requires `Move Members` permission to view other voice channels"""
+        if not ctx.guild and not voicechannel:
+            return await ctx.send('You must specify a voice channel in DMs!')
+
+        if voicechannel is None and not ctx.author.voice:
+            return await ctx.send('You are not in a voice channel!')
+
+        voicechannel = voicechannel or ctx.author.voice.channel
+        author = voicechannel.guild.get_member(ctx.author.id) if not ctx.guild else ctx.author
+
+        # We will disallow checking history of channels you are not in if you do not have move members perms
+        if not author.guild_permissions.move_members and author.id != self.bot.owner_id:
+            if author.voice is None or author.voice.channel != voicechannel:
+                return await ctx.send('You are not in that voice channel!', delete_after=10)
+
+        out = ''
+
+        if self.vc_joins[voicechannel.guild.id][voicechannel.id]:
+            last_join, join_time = self.vc_joins[voicechannel.guild.id][voicechannel.id]
+            join_delta = datetime.utcnow() - join_time
+            if join_delta > timedelta(minutes=5):
+                human_join = 'Over 5 minutes'
+            else:
+                human_join = humanize.naturaldelta(join_delta)
+            out += f'Last person to join `{voicechannel}` was {last_join} - {human_join} ago\n'
+
+        if self.vc_leaves[voicechannel.guild.id][voicechannel.id]:
+            last_left, leave_time = self.vc_leaves[voicechannel.guild.id][voicechannel.id]
+            leave_delta = datetime.utcnow() - leave_time
+            if leave_delta > timedelta(minutes=5):
+                human_leave = 'Over 5 minutes'
+            else:
+                human_leave = humanize.naturaldelta(leave_delta)
+            out += f'Last person to leave `{voicechannel}` was {last_left} - {human_leave} ago\n'
+
+        delete = 10 if ctx.guild else None
+        if out:
+            await ctx.send(out, delete_after=delete)
+            await ctx.message.add_reaction('<:greenTick:602811779835494410>')
+        else:
+            await ctx.send('Sorry, no logs found', delete_after=delete)
+            await ctx.message.add_reaction('<:redTick:602811779474522113>')
 
 
 def setup(bot):
