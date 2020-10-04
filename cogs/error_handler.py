@@ -77,7 +77,8 @@ class CommandErrorHandler(commands.Cog):
             err_msg = err[0].strip("!\n")
 
             if len(err_msg) > 1000:
-                return await ctx.send('Rendering failed. Please check your code.')
+                url = await upload_hastebin(ctx, err_msg)
+                return await ctx.send(f'Rendering failed. Please check your code. {url}')
             return await ctx.send(f'Rendering failed.\n```{err_msg}```')
 
         # Unhandled error, so just return the traceback

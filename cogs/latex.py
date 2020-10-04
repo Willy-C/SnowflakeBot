@@ -13,6 +13,7 @@ TEMPLATE = r'''
 \usepackage{geometry}
 \usepackage{mathtools}
 \usepackage{amsthm}
+\usepackage{amssymb}
 \usepackage{chemfig}
 \usepackage{color}
 \usepackage{xcolor}
