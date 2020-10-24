@@ -56,7 +56,7 @@ NOTE: the following steps are only a rough guideline, a lot of steps are left to
 ```python
 # These are required for the bot to run
 BOT_TOKEN = '...' # Your bot token from discord
-DBURI = 'postgresql://snowflake:password@host/snowflake # Your PostgreSQL credentials
+DBURI = 'postgresql://snowflake:password@host/snowflake' # Your PostgreSQL credentials
 
 # The rest are optional, certain commands require external APIs:
 GOOGLE_API_KEY = '...' # API key from Google
