@@ -186,8 +186,8 @@ class TrackerCog(commands.Cog):
         if self.vc_joins[voicechannel.guild.id][voicechannel.id]:
             last_join, join_time = self.vc_joins[voicechannel.guild.id][voicechannel.id]
             join_delta = datetime.utcnow() - join_time
-            if join_delta > timedelta(minutes=5):
-                human_join = 'Over 5 minutes'
+            if join_delta > timedelta(minutes=15) and author.id != self.bot.owner_id:
+                human_join = 'Over 15 minutes (Capped at 15)'
             else:
                 human_join = humanize.naturaldelta(join_delta)
             out += f'Last person to join `{voicechannel}` was {last_join} - {human_join} ago\n'
@@ -195,13 +195,13 @@ class TrackerCog(commands.Cog):
         if self.vc_leaves[voicechannel.guild.id][voicechannel.id]:
             last_left, leave_time = self.vc_leaves[voicechannel.guild.id][voicechannel.id]
             leave_delta = datetime.utcnow() - leave_time
-            if leave_delta > timedelta(minutes=5):
-                human_leave = 'Over 5 minutes'
+            if leave_delta > timedelta(minutes=15) and author.id != self.bot.owner_id:
+                human_leave = 'Over 15 minutes (Capped at 15)'
             else:
                 human_leave = humanize.naturaldelta(leave_delta)
             out += f'Last person to leave `{voicechannel}` was {last_left} - {human_leave} ago\n'
 
-        delete = 10 if ctx.guild else None
+        delete = 15 if ctx.guild else None
         if out:
             await ctx.send(out, delete_after=delete)
             await ctx.message.add_reaction('<:greenTick:602811779835494410>')
