@@ -369,7 +369,7 @@ class Music(commands.Cog):
             event.player.next_event.set()
         elif isinstance(event, wavelink.TrackException):
             try:
-                self.bot.loop.create_task(event.player._channel.send(f'An error occurred while trying to this track. Please try again later', delete_after=10))
+                self.bot.loop.create_task(event.player._channel.send(f'An error occurred while trying to play this track. Please try again later', delete_after=10))
             except (AttributeError, discord.HTTPException):
                 pass
             if event.player.looping:
@@ -559,9 +559,13 @@ class Music(commands.Cog):
         if not RURL.match(query):
             query = f'ytsearch:{query}'
 
-        tracks = await self.bot.wavelink.get_tracks(query)
+        for _ in range(3):
+            tracks = await self.bot.wavelink.get_tracks(query)
+            await asyncio.sleep(1)
+            if tracks:
+                break
         if not tracks:
-            return await ctx.send('No songs were found with that query. Please try again.')
+            return await ctx.send('No songs were found with that query. Please try again. (If this issue is happening consistently, blame YouTube)')
 
         if isinstance(tracks, wavelink.TrackPlaylist):
             for t in tracks.tracks:
