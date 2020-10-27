@@ -1,0 +1,54 @@
+import discord
+from discord.ext import commands
+
+from signal import SIGKILL
+
+from config import SNEKBOX_URL
+from utils.global_utils import cleanup_code, upload_hastebin
+
+class EvalError(commands.CommandError):
+    def __init__(self, status, message=None):
+        self.status = status
+        self.message = message or 'Something went wrong with this eval'
+
+
+class Eval(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    def prepare_output(self, content):
+        content = content.replace('```', "'''")  # don't want any codeblocks inside output to break our output codeblock
+        return f'```py\n{content}\n```'
+
+    @commands.command(aliases=['e'])
+    async def eval(self, ctx: commands.Context, *, code):
+        code = cleanup_code(code)
+        async with ctx.typing():
+            async with self.bot.session.post(f'{SNEKBOX_URL}/eval', json={'input': code}) as res:
+                if res.status != 200:
+                    raise EvalError(res.status, f'Something went wrong. Status: {res.status}')
+                data = await res.json()
+
+            output = data['stdout']
+            rcode = data['returncode']
+
+            if rcode is None:
+                raise EvalError(rcode, 'Your eval failed')
+            elif rcode == 128 + SIGKILL:
+                raise EvalError(rcode, 'Your eval timed out or ran out of memory')
+
+            greentick = '<:greenTick:602811779835494410>'
+            redtick = '<:redTick:602811779474522113>'
+            emoji = greentick if rcode == 0 else redtick
+            msg = f'{ctx.author.mention} {emoji} your eval completed with return code {rcode}'
+
+            if len(output) >= 300:
+                url = await upload_hastebin(ctx, output)
+                await ctx.send(f'{msg}\nThe output is long so I uploaded it here: {url}')
+            else:
+                out = self.prepare_output(output)
+                await ctx.send(f'{msg}\n{out}')
+
+
+def setup(bot):
+    bot.add_cog(Eval(bot))

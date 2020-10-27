@@ -141,7 +141,7 @@ class OwnerCog(commands.Cog, name='Owner'):
         await self.bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name='you :)'))
         await ctx.message.add_reaction('\u2705')
 
-    @commands.command(name='eval')
+    @commands.command(name='aeval')
     async def _eval(self, ctx, *, code: str):
         """Evaluates python code in a single line or code block"""
         env = {

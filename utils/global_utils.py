@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 
+import re
 import copy
 import colorsys
 import random
@@ -77,9 +78,14 @@ async def confirm_prompt(ctx: commands.Context, msg):
 
 def cleanup_code(content):
     """Automatically removes code blocks from the code."""
-    # remove ```py\n```
-    if content.startswith('```') and content.endswith('```'):
-        return '\n'.join(content.split('\n')[1:-1])
+    if content.startswith('```'):
+        split = content.split('\n')
+        if ' ' not in split[0][3:].rstrip():  # Is language
+            split = split[1:]
+        else:
+            split[0] = split[0][3:]  # Accidentally started coding on first line
+
+        return '\n'.join(split).rstrip('` ')
     return content.strip('` \n')
 
 
@@ -148,6 +154,8 @@ async def get_user_timezone(ctx, user):
 async def toggle_role(member, role):
     if not isinstance(member, discord.Member):
         raise commands.BadArgument(f'A member is expected but a {type(member)} is passed')
+    if not isinstance(role, discord.Role):
+        raise commands.BadArgument(f'A role is expected but a {type(role)} is passed')
 
     if role in member.roles:
         await member.remove_roles(role)
