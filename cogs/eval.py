@@ -6,6 +6,7 @@ from signal import SIGKILL
 from config import SNEKBOX_URL
 from utils.global_utils import cleanup_code, upload_hastebin
 
+
 class EvalError(commands.CommandError):
     def __init__(self, status, message=None):
         self.status = status
@@ -21,12 +22,13 @@ class Eval(commands.Cog):
         return f'```py\n{content}\n```'
 
     @commands.command(aliases=['e'])
+    @commands.max_concurrency(1, commands.BucketType.user)
     async def eval(self, ctx: commands.Context, *, code):
         code = cleanup_code(code)
         async with ctx.typing():
             async with self.bot.session.post(f'{SNEKBOX_URL}/eval', json={'input': code}) as res:
                 if res.status != 200:
-                    raise EvalError(res.status, f'Something went wrong. Status: {res.status}')
+                    raise EvalError(res.status, f'Something went wrong while sending your eval job.')
                 data = await res.json()
 
             output = data['stdout']
@@ -36,6 +38,8 @@ class Eval(commands.Cog):
                 raise EvalError(rcode, 'Your eval failed')
             elif rcode == 128 + SIGKILL:
                 raise EvalError(rcode, 'Your eval timed out or ran out of memory')
+            elif rcode == 255:
+                raise EvalError(rcode, 'Something has gone horribly wrong')
 
             greentick = '<:greenTick:602811779835494410>'
             redtick = '<:redTick:602811779474522113>'
@@ -48,6 +52,18 @@ class Eval(commands.Cog):
             else:
                 out = self.prepare_output(output)
                 await ctx.send(f'{msg}\n{out}')
+
+    @eval.error
+    async def eval_error(self, ctx, error):
+        if isinstance(error, commands.MaxConcurrencyReached):
+            ctx.local_handled = True
+            if await self.bot.is_owner(ctx.author):  # Owner bypass
+                return await ctx.reinvoke()
+            return await ctx.send(f'{ctx.author.mention} Please wait until your previous eval job is finished before sending another')
+
+        elif isinstance(error, EvalError):
+            ctx.local_handled = True
+            return await ctx.send(f'{ctx.author.mention} {error.message}\nStatus code: {error.status}')
 
 
 def setup(bot):
