@@ -192,6 +192,10 @@ class GeneralCog(commands.Cog, name='General'):
             embed.description = 'Text too long to send, uploaded instead'
         await ctx.send(embed=embed)
 
+    @commands.command()
+    async def say(self, ctx, *, message):
+        await ctx.send(message, allowed_mentions=discord.AllowedMentions.none())
+
 
 def to_emoji(c):
     base = 0x1f1e6
