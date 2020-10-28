@@ -17,10 +17,6 @@ class Eval(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    def prepare_output(self, content):
-        content = content.replace('```', "'''")  # don't want any codeblocks inside output to break our output codeblock
-        return f'```py\n{content}\n```'
-
     @commands.command(aliases=['e'])
     @commands.max_concurrency(1, commands.BucketType.user)
     async def eval(self, ctx: commands.Context, *, code):
@@ -52,8 +48,8 @@ class Eval(commands.Cog):
                 url = await upload_hastebin(ctx, output)
                 await ctx.send(f'{msg}\nThe output is long so I uploaded it here: {url}')
             else:
-                out = self.prepare_output(output)
-                await ctx.send(f'{msg}\n{out}')
+                output = output.replace('```', "'''")  # don't want any codeblocks inside the output to break our output codeblock
+                await ctx.send(f'{msg}\n```py\n{output}\n```')
 
     @eval.error
     async def eval_error(self, ctx, error):

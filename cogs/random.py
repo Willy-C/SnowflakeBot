@@ -27,25 +27,33 @@ class DiceRoll(commands.Converter):
         return int(dice), int(faces), operator, modifier
 
 
-class RNGCog(commands.Cog, name='Rng'):
+class RNG(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.group(invoke_without_command=True, case_insensitive=True, aliases=['rand'])
     async def random(self, ctx):
+        """RNG"""
         await ctx.send_help(ctx.command)
 
     @random.command(name='number', aliases=['num'])
     async def random_number(self, ctx, min: int = 0, max: int = 10):
-        """Chooses a random number within a given range.
+        """Chooses a random number within a given range (inclusive).
         Defaults to 0 to 10"""
-        if max <= min:
+        if max < min:
             max, min = min, max
-        await ctx.send(f'Random number between {min}-{max}: {random.randint(min, max)}')
+        await ctx.send(f'Random number between {min}-{max} (inclusive): {random.randint(min, max)}')
 
     @random.command(name='choice')
     async def random_choice_group(self, ctx, *choices: commands.clean_content):
+        """Chooses a random element from a list.
+        Separate each element by " " or spaces"""
         await self.random_choice(ctx, choices=choices)
+
+    @commands.command(name='coin')
+    async def coin_flip(self, ctx):
+        """Flip a coin"""
+        await ctx.send(random.choice(('Head', 'Tail')))
 
     @commands.command(name='dice', aliases=['roll'])
     async def dice_roll(self, ctx, diceroll: DiceRoll, sorted: bool=False):
@@ -111,4 +119,4 @@ class RNGCog(commands.Cog, name='Rng'):
 
 
 def setup(bot):
-    bot.add_cog(RNGCog(bot))
+    bot.add_cog(RNG(bot))
