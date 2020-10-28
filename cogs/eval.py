@@ -13,7 +13,7 @@ class EvalError(commands.CommandError):
         self.message = message or 'Something went wrong with this eval'
 
 
-class Eval(commands.Cog):
+class Evaluation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -67,4 +67,4 @@ class Eval(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(Eval(bot))
+    bot.add_cog(Evaluation(bot))
