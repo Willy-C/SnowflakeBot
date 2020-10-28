@@ -1,58 +1,104 @@
 import discord
 from discord.ext import commands
 
-import io
+import re
 import random
-from typing import Optional
+import operator
+
+from utils.global_utils import upload_hastebin
+
+DICE_NOTATION_REGEX = re.compile(r'(\d+)d(\d+)\s?(([+-])(\d+|l|h))?')
+
+operators = {'+': operator.add,
+             '-': operator.sub}
+
+
+class DiceRoll(commands.Converter):
+    async def convert(self, ctx, argument):
+        match = DICE_NOTATION_REGEX.fullmatch(argument)
+        if not match:
+            raise commands.BadArgument(f'Invalid dice notation. See {ctx.prefix}help dice for more info')
+        dice, faces, _, operator, modifier = match.groups() # 1d2-3 -> (1, 2, -3, -, 3 ) (num_dice, faces, _, operator, modifier)
+        if modifier.isnumeric():
+            modifier = int(modifier)
+        else:
+            if operator != '-':
+                raise commands.BadArgument(f'Invalid dice notation. Modifier must be `-` when using H/L.')
+        return int(dice), int(faces), operator, modifier
 
 
 class RNGCog(commands.Cog, name='Rng'):
     def __init__(self, bot):
         self.bot = bot
 
-    # @commands.group()
-    # async def random(self, ctx):
-    #     if ctx.invoked_subcommand is None:
-    #         raise commands.MissingRequiredArgument
+    @commands.group(invoke_without_command=True, case_insensitive=True, aliases=['rand'])
+    async def random(self, ctx):
+        await ctx.send_help(ctx.command)
 
-    @commands.command(name='randnum', aliases=['randnumber'])
-    async def random_num(self, ctx, min: int = 0, max: int = 10):
+    @random.command(name='number', aliases=['num'])
+    async def random_number(self, ctx, min: int = 0, max: int = 10):
         """Chooses a random number within a given range.
         Defaults to 0 to 10"""
         if max <= min:
             max, min = min, max
-        await ctx.send(random.randint(min, max))
+        await ctx.send(f'Random number between {min}-{max}: {random.randint(min, max)}')
 
-    @commands.command(name='roll')
-    async def roll_die(self, ctx, num_rolls: Optional[int] = 1, faces: Optional[int] = 6, sorted: bool = False):
-        """Roll a die with Y faces X times.
-        Defaults to 1 roll of a 6-side die
-        Ex. "%roll 2 20" will roll a 20-sided die twice"""
-        if not (1 <= num_rolls <= 999):
-            return await ctx.send('Number of Rolls must be between 1 and 999')
+    @random.command(name='choice')
+    async def random_choice_group(self, ctx, *choices: commands.clean_content):
+        await self.random_choice(ctx, choices=choices)
+
+    @commands.command(name='dice', aliases=['roll'])
+    async def dice_roll(self, ctx, diceroll: DiceRoll, sorted: bool=False):
+        """Rolls a dice with standard dice notation
+        AdX (±B L/H)
+        A = number of dice
+        X = number of faces on each die
+        B = number to add/subtract to the sum of the dice
+        -L/H = drop the lowest or highest result
+        Example usage:
+        `1d20` = Roll a 20-sided die
+        `2d6+4` = Roll 2 6-sided dice and then subtract 4 from the result
+        `4d12-L` = Roll 4 12-sided dice and then drop the lowest number
+        """
+        dice, faces, operator, modifier = diceroll
+
+        if not (1 <= dice <= 999):
+            return await ctx.send('Number of Dice must be between 1 and 999')
         if not (1 <= faces <= 999):
             return await ctx.send('Number of Faces must be between 1 and 999')
-        rolls = []
-        for _ in range(num_rolls):
-            rolls.append(random.randint(1, faces))
-        sort = ''
-        multi = ''
-        if sorted:
-            rolls.sort()
-            sort = 'Sorted '  # Empty string if unsorted
-        if num_rolls != 1:
-            multi = 's'
-        separator = ' '  # Space between each element in list when outputting
 
+        rolls = []
+        for _ in range(dice):
+            rolls.append(random.randint(1, faces))
+        dsum = sum(rolls)
+
+        if operator:
+            if isinstance(modifier, int):
+                final = operators[operator](dsum, modifier)
+                output = f'{dsum} {operator} {modifier} = **{final}**'
+            elif modifier.lower() == 'l':
+                removed = min(rolls)
+                output = f'{dsum} - {removed} (dropped lowest) = {dsum-removed}'
+            elif modifier.lower() == 'h':
+                removed = max(rolls)
+                output = f'{dsum} - {removed} (dropped highest) = {dsum-removed}'
+            else:
+                raise commands.CommandError('Something went terribly wrong. Sorry')
+        else:
+            output = dsum
+
+        all_rolls = ' '.join(rolls)
+        if len(all_rolls) >= 1000:
+            url = await upload_hastebin(ctx, all_rolls)
+            all_rolls = f'Too many rolls to display here. Uploaded to here instead: {url}'
+
+        sort = 'Sorted ' if sorted else ''
+        die = 'dice' if dice > 1 else 'die'
         embed = discord.Embed(colour=discord.Color.dark_teal(),
-                              description=f'{sort}Results for rolling a {faces} sided die {num_rolls} time{multi}:')
-        embed.add_field(name='Rolls', value=separator.join(str(roll) for roll in rolls))
-        embed.add_field(name='Total', value=sum(rolls), inline=False)
-        try:
-            await ctx.send(embed=embed)
-        except discord.errors.HTTPException:
-            await ctx.send('Due to discord\'s message character limit, I cannot finish this request.\n'
-                           'Please try again with smaller numbers')
+                              title=f'{sort}Results for rolling {dice} {faces}-sided {die}:')
+        embed.add_field(name='Rolls', value=all_rolls)
+        embed.add_field(name='Sum', value=output, inline=False)
+        await ctx.send(embed=embed)
 
     @commands.command(name='choice')
     async def random_choice(self, ctx, *choices: commands.clean_content):
@@ -62,39 +108,6 @@ class RNGCog(commands.Cog, name='Rng'):
             return await ctx.send('Need more choices to choose from!')
 
         await ctx.send(random.choice(choices))
-
-    @commands.command()  # Stolen from Danny, just want catto
-    async def cat(self, ctx):
-        """Sends a random cat."""
-        async with self.bot.session.get('https://aws.random.cat/meow') as resp:
-            if resp.status != 200:
-                return await ctx.send('No cat found :(')
-            js = await resp.json()
-            await ctx.send(embed=discord.Embed(title='Random Cat').set_image(url=js['file']))
-
-    @commands.command()  # Also stolen from Danno
-    async def dog(self, ctx):
-        """Gives you a random dog."""
-        async with self.bot.session.get('https://random.dog/woof') as resp:
-            if resp.status != 200:
-                return await ctx.send('No dog found :(')
-
-            filename = await resp.text()
-            url = f'https://random.dog/{filename}'
-            filesize = ctx.guild.filesize_limit if ctx.guild else 8388608
-            if filename.endswith(('.mp4', '.webm')):
-                async with ctx.typing():
-                    async with self.bot.session.get(url) as other:
-                        if other.status != 200:
-                            return await ctx.send('Could not download dog video :(')
-
-                        if int(other.headers['Content-Length']) >= filesize:
-                            return await ctx.send(f'Video was too big to upload... See it here: {url} instead.')
-
-                        fp = io.BytesIO(await other.read())
-                        await ctx.send(file=discord.File(fp, filename=filename))
-            else:
-                await ctx.send(embed=discord.Embed(title='Random Dog').set_image(url=url))
 
 
 def setup(bot):
