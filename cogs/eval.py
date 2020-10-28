@@ -48,8 +48,10 @@ class Eval(commands.Cog):
                 url = await upload_hastebin(ctx, output)
                 await ctx.send(f'{msg}\nThe output is long so I uploaded it here: {url}')
             else:
-                output = output.replace('```', "'''")  # don't want any codeblocks inside the output to break our output codeblock
-                await ctx.send(f'{msg}\n```py\n{output}\n```')
+                # don't want any codeblocks inside the output to break our output codeblock
+                content = output.replace('```', "'''")
+                await ctx.send(f'{msg}\n```py\n{content}\n```',
+                               allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=[ctx.author]))
 
     @eval.error
     async def eval_error(self, ctx, error):
