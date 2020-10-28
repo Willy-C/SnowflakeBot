@@ -24,6 +24,8 @@ class Eval(commands.Cog):
     @commands.command(aliases=['e'])
     @commands.max_concurrency(1, commands.BucketType.user)
     async def eval(self, ctx: commands.Context, *, code):
+        """Evaluates your python code
+        codeblocks (```...```) are optional """
         code = cleanup_code(code)
         async with ctx.typing():
             async with self.bot.session.post(f'{SNEKBOX_URL}/eval', json={'input': code}) as res:

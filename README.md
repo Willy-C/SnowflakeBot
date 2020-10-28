@@ -18,8 +18,10 @@ A full list of commands and its corresponding documentation can be found via the
 Here is a brief list of some of the things the bot can do:
  - Server Moderation
  - Get user and server info 
- - Set reminders for yourself
+ - Evaluate Python code in chat
  - Help manage your notifications
+ - Generate LaTeX as image in chat
+ - Set timed reminders for yourself
  - Hot reload modules without restart
  - Use custom emojis across servers without Nitro
  - Stream music from Youtube, Twitch, Soundcloud, Mixer, Vimeo, etc with [Lavalink](https://github.com/Frederikam/Lavalink) 
@@ -43,7 +45,7 @@ I would not recommend trying to host your own instance of this bot as some cruci
 
 If you *really* want to run your own instance you would need the following:
 - Python 3.7+
-- discord.py >= 1.3.0
+- discord.py >= 1.5
 - A PostgreSQL database
 - [asyncpg](https://github.com/MagicStack/asyncpg) for interacting with the database
 - A [Lavalink](https://github.com/Frederikam/Lavalink) server for music playing
