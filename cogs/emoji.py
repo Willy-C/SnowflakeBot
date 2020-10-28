@@ -63,7 +63,7 @@ class EmojiCog(commands.Cog, name='Emoji'):
             else:
                 await ctx.message.add_reaction('\U00002705')
 
-    @emoji.command(name='list')
+    @emoji.group(name='list', invoke_without_command=True, case_insensitive=True)
     async def guild_emojis(self, ctx, codepoint: bool = False):
         """Returns all usable emojis in the guild sorted by name
         Pass in True as a parameter to get codepoints"""
@@ -82,6 +82,14 @@ class EmojiCog(commands.Cog, name='Emoji'):
 
         for page in paginator.pages:
             await ctx.send(page)
+
+    @guild_emojis.command(name='big')
+    async def guild_emojis_big(self, ctx):
+        """Lists all guild emojis without name so they are bigger"""
+        emojis = sorted([emoji for emoji in ctx.guild.emojis if emoji.require_colons], key=lambda e: e.name)
+        formatted = [str(e) for e in emojis]
+        for i in range(0, len(formatted), 27):
+            await ctx.send(''.join(formatted[i:i+27]))
 
     @commands.command(name='bigemoji')
     async def get_emoji_url(self, ctx, emoji: Union[discord.Emoji, discord.PartialEmoji, str]):
