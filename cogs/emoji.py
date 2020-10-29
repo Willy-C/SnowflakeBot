@@ -40,6 +40,10 @@ class EmojiCog(commands.Cog, name='Emojis'):
     @commands.has_permissions(manage_emojis=True)
     @commands.guild_only()
     async def create_emoji(self, ctx, name, url):
+        """Create new emoji from url
+        The url must point to a png/jpeg/jpg/gif file
+        Example:
+        %emoji create arrow https://i.imgur.com/0cptOAb.jpg"""
         url = url.split('?')[0]
         if not await is_image(ctx, url, gif=True):
             return await ctx.send('Invalid file type! Must be one of the following: `.png .jpeg .jpg .gif`')
@@ -96,6 +100,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
 
     @emoji.command(aliases=['download'])
     async def zip(self, ctx):
+        """Download all the emojis in the server into a zip file"""
         await ctx.message.add_reaction('<a:downloading:771280303498985482>')
         zip_buffer = io.BytesIO()
         emojis = sorted([emoji for emoji in ctx.guild.emojis if emoji.require_colons], key=lambda e: e.name)
