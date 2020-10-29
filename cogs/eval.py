@@ -20,8 +20,9 @@ class Evaluation(commands.Cog):
     @commands.command(aliases=['e'])
     @commands.max_concurrency(1, commands.BucketType.user)
     async def eval(self, ctx: commands.Context, *, code):
-        """Evaluates your python code
-        codeblocks (```...```) are optional """
+        """Evaluates your python code.
+        Codeblocks are optional
+        ```this is a codeblock``` """
         code = cleanup_code(code)
         async with ctx.typing():
             async with self.bot.session.post(f'{SNEKBOX_URL}/eval', json={'input': code}) as res:
@@ -29,7 +30,7 @@ class Evaluation(commands.Cog):
                     raise EvalError(res.status, f'Something went wrong while sending your eval job.')
                 data = await res.json()
 
-            output = data['stdout']
+            output = data['stdout'] or '<No output>'
             rcode = data['returncode']
 
             if rcode is None:
