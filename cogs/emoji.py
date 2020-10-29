@@ -1,12 +1,15 @@
 import discord
 from discord.ext import commands
 
-from utils.global_utils import is_image
+import io
 import random
+import zipfile
 from typing import Union
 
+from utils.global_utils import is_image
 
-class EmojiCog(commands.Cog, name='Emoji'):
+
+class EmojiCog(commands.Cog, name='Emojis'):
     def __init__(self, bot):
         self.bot = bot
 
@@ -90,6 +93,20 @@ class EmojiCog(commands.Cog, name='Emoji'):
         formatted = [str(e) for e in emojis]
         for i in range(0, len(formatted), 27):
             await ctx.send(''.join(formatted[i:i+27]))
+
+    @emoji.command(aliases=['download'])
+    async def zip(self, ctx):
+        await ctx.message.add_reaction('<a:downloading:771280303498985482>')
+        zip_buffer = io.BytesIO()
+        emojis = sorted([emoji for emoji in ctx.guild.emojis if emoji.require_colons], key=lambda e: e.name)
+        with zipfile.ZipFile(zip_buffer, mode='w') as zf:
+            for e in emojis:
+                emoji_buffer = io.BytesIO(await e.url.read())
+                zf.writestr(f'{e.name}.{"png" if not e.animated else "gif"}', emoji_buffer.getvalue())
+        zip_buffer.seek(0)
+        await ctx.send(f'{ctx.author.mention} Emojis successfully zipped',
+                       file=discord.File(zip_buffer, f'emojis-{ctx.guild.id}.zip'))
+        await ctx.message.remove_reaction('<a:downloading:771280303498985482>', ctx.me)
 
     @commands.command(name='bigemoji')
     async def get_emoji_url(self, ctx, emoji: Union[discord.Emoji, discord.PartialEmoji, str]):
