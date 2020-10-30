@@ -7,6 +7,15 @@ import zipfile
 from typing import Union
 
 from utils.global_utils import is_image
+from utils.errors import NoGuildEmojis
+
+
+def guild_has_emojis():
+    async def predicate(ctx):
+        if ctx.guild.emojis:
+            return True
+        raise NoGuildEmojis
+    return commands.check(predicate)
 
 
 class EmojiCog(commands.Cog, name='Emojis'):
@@ -71,6 +80,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
                 await ctx.message.add_reaction('\U00002705')
 
     @emoji.group(name='list', invoke_without_command=True, case_insensitive=True)
+    @guild_has_emojis()
     async def guild_emojis(self, ctx, codepoint: bool = False):
         """Returns all usable emojis in the guild sorted by name
         Pass in True as a parameter to get codepoints"""
@@ -91,6 +101,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
             await ctx.send(page)
 
     @guild_emojis.command(name='big')
+    @guild_has_emojis()
     async def guild_emojis_big(self, ctx):
         """Lists all guild emojis without name so they are bigger"""
         emojis = sorted([emoji for emoji in ctx.guild.emojis if emoji.require_colons], key=lambda e: e.name)
@@ -99,6 +110,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
             await ctx.send(''.join(formatted[i:i+27]))
 
     @emoji.command(aliases=['download'])
+    @guild_has_emojis()
     async def zip(self, ctx):
         """Download all the emojis in the server into a zip file"""
         await ctx.message.add_reaction('<a:downloading:771280303498985482>')

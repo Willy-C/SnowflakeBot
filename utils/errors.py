@@ -63,3 +63,8 @@ class TimezoneNotFound(commands.CommandError):
 class ChannelNotFound(commands.BadArgument):
     def __init__(self, message=None):
         super().__init__(message or 'No channel found with that name or ID')
+
+
+class NoGuildEmojis(commands.CommandError):
+    def __init__(self, message=None):
+        self.message = message or 'This server does not have any emojis. <:k3llySad:771583555193143326>'
