@@ -58,7 +58,8 @@ class InviteTracker(commands.Cog, name='Invites'):
                               color=discord.Colour.dark_purple(),
                               timestamp=datetime.utcnow())
             e.set_author(icon_url=member.avatar_url, name=member)
-            e.add_field(name='Joined with invite created by:', value=f'{inviter.mention}')
+            e.add_field(name='ID', value=member.id)
+            e.add_field(name='Joined with invite created by:', value=f'{inviter.mention} (ID: {inviter.id})')
             await invite_channel.send(embed=e)
 
     def prettify_invites(self):

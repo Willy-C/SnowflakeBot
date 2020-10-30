@@ -1226,7 +1226,7 @@ class Music(commands.Cog):
     @commands.command(hidden=True)
     async def USSR(self, ctx):
         if ctx.author.voice:
-            await ctx.invoke(self.play_, query='https://www.youtube.com/watch?v=U06jlgpMtQs')
+            await ctx.invoke(self._playnext, query='https://www.youtube.com/watch?v=U06jlgpMtQs')
 
     # Anti-afk
     @commands.command(name='noafk', hidden=True)
