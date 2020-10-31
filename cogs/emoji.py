@@ -7,7 +7,11 @@ import zipfile
 from typing import Union
 
 from utils.global_utils import is_image
-from utils.errors import NoGuildEmojis
+
+
+class NoGuildEmojis(commands.CommandError):
+    def __init__(self, message=None):
+        self.message = message or 'This server does not have any emojis. <:k3llySad:771583555193143326>'
 
 
 def guild_has_emojis():
@@ -22,7 +26,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.group(invoke_without_command=True, case_insensitive=True, aliases=['emotes'])
+    @commands.group(invoke_without_command=True, case_insensitive=True)
     async def emoji(self, ctx):
         await ctx.send_help(ctx.command)
 
@@ -171,6 +175,10 @@ class EmojiCog(commands.Cog, name='Emojis'):
             await ctx.send(random.choice(found))
         else:
             await ctx.message.add_reaction('<:redTick:602811779474522113>')
+
+    async def cog_command_error(self, ctx, error):
+        if isinstance(error, NoGuildEmojis):
+            return await ctx.send(error.message)
 
 
 def setup(bot):

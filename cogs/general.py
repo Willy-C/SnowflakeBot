@@ -140,7 +140,7 @@ class GeneralCog(commands.Cog, name='General'):
         for msg in messages:
             if msg.attachments:
                 for attachment in msg.attachments:
-                    if attachment.filename.endswith('.txt') and attachment.height is None and attachment.url.endswith('.txt'):
+                    if attachment.filename.endswith(('.txt', '.py', '.java', '.json')):
                         try:
                             async with ctx.bot.session.get(attachment.url) as resp:
                                 content = await resp.text()
@@ -151,8 +151,10 @@ class GeneralCog(commands.Cog, name='General'):
 
     @commands.command(name='filetopaste', aliases=['txttopaste', 'ftp'])
     async def txt_to_pastebin(self, ctx, message: discord.Message = None):
-        """Sending a .txt file because your message is too long?
-        Use this command to upload it so people dont have to download a file!"""
+        """Upload the last text file in chat (within 25 messages)
+        Sending a .txt file because your message is too long?
+        Use this command to upload it so people dont have to download a file!
+        """
         messages = []
         if message:
             messages.append(message)

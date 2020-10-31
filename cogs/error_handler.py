@@ -5,7 +5,7 @@ import discord
 import re
 
 from utils.global_utils import upload_hastebin
-from utils.errors import BlacklistedUser, TimezoneNotFound, NoGuildEmojis
+from utils.errors import BlacklistedUser, TimezoneNotFound
 from .latex import TexRenderError
 
 
@@ -50,9 +50,6 @@ class CommandErrorHandler(commands.Cog):
                                           f'Timezones are not case-sensitive',
                               colour=discord.Colour.blue())
             await ctx.send('Unable to find a timezone with that name', embed=e)
-
-        elif isinstance(error, NoGuildEmojis):
-            return await ctx.send(error.message)
 
         elif isinstance(error, commands.BadArgument):
             return await ctx.send(f'Bad argument: {error}')
