@@ -178,6 +178,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
 
     async def cog_command_error(self, ctx, error):
         if isinstance(error, NoGuildEmojis):
+            ctx.local_handled = True
             return await ctx.send(error.message)
 
 
