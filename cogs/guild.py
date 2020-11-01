@@ -111,49 +111,6 @@ class GuildCog(commands.Cog, name='Server'):
         await ctx.send(embed=e)
         await ctx.send(f'You can use {ctx.prefix}share to get the link for a single voice channel or your current voice channel', delete_after=5)
 
-    @commands.command()
-    async def waitfor(self, ctx, channel: Optional[discord.TextChannel], user: CaseInsensitiveMember = None):
-        """Wait for a reply to your channel
-        Will send you a DM when I see a reply
-
-        - Will not trigger on messages by you or bots
-        - Only waits for a max of 24 hours
-        - You can specify a channel to wait for in, if none is given, defaults to this channel
-        - You can specify a user to only wait for their message, if none is given, defaults to anyone
-
-        `Ex. %waitfor` will wait for a message from anyone in the current channel
-        `Ex. %waitfor Bob` will wait for a message from Bob in the current channel
-        `Ex. %waitfor #general Bob` will wait for a message from Bob in #general"""
-        await ctx.send(f'Waiting for reply from `{user if user is not None else "anyone"}` in {f"`{channel}`" if channel else "this channel"} for up to 24 hours', delete_after=5)
-        await ctx.message.add_reaction('<a:typing:559157048919457801>')
-        channel = channel or ctx.channel
-        try:
-            msg = await self.bot.wait_for('message',
-                                          check=lambda m: m.channel == channel
-                                                          and m.author != ctx.author
-                                                          and not m.author.bot
-                                                          and (not user or m.author == user),
-                                          timeout=86400)
-        except TimeoutError:
-            try:
-                await ctx.message.add_reaction('<:redTick:602811779474522113>')
-            except discord.HTTPException:
-                pass
-        else:
-            try:
-                await ctx.message.add_reaction('\U00002705')
-            except discord.HTTPException:
-                pass
-            try:
-                e = discord.Embed(title=f'You got a reply at: {ctx.guild} | #{channel}',
-                                  description=f'{msg.author}: {msg.content}\n'
-                                              f'[Jump to message]({msg.jump_url})',
-                                  colour=0x0DF33E,
-                                  timestamp=datetime.utcnow())
-                await ctx.author.send(embed=e)
-            except discord.Forbidden:
-                pass
-
     @commands.Cog.listener()
     async def on_member_join(self, member):
         query = '''SELECT *
