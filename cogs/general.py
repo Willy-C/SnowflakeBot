@@ -238,7 +238,7 @@ class GeneralCog(commands.Cog, name='General'):
                                   description=f'{msg.author}: {msg.content}\n'
                                               f'[Jump to message]({msg.jump_url})',
                                   colour=0x0DF33E,
-                                  timestamp=datetime.utcnow())
+                                  timestamp=datetime.datetime.utcnow())
                 await ctx.author.send(embed=e)
             except discord.Forbidden:
                 pass
