@@ -1,5 +1,7 @@
 import discord
 from discord.ext import commands
+
+import contextlib
 from asyncio import TimeoutError
 from utils.converters import CaseInsensitiveVoiceChannel
 
@@ -19,6 +21,7 @@ class Voice(commands.Cog):
             ctx.author = voicechannel.guild.get_member(ctx.author.id)
 
         await ctx.message.add_reaction('<a:typing:559157048919457801>')
+        await ctx.message.add_reaction('<:greenTick:602811779835494410>')
 
         current_members = voicechannel.members
 
@@ -38,11 +41,16 @@ class Voice(commands.Cog):
         else:
             if member != ctx.author:
                 await ctx.author.edit(mute=True)
-        await ctx.message.add_reaction('<:greenTick:602811779835494410>')
-        try:
-            await ctx.message.remove_reaction('<a:typing:559157048919457801>', ctx.me)
-        except:
-            pass
+                await ctx.message.add_reaction('\U0000203c')
+                await ctx.message.remove_reaction('<:greenTick:602811779835494410>', ctx.me)
+        finally:
+            with contextlib.suppress(discord.HTTPException):
+                await ctx.message.remove_reaction('<a:typing:559157048919457801>', ctx.me)
+
+
+
+
+
 
 
 def setup(bot):
