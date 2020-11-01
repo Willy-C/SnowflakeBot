@@ -21,7 +21,7 @@ class Voice(commands.Cog):
             ctx.author = voicechannel.guild.get_member(ctx.author.id)
 
         await ctx.message.add_reaction('<a:typing:559157048919457801>')
-        await ctx.message.add_reaction('<:greenTick:602811779835494410>')
+        await ctx.message.add_reaction('<:status_online:602811779948740627>')
 
         current_members = voicechannel.members
 
@@ -35,17 +35,19 @@ class Voice(commands.Cog):
                        and before.channel == voicechannel
                        and after.channel != voicechannel)
         try:
-            member, _ , _ = await self.bot.wait_for('voice_state_update', check=check, timeout=43200)
+            member, _, _ = await self.bot.wait_for('voice_state_update', check=check, timeout=43200)
         except TimeoutError:
-            pass
+            await ctx.message.add_reaction('<:status_idle:602811780129095701>')
         else:
             if member != ctx.author:
                 await ctx.author.edit(mute=True)
-                await ctx.message.add_reaction('\U0000203c')
-                await ctx.message.remove_reaction('<:greenTick:602811779835494410>', ctx.me)
+                await ctx.message.add_reaction('<:status_dnd:602811779931701259>')
+            else:
+                await ctx.message.add_reaction('<:status_idle:602811780129095701>')
         finally:
             with contextlib.suppress(discord.HTTPException):
                 await ctx.message.remove_reaction('<a:typing:559157048919457801>', ctx.me)
+                await ctx.message.remove_reaction('<:status_online:602811779948740627>', ctx.me)
 
 
 
