@@ -226,6 +226,31 @@ class ReminderCog(commands.Cog, name='Reminders'):
     async def weekly_check(self):
         self.have_timer.set()
 
+    @commands.command()
+    async def desktop(self, ctx, *, reminder):
+        """Set a reminder that triggers next time you login your desktop client
+        Reminder expires if not triggered after 36 hours
+        Example usage: %desktop check out this video https://youtu.be/D0q0QeQbw9U"""
+        start = ctx.message.created_at
+        await ctx.message.add_reaction('<a:typing:559157048919457801>')
+
+        def check(before, after):
+            if before.id == ctx.author.id:
+                if before.desktop_status is not discord.Status.online and after.desktop_status is discord.Status.online:
+                    return True
+                elif before.desktop_status is discord.Status.offline and after.desktop_status is not discord.Status.offline:
+                    return True
+            return False
+        try:
+            await self.bot.wait_for('member_update', check=check, timeout=129600)
+        except asyncio.TimeoutError:
+            await ctx.message.add_reaction('<:redTick:602811779474522113>')
+        else:
+            await ctx.send(f'{ctx.author.mention} desktop reminder from {human_timedelta(start)}: {reminder}\n\n{ctx.message.jump_url}')
+            await ctx.message.add_reaction('<:greenTick:602811779835494410>')
+        finally:
+            await ctx.message.remove_reaction('<a:typing:559157048919457801>', ctx.me)
+
 
 def setup(bot):
     bot.add_cog(ReminderCog(bot))
