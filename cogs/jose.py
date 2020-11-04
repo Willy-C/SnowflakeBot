@@ -12,6 +12,7 @@ class Jose(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        """3 'strikes' on an attachment and it gets deleted"""
         if not message.guild or message.guild.id != GUILD_ID or message.author.bot:
             return
         if not message.attachments:

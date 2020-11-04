@@ -627,7 +627,7 @@ class ModCog(commands.Cog, name='Mod'):
         await self.purge_messages(ctx, 25, lambda m: m.content == _content)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
-    @purge.command(name='all')
+    @purge.command(name='any')
     async def everything(self, ctx, limit=20):
         """Deletes the last `limit` messages in the channel
         If no limit is given, defaults to 20"""
