@@ -235,12 +235,10 @@ class ReminderCog(commands.Cog, name='Reminders'):
         await ctx.message.add_reaction('<a:typing:559157048919457801>')
 
         def check(before, after):
-            if before.id == ctx.author.id:
-                if before.desktop_status is not discord.Status.online and after.desktop_status is discord.Status.online:
-                    return True
-                elif before.desktop_status is discord.Status.offline and after.desktop_status is not discord.Status.offline:
-                    return True
-            return False
+            return before.id == ctx.author.id and \
+                   ((before.desktop_status is not discord.Status.online and after.desktop_status is discord.Status.online)
+                    or (before.desktop_status is discord.Status.offline and after.desktop_status is not discord.Status.offline))
+
         try:
             await self.bot.wait_for('member_update', check=check, timeout=129600)
         except asyncio.TimeoutError:

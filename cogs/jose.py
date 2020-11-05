@@ -25,7 +25,7 @@ class Jose(commands.Cog):
             else:
                 return False
         try:
-            await self.bot.wait_for('reaction_add', check=check, timeout=900)
+            await self.bot.wait_for('reaction_add', check=check, timeout=600)
         except asyncio.TimeoutError:
             await message.remove_reaction('\U0001f621', message.guild.me)
         else:
