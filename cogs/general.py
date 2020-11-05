@@ -8,6 +8,8 @@ import googletrans
 import unicodedata
 from PIL import Image
 from typing import Optional
+from asyncio import TimeoutError
+
 from utils import converters
 from utils.global_utils import last_image, is_image, upload_hastebin, bright_color
 
@@ -222,7 +224,7 @@ class GeneralCog(commands.Cog, name='General'):
                                                           and m.author != ctx.author
                                                           and not m.author.bot
                                                           and (not user or m.author == user),
-                                          timeout=86400)
+                                          timeout=129600)
         except TimeoutError:
             try:
                 await ctx.message.add_reaction('<:redTick:602811779474522113>')
