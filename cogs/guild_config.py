@@ -23,7 +23,7 @@ class GuildConfig(commands.Cog, name='Settings'):
     async def cog_check(self, ctx):
         if ctx.guild is None:
             raise commands.NoPrivateMessage
-        return ctx.author.guild_permissions.manage_guild
+        return ctx.author.guild_permissions.manage_guild or await ctx.bot.is_owner(ctx.author)
 
     @commands.group(name='config', invoke_without_command=True, case_insensitive=True)
     async def guild_config(self, ctx):

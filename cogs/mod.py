@@ -548,6 +548,10 @@ class ModCog(commands.Cog, name='Mod'):
             if members is None:
                 return await ctx.send('Please specify users or join a voice channel')
 
+        if not channel and len(members) > 2:
+            if not await confirm_prompt(ctx, 'Are you sure you want to disconnect users from voice?'):
+                return
+
         total = len(members)
         success = 0
         for member in members:
