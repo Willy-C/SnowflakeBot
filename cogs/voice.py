@@ -41,8 +41,13 @@ class Voice(commands.Cog):
             await ctx.message.add_reaction('<:status_idle:602811780129095701>')
             return
         else:
+            muted = False
             if member != ctx.author:
-                await ctx.author.edit(mute=True)
+                if ctx.author.voice.self_video:
+                    await ctx.author.move_to(None)
+                else:
+                    await ctx.author.edit(mute=True)
+                    muted = True
                 await ctx.message.add_reaction('<:status_dnd:602811779931701259>')
             else:
                 await ctx.message.add_reaction('<:status_idle:602811780129095701>')
@@ -51,7 +56,7 @@ class Voice(commands.Cog):
                 await ctx.message.remove_reaction('<a:typing:559157048919457801>', ctx.me)
                 await ctx.message.remove_reaction('<:status_online:602811779948740627>', ctx.me)
 
-        if member != ctx.author:
+        if muted:
             await ctx.message.add_reaction('\U0000203c')
 
             def reaction_check(reaction, user):
