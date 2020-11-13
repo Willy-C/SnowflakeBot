@@ -244,6 +244,11 @@ class GeneralCog(commands.Cog, name='General'):
                 await ctx.author.send(embed=e)
             except discord.Forbidden:
                 pass
+        finally:
+            try:
+                await ctx.message.remove_reaction('<a:typing:559157048919457801>', ctx.me)
+            except discord.HTTPException:
+                pass
 
 
 def to_emoji(c):

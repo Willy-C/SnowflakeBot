@@ -7,7 +7,7 @@ import operator
 
 from utils.global_utils import upload_hastebin
 
-DICE_NOTATION_REGEX = re.compile(r'(\d+)d(\d+)\s?(([+-])(\d+|l|h))?')
+DICE_NOTATION_REGEX = re.compile(r'(\d+)d(\d+)(([+-])(\d+|l|h))?', re.IGNORECASE)
 
 operators = {'+': operator.add,
              '-': operator.sub}
@@ -18,10 +18,11 @@ class DiceRoll(commands.Converter):
         match = DICE_NOTATION_REGEX.fullmatch(argument)
         if not match:
             raise commands.BadArgument(f'Invalid dice notation. See {ctx.prefix}help dice for more info')
-        dice, faces, _, operator, modifier = match.groups() # 1d2-3 -> (1, 2, -3, -, 3 ) (num_dice, faces, _, operator, modifier)
-        if modifier.isnumeric():
+
+        dice, faces, _, operator, modifier = match.groups()  # 1d2-3 -> (1, 2, -3, -, 3 ) (num_dice, faces, _, operator, modifier)
+        if modifier and modifier.isnumeric():
             modifier = int(modifier)
-        else:
+        elif modifier is not None:
             if operator != '-':
                 raise commands.BadArgument(f'Invalid dice notation. Modifier must be `-` when using H/L.')
         return int(dice), int(faces), operator, modifier
@@ -56,24 +57,31 @@ class RNG(commands.Cog):
         await ctx.send(random.choice(('Head', 'Tail')))
 
     @commands.command(name='dice', aliases=['roll'])
-    async def dice_roll(self, ctx, diceroll: DiceRoll, sorted: bool=False):
-        """Rolls a dice with standard dice notation
-        AdX (±B L/H)
+    async def dice_roll(self, ctx, diceroll: DiceRoll = '1d6', sorted: bool=False):
+        """Rolls a dice with [**standard dice notation**](https://en.wikipedia.org/wiki/Dice_notation)
+        Add True at the end to sort rolls
+
+        Example usage:
+        `1d20` = Roll a 20-sided die
+        `10d20 true` = Roll 10 20-sided dice and sort the results
+        `2d6+4` = Roll 2 6-sided dice and then subtract 4 from the result
+        `4d12-L` = Roll 4 12-sided dice and then drop the lowest number
+
+        AdX (±B)/(-L/H)
         A = number of dice
         X = number of faces on each die
         B = number to add/subtract to the sum of the dice
         -L/H = drop the lowest or highest result
-        Example usage:
-        `1d20` = Roll a 20-sided die
-        `2d6+4` = Roll 2 6-sided dice and then subtract 4 from the result
-        `4d12-L` = Roll 4 12-sided dice and then drop the lowest number
         """
-        dice, faces, operator, modifier = diceroll
+        if diceroll == '1d6':
+            dice, faces, operator, modifier = (1, 6, None, None)
+        else:
+            dice, faces, operator, modifier = diceroll
 
-        if not (1 <= dice <= 999):
-            return await ctx.send('Number of Dice must be between 1 and 999')
-        if not (1 <= faces <= 999):
-            return await ctx.send('Number of Faces must be between 1 and 999')
+        if not (1 <= dice <= 9999):
+            return await ctx.send('Number of Dice must be between 1 and 9999')
+        if not (1 <= faces <= 9999):
+            return await ctx.send('Number of Faces must be between 1 and 9999')
 
         rolls = []
         for _ in range(dice):
@@ -95,7 +103,10 @@ class RNG(commands.Cog):
         else:
             output = dsum
 
-        all_rolls = ' '.join(rolls)
+        if sorted:
+            rolls.sort()
+
+        all_rolls = ' '.join([str(r) for r in rolls])
         if len(all_rolls) >= 1000:
             url = await upload_hastebin(ctx, all_rolls)
             all_rolls = f'Too many rolls to display here. Uploaded to here instead: {url}'
