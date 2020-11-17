@@ -124,3 +124,26 @@ class CaseInsensitiveVoiceChannel(commands.VoiceChannelConverter):
             raise errors.ChannelNotFound(f'Channel `{argument}` not found.')
         return channel
 
+
+class BannedUser(commands.Converter):
+    async def convert(self, ctx, argument):
+        if argument.isdigit():
+            try:
+                return await ctx.guild.fetch_ban(discord.Object(argument))
+            except discord.NotFound:
+                raise commands.BadArgument('Unable to find ban for this ID')
+
+        bans = await ctx.guild.bans()
+        entry = discord.utils.find(lambda u: str(u.user) == argument, bans)
+
+        if entry is None:
+            raise commands.BadArgument('Unable to find ban for this user')
+        return entry
+
+
+class MessageConverter(commands.MessageConverter):
+    async def convert(self, ctx, argument):
+        try:
+            return await super().convert(ctx, argument)
+        except commands.MessageNotFound:
+            raise errors.MessageNotFound

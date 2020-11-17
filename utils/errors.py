@@ -63,3 +63,15 @@ class TimezoneNotFound(commands.CommandError):
 class ChannelNotFound(commands.BadArgument):
     def __init__(self, message=None):
         super().__init__(message or 'No channel found with that name or ID')
+
+
+class MessageNotFound(commands.BadArgument):
+    def __init__(self, message=None):
+        super().__init__(message or '```I am unable to find the specified message.\n'
+                                    'I will search in the following order:\n\n'
+                                    '1. By {channel ID}-{message ID}\n'
+                                    'This can be retrieved by shift-clicking on “Copy ID”\n\n'
+                                    '2. Lookup by message ID\n'
+                                    'The message must be in the current channel\n\n'
+                                    '3. Lookup by message URL\n\n'
+                                    'Note: You need Developer Mode enabled to retrieve message IDs```')

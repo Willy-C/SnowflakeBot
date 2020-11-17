@@ -3,7 +3,7 @@ from discord.ext import commands
 
 from collections import Counter
 from datetime import datetime
-from utils.converters import Member, CaseInsensitiveMember, CaseInsensitiveVoiceChannel
+from utils.converters import Member, CaseInsensitiveMember, CaseInsensitiveVoiceChannel, BannedUser
 from utils.global_utils import confirm_prompt
 from utils.time import human_timedelta, FutureTime, ShortTime
 
@@ -210,15 +210,16 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.bot_has_permissions(ban_members=True)
     @can_ban()
     @commands.guild_only()
-    async def unban(self, ctx, id: int, *, reason=None):
-        """Unbans someone from the server. Must provide user's ID"""
+    async def unban(self, ctx, user: BannedUser, *, reason=None):
+        """Unbans someone from the server.
+        Must provide ID or Name#Discrim"""
         if reason is None:
-            reason = f'Done by: {ctx.author} ({ctx.author.id})'
+            reason = f'Done by: {ctx.author} ({ctx.author.id}). Was banned for {user.reason}'
         else:
             reason = f'{ctx.author} ({ctx.author.id}): {reason}'
 
         try:
-            await ctx.guild.unban(discord.Object(id=id), reason=reason)
+            await ctx.guild.unban(user.user, reason=reason)
         except discord.HTTPException:
             await ctx.send('\U0001f44e')
         else:
