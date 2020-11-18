@@ -28,6 +28,13 @@ class ReactionRole(commands.Cog):
         self.interacting = {}
         bot.loop.create_task(self.get_message_ids())
 
+    async def cog_check(self, ctx):
+        if ctx.guild is None:
+            raise commands.NoPrivateMessage
+        if ctx.command.qualified_name == 'reactrole info':
+            return True
+        return ctx.author.guild_permissions.manage_roles or await ctx.bot.is_owner(ctx.author)
+
     async def get_message_ids(self):
         query = '''SELECT * FROM reaction_roles;'''
         records = await self.bot.pool.fetch(query)
@@ -333,7 +340,7 @@ class ReactionRole(commands.Cog):
 
     @reactrole.command()
     async def info(self, ctx, message: typing.Optional[MessageConverter]):
-        """"""
+        """Lists info about a reaction role message"""
         if message is None:
             if ctx.author.id in self.interacting:
                 message = self.interacting[ctx.author.id]
@@ -349,6 +356,42 @@ class ReactionRole(commands.Cog):
                           description=f'[Message]({message.jump_url})\n\n{fmt}')
         e.add_field(name='Type', value='Regular' if self.messages[message.id][0] == 'normal' else 'Toggle/Group')
         await ctx.send(embed=e)
+
+    @reactrole.command()
+    async def list(self, ctx):
+        """List all reaction role message on this server"""
+        query = '''SELECT message, type, data, channel FROM reaction_roles WHERE guild = $1;'''
+        records = await self.bot.pool.fetch(query, ctx.guild.id)
+        messages = []
+        for r in records:
+            count = len(r['data'])
+            if r['type'] == 'group':
+                count -= 1
+            url = f'https://discord.com/channels/{ctx.guild.id}/{r["channel"]}/{r["message"]}'
+            messages.append(f'[{r["message"]}]({url}) - {count} - {r["type"].capitalize()}')
+
+        e = discord.Embed(title='Reaction Roles List',
+                          color=0x55dd55,
+                          description='\n'.join(messages))
+        await ctx.send(embed=e)
+
+    @reactrole.command(name='reset')
+    async def clear(self, ctx, message: MessageConverter):
+        """Remove all reaction roles from a message
+        A message must be given"""
+        if not await confirm_prompt(ctx, 'Are you sure you want to completely remove reaction roles from this message?\n'
+                                         'This will make it be a regular message. This cannot be undone.\n'):
+            return
+        query = '''DELETE FROM reaction_roles WHERE message = $1;'''
+        status = await self.bot.pool.execute(query, message.id)
+        if status == 'DELETE 0':
+            return await ctx.send('Unable to remove reaction roles with that ID')
+        self.messages.pop(message.id, None)
+        await ctx.message.add_reaction('<:greenTick:602811779835494410>')
+        try:
+            await message.clear_reactions()
+        except discord.HTTPException:
+            pass
 
 
 def setup(bot):
