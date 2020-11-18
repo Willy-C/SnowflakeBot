@@ -2,6 +2,7 @@ import discord
 import asyncpg
 from discord.ext import commands
 
+import json
 import aiohttp
 import asyncio
 import traceback
@@ -94,9 +95,11 @@ class SnowflakeBot(commands.Bot):
         await asyncio.wait_for(self.pool.close(), timeout=20)
 
 
+async def db_init(con):
+    await con.set_type_codec('jsonb', encoder=json.dumps, decoder=json.loads, schema='pg_catalog')
 loop = asyncio.get_event_loop()
 try:
-    pool = loop.run_until_complete(asyncpg.create_pool(DBURI))
+    pool = loop.run_until_complete(asyncpg.create_pool(DBURI, init=db_init))
 except Exception:
     print(f'\nUnable to connect to PostgreSQL, exiting...\n')
     traceback.print_exc()

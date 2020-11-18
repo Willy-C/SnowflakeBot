@@ -1,12 +1,13 @@
 import discord
 from discord.ext import commands
 
+import json
 import datetime
 from typing import Union
 
-from utils.global_utils import bright_color
+from utils.global_utils import bright_color, upload_hastebin
 from utils.time import human_timedelta
-from utils.converters import CaseInsensitiveMember, CachedUserID
+from utils.converters import CaseInsensitiveMember, CachedUserID, MessageConverter
 
 
 class InfoCog(commands.Cog, name='Info'):
@@ -144,6 +145,23 @@ class InfoCog(commands.Cog, name='Info'):
         if isinstance(error, commands.errors.BadUnionArgument):
             ctx.local_handled = True
             return await ctx.send('Unable to find that person')
+
+    @commands.command()
+    async def msginfo(self, ctx, message: MessageConverter):
+        """Get raw JSON of a message
+        Can pass ID, channel-ID or jump url"""
+        try:
+            msg = await self.bot.http.get_message(message.channel.id, message.id)
+        except discord.NotFound:
+            return await ctx.send('Unable to find message in that channel')
+
+        raw = json.dumps(msg, indent=2, ensure_ascii=False, sort_keys=True)
+        if len(raw) < 1900:
+            out = raw.replace("```", "'''")
+            await ctx.send(f'```json\n{out}\n```')
+        else:
+            url = await upload_hastebin(ctx, raw)
+            await ctx.send(f'Output too long, uploaded to: {url}.json')
 
 
 def setup(bot):
