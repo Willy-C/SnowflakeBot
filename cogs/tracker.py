@@ -1,4 +1,5 @@
 import discord
+import asyncio
 import humanize
 import traceback
 from io import BytesIO
@@ -99,6 +100,7 @@ class TrackerCog(commands.Cog):
                 await self.log_nickname(member)
             if member.id not in ava_ids:
                 await self.log_avatar(member)
+                await asyncio.sleep(2)
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
