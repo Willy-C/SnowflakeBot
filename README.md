@@ -16,12 +16,13 @@ The name Snowflake does not actually have anything to do with discord's [Snowfla
 A full list of commands and its corresponding documentation can be found via the `help` command on the bot or you can source dive this repo.
 
 Here is a brief list of some of the things the bot can do:
+ - Reaction Roles
  - Server Moderation
  - Get user and server info 
  - Evaluate Python code in chat
  - Help manage your notifications
- - Generate LaTeX as image in chat
  - Set timed reminders for yourself
+ - Generate LaTeX as image in chat
  - Hot reload modules without restart
  - Use custom emojis across servers without Nitro
  - Stream music from Youtube, Twitch, Soundcloud, Mixer, Vimeo, etc with [Lavalink](https://github.com/Frederikam/Lavalink) 
