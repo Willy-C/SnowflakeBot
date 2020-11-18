@@ -44,7 +44,8 @@ startup_extensions = ['jishaku',
                       'cogs.invites',
                       'cogs.stealth',
                       'cogs.voice',
-                      'cogs.eval']
+                      'cogs.eval',
+                      'cogs.reaction_role']
 
 
 def get_prefix(bot, message):
