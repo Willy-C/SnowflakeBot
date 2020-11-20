@@ -31,7 +31,7 @@ class ReactionRole(commands.Cog):
     async def cog_check(self, ctx):
         if ctx.guild is None:
             raise commands.NoPrivateMessage
-        if ctx.command.qualified_name == 'reactrole info':
+        if ctx.command.qualified_name in ('reactrole info', 'reactrole list'):
             return True
         return ctx.author.guild_permissions.manage_roles or await ctx.bot.is_owner(ctx.author)
 
@@ -372,7 +372,7 @@ class ReactionRole(commands.Cog):
 
         e = discord.Embed(title='Reaction Roles List',
                           color=0x55dd55,
-                          description='\n'.join(messages))
+                          description='\n'.join(messages) if messages else 'No reaction roles on this server')
         await ctx.send(embed=e)
 
     @reactrole.command(name='reset')
