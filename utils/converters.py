@@ -1,7 +1,9 @@
 import discord
 import pytz
+import typing
 from discord.ext import commands
 from utils import errors
+
 
 
 class CaseInsensitiveMember(commands.MemberConverter):
@@ -125,6 +127,26 @@ class CaseInsensitiveVoiceChannel(commands.VoiceChannelConverter):
         return channel
 
 
+class CaseInsensitiveCategoryChannel(commands.CategoryChannelConverter):
+    async def convert(self, ctx, argument):
+        try:
+            channel = await super().convert(ctx, argument)
+        except commands.BadArgument:
+            if ctx.guild:
+                channel = discord.utils.find(lambda c: c.name.lower() == argument.lower(), ctx.guild.categories)
+            else:
+                # Doing case insensitive search across many guilds leads to too much ambiguity
+                raise errors.ChannelNotFound('A channel with that ID cannot be found')
+
+        if channel is None:
+            raise errors.ChannelNotFound(f'Channel `{argument}` not found.')
+        return channel
+
+
+CaseInsensitiveChannel = typing.Union[CaseInsensitiveTextChannel,
+                                      CaseInsensitiveVoiceChannel,
+                                      CaseInsensitiveCategoryChannel]
+
 class BannedUser(commands.Converter):
     async def convert(self, ctx, argument):
         if argument.isdigit():
@@ -147,3 +169,17 @@ class MessageConverter(commands.MessageConverter):
             return await super().convert(ctx, argument)
         except commands.MessageNotFound:
             raise errors.MessageNotFound
+
+
+class CaseInsensitiveRole(commands.RoleConverter):
+    async def convert(self, ctx, argument):
+        try:
+            role = await super().convert(ctx, argument)
+        except commands.BadArgument:
+            role = discord.utils.find(lambda r: r.name.lower() == argument.lower(), ctx.guild.roles)
+        except commands.NoPrivateMessage:
+            raise
+
+        if role is None:
+            raise errors.RoleNotFound()
+        return role

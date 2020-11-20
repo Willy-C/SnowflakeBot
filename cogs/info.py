@@ -7,7 +7,7 @@ from typing import Union
 
 from utils.global_utils import bright_color, upload_hastebin
 from utils.time import human_timedelta
-from utils.converters import CaseInsensitiveMember, CachedUserID, MessageConverter
+from utils.converters import CaseInsensitiveMember, CachedUserID, MessageConverter, CaseInsensitiveTextChannel, CaseInsensitiveRole
 
 
 class InfoCog(commands.Cog, name='Info'):
@@ -162,6 +162,33 @@ class InfoCog(commands.Cog, name='Info'):
         else:
             url = await upload_hastebin(ctx, raw)
             await ctx.send(f'Output too long, uploaded to: {url}.json')
+
+    @commands.command()
+    async def topic(self, ctx, *, channel: CaseInsensitiveTextChannel=None):
+        """Displays channel topic in chat.
+        If no channel is given, defaults to current channel"""
+        channel = channel or ctx.channel
+        await ctx.send(f'Channel Topic: {channel.topic}' if channel.topic else "No channel topic.",
+                       allowed_mentions=discord.AllowedMentions.none())
+
+    @commands.command()
+    async def roleinfo(self, ctx, *, role: CaseInsensitiveRole):
+        e = discord.Embed(title='Role Info',
+                          color=role.color)
+        emoji = {True: '<:greenTick:602811779835494410>',
+                 False: '<:redTick:602811779474522113>'}
+        e.add_field(name='Name', value=role.name)
+        e.add_field(name='ID', value=role.id)
+        e.add_field(name='Created at', value=f'{role.created_at} ({human_timedelta(role.created_at)})')
+        e.add_field(name='Members', value=len(role.members))
+        e.add_field(name='Permissions', value=role.permissions.value)
+        e.add_field(name='Position', value=role.position)
+        e.add_field(name='Hoisted', value=emoji[role.hoist])
+        e.add_field(name='Mentionable', value=emoji[role.mentionable])
+        e.add_field(name='Managed', value=emoji[role.managed])
+        e.add_field(name='Color', value=role.color)
+
+        await ctx.send(embed=e)
 
 
 def setup(bot):

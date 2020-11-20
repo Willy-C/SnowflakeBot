@@ -75,3 +75,8 @@ class MessageNotFound(commands.BadArgument):
                                     'The message must be in the current channel\n\n'
                                     '3. Lookup by message URL\n\n'
                                     'Note: You need Developer Mode enabled to retrieve message IDs```')
+
+
+class RoleNotFound(commands.BadArgument):
+    def __init__(self, message=None):
+        super().__init__(message or 'No role found with that name or ID')
