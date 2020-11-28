@@ -49,9 +49,15 @@ class InfoCog(commands.Cog, name='Info'):
         guild = ctx.guild
         text_channels = len(guild.text_channels)
         voice_channels = len(guild.voice_channels)
-        roles = ['@everyone']
-        roles.extend([role.mention for role in guild.roles[1:]])
-        roles = ", ".join(roles)
+
+        if len(guild.roles) > 30:
+            roles = [role.mention for role in reversed(guild.roles[-30:])]
+            roles = ", ".join(roles)
+            show_roles = f'Top 30/{len(guild.roles)} roles: {roles}, `...`'
+        else:
+            roles = [role.mention for role in reversed(guild.roles[1:])]
+            roles = ", ".join(roles)
+            show_roles = f'{len(guild.roles)} roles: {roles}, @everyone'
 
         e = discord.Embed(title='Server Info', color=bright_color())
         e.set_author(icon_url=guild.icon_url, name=guild.name)
@@ -62,7 +68,7 @@ class InfoCog(commands.Cog, name='Info'):
         e.add_field(name='Members', value=guild.member_count)
         e.add_field(name='Channels', value=f'{text_channels} Text | {voice_channels} Voice')
         e.add_field(name='Created', value=human_timedelta(guild.created_at))
-        e.add_field(name='Roles', value=roles)
+        e.add_field(name='Roles', value=show_roles)
 
         await ctx.send(embed=e)
 
@@ -167,8 +173,12 @@ class InfoCog(commands.Cog, name='Info'):
     async def topic(self, ctx, *, channel: CaseInsensitiveTextChannel=None):
         """Displays channel topic in chat.
         If no channel is given, defaults to current channel"""
-        channel = channel or ctx.channel
-        await ctx.send(f'Channel Topic: {channel.topic}' if channel.topic else "No channel topic.",
+        if channel is None:
+            channel = ctx.channel
+            add = ''
+        else:
+            add = f' for {channel.mention}'
+        await ctx.send(f'Channel Topic{add}: {channel.topic}' if channel.topic else "No channel topic.",
                        allowed_mentions=discord.AllowedMentions.none())
 
     @commands.command()
@@ -179,7 +189,7 @@ class InfoCog(commands.Cog, name='Info'):
                  False: '<:redTick:602811779474522113>'}
         e.add_field(name='Name', value=role.name)
         e.add_field(name='ID', value=role.id)
-        e.add_field(name='Created at', value=f'{role.created_at} ({human_timedelta(role.created_at)})')
+        e.add_field(name='Created at', value=f'{role.created_at}\n({human_timedelta(role.created_at)})')
         e.add_field(name='Members', value=len(role.members))
         e.add_field(name='Permissions', value=role.permissions.value)
         e.add_field(name='Position', value=role.position)
