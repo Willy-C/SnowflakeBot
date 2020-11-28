@@ -35,7 +35,7 @@ class CommandErrorHandler(commands.Cog):
             return
 
         elif isinstance(error, commands.DisabledCommand):
-            return await ctx.send(f'`{ctx.command}` has been disabled. If you believe this is a mistake, please contact @{self.owner}')
+            return await ctx.send(f'Command `{ctx.command}` has been disabled.')
 
         elif isinstance(error, commands.NoPrivateMessage):
             return await ctx.author.send(f'The command `{ctx.command}` cannot be used in Private Messages.')

@@ -54,7 +54,7 @@ class RNG(commands.Cog):
     @commands.command(name='coin')
     async def coin_flip(self, ctx):
         """Flip a coin"""
-        await ctx.send(random.choice(('Head', 'Tail')))
+        await ctx.send(random.choice(('Heads', 'Tails')))
 
     @commands.command(name='dice', aliases=['roll'])
     async def dice_roll(self, ctx, diceroll: DiceRoll = '1d6', sorted: bool=False):
