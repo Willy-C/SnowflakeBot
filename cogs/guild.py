@@ -6,7 +6,7 @@ from datetime import datetime
 from collections import Counter
 
 from utils.global_utils import bright_color
-from utils.converters import CaseInsensitiveMember
+from utils.converters import CaseInsensitiveMember, CaseInsensitiveChannel
 
 
 class GuildCog(commands.Cog, name='Server'):
@@ -45,21 +45,31 @@ class GuildCog(commands.Cog, name='Server'):
 
         await ctx.send(embed=e)
 
-    @commands.command(name='shortperms', hidden=True)
-    async def get_permissions(self, ctx, *, member: CaseInsensitiveMember = None):
-        """Lists permissions of a member.
+    @commands.command(name='channelperms', aliases=['cperms'])
+    async def channel_permissions(self, ctx, channel: Optional[CaseInsensitiveChannel],  *, member: CaseInsensitiveMember = None):
+        """Lists permissions of a member in a particular channel.
+        If no channel is provided, the current channel will be checked.
         If a member is not provided, the author will be checked."""
 
-        if not member:
-            member = ctx.author
-        # Check if the value of each permission is True.
-        perms = '\n'.join(perm for perm, value in member.guild_permissions if value)
+        member = member or ctx.author
+        channel = channel or ctx.channel
 
-        # Embeds look nicer
-        e = discord.Embed(title='Permissions for:', description=ctx.guild.name, colour=member.colour)
+        if channel.type is discord.ChannelType.text:
+            voice_perms = ('priority_speaker', 'stream', 'connect', 'speak', 'mute_members', 'deafen_members',
+                           'move_members', 'use_voice_activation')
+            perms = '\n'.join(f'<:greenTick:602811779835494410> {perm}' if value else f'<:redTick:602811779474522113> {perm}'
+                              for perm, value in channel.permissions_for(member) if perm not in voice_perms)
+            # Voice permissions are always False in text channels, we will just not show them
+
+        else:
+            perms = '\n'.join(f'<:greenTick:602811779835494410> {perm}' if value else f'<:redTick:602811779474522113> {perm}'
+                              for perm, value in channel.permissions_for(member))
+
+        e = discord.Embed(title=f'Channel permissions in #{channel}:',
+                          description=perms,
+                          colour=member.colour)
         e.set_author(icon_url=member.avatar_url, name=str(member))
-
-        e.add_field(name='\uFEFF', value=perms)  # zero-width space
+        e.set_footer(text=f'Channel Type: {str(channel.type).capitalize()}')
 
         await ctx.send(embed=e)
 
@@ -69,9 +79,10 @@ class GuildCog(commands.Cog, name='Server'):
         If a member is not provided, the author will be checked."""
         member = member or ctx.author
 
-        perms = '\n'.join(f'<:greenTick:602811779835494410> {perm}' if value else f'<:redTick:602811779474522113> {perm}' for perm, value in member.guild_permissions)
+        perms = '\n'.join(f'<:greenTick:602811779835494410> {perm}' if value else f'<:redTick:602811779474522113> {perm}'
+                          for perm, value in member.guild_permissions)
 
-        e = discord.Embed(description=perms, colour=member.colour)
+        e = discord.Embed(title='Server Permissions', description=perms, colour=member.colour)
         e.set_author(icon_url=member.avatar_url, name=member)
         await ctx.send(embed=e)
 
