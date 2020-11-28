@@ -88,10 +88,12 @@ class ReactionRole(commands.Cog):
             current_roles = [(e, rid) for e, rid in info[1].items() if e != 'max' and e != str(payload.emoji) and rid in {r.id for r in member.roles}]
             to_remove = len(current_roles) - info[1]['max'] + 1
             to_remove = max(0, to_remove)
+            _remove_roles = []
             for t in current_roles[:to_remove]:
                 e, r = t
-                await member.remove_roles(discord.Object(r))
+                _remove_roles.append(discord.Object(r))
                 await self.bot.http.remove_reaction(payload.channel_id, payload.message_id, e, payload.user_id)
+            await member.remove_roles(*_remove_roles)
         await member.add_roles(discord.Object(info[1][str(payload.emoji)]))
 
     @commands.Cog.listener()
@@ -100,6 +102,8 @@ class ReactionRole(commands.Cog):
             return
         info = self.messages[payload.message_id]
         if str(payload.emoji) not in info[1]:
+            return
+        if info[0] == 'verify':
             return
         guild = self.bot.get_guild(info[3])
         member = guild.get_member(payload.user_id)
@@ -112,6 +116,56 @@ class ReactionRole(commands.Cog):
                        WHERE message = $1;'''
             await self.bot.pool.execute(query, payload.message_id)
             del self.messages[payload.message_id]
+
+    async def create_reaction_role_with_type(self, ctx, message, role, emoji, type):
+        try:
+            await message.add_reaction(emoji)
+        except discord.HTTPException:
+            if not isinstance(emoji, discord.PartialEmoji):
+                return await ctx.send('Sorry, I am unable to add that emoji to the message, are you sure it is a valid emoji?', delete_after=15)
+            else:
+                m = await ctx.send(f'I cannot add that reaction since its from another server, please do so for me by adding {emoji.name} to the message for me within the next **90 seconds**. You can remove the reaction after I added one.\n'
+                                   f'The message: {message.jump_url}')
+
+                def check(payload):
+                    return payload.emoji == emoji and payload.message_id == message.id
+                try:
+                    await self.bot.wait_for('raw_reaction_add', check=check, timeout=90)
+                except discord.HTTPException:
+                    return await ctx.send('Sorry, I am unable to add that emoji to the message.', delete_after=15)
+                except asyncio.TimeoutError:
+                    return await ctx.send('Waited too long for the reaction, exiting...', delete_after=15)
+                else:
+                    try:
+                        await message.add_reaction(emoji)
+                    except:
+                        return await ctx.send('I am unable to add that reaction', delete_after=15)
+                    with contextlib.suppress(discord.HTTPException):
+                        await message.remove_reaction(emoji, ctx.author)
+                finally:
+                    await m.delete()
+
+        if role >= ctx.me.top_role:
+            return await ctx.send('That role is above my role so I won\'t be able to add/remove it, please move my role up and try again!')
+
+        query = '''INSERT INTO reaction_roles(message, channel, guild, type, data)
+                   VALUES($1, $2, $3, $4, $5::jsonb)
+                   ON CONFLICT(message) DO UPDATE
+                   SET data = reaction_roles.data::jsonb || $5::jsonb;'''
+        await self.bot.pool.execute(query, message.id, message.channel.id, message.guild.id, type, {str(emoji): role.id})
+
+
+        description = f'Added {role.mention} with emoji {emoji if not isinstance(emoji, discord.PartialEmoji) else emoji.name} for [message]({message.jump_url})'
+        if type == 'verify':
+            description += f'\nRemoving reactions from this message will **not** remove the role.'
+
+        emoji = discord.Embed(title='Reaction Role - Add emoji',
+                              color=0x55dd55,
+                              description=description)
+        await ctx.send(embed=emoji, allowed_mentions=discord.AllowedMentions.none())
+        await ctx.message.add_reaction('<:greenTick:602811779835494410>')
+        await self.update_message_data(message)
+        await self.update_message_content(message)
 
     @commands.group(name='reactrole', aliases=['rr'], invoke_without_command=True, case_insensitive=True)
     async def reactrole(self, ctx):
@@ -167,48 +221,7 @@ class ReactionRole(commands.Cog):
         if message.id in self.messages and e in self.messages[message.id][1]:
             return await ctx.send(f'This emoji is already used for a role on this message!')
 
-        try:
-            await message.add_reaction(e)
-        except discord.HTTPException:
-            if not isinstance(e, discord.PartialEmoji):
-                return await ctx.send('Sorry, I am unable to add that emoji to the message, are you sure it is a valid emoji?', delete_after=15)
-            else:
-                m = await ctx.send(f'I cannot add that reaction since its from another server, please do so for me by adding {e.name} to the message for me within the next **90 seconds**. You can remove the reaction after I added one.\n'
-                                   f'The message: {message.jump_url}')
-
-                def check(payload):
-                    return payload.emoji == e and payload.message_id == message.id
-                try:
-                    await self.bot.wait_for('raw_reaction_add', check=check, timeout=90)
-                except discord.HTTPException:
-                    return await ctx.send('Sorry, I am unable to add that emoji to the message.', delete_after=15)
-                except asyncio.TimeoutError:
-                    return await ctx.send('Waited too long for the reaction, exiting...', delete_after=15)
-                else:
-                    try:
-                        await message.add_reaction(e)
-                    except:
-                        return await ctx.send('I am unable to add that reaction', delete_after=15)
-                    with contextlib.suppress(discord.HTTPException):
-                        await message.remove_reaction(e, ctx.author)
-                finally:
-                    await m.delete()
-
-        if r >= ctx.me.top_role:
-            return await ctx.send('That role is above my role so I won\'t be able to add/remove it, please move my role up and try again!')
-
-        query = '''INSERT INTO reaction_roles(message, channel, guild, type, data)
-                   VALUES($1, $2, $3, $4, $5::jsonb)
-                   ON CONFLICT(message) DO UPDATE
-                   SET data = reaction_roles.data::jsonb || $5::jsonb;'''
-        await self.bot.pool.execute(query, message.id, message.channel.id, message.guild.id, 'normal', {str(e): r.id})
-        e = discord.Embed(title='Reaction Role - Add emoji',
-                          color=0x55dd55,
-                          description=f'Added {r.mention} with emoji {e if not isinstance(e, discord.PartialEmoji) else e.name} for [message]({message.jump_url}) ')
-        await ctx.send(embed=e, allowed_mentions=discord.AllowedMentions.none())
-        await ctx.message.add_reaction('<:greenTick:602811779835494410>')
-        await self.update_message_data(message)
-        await self.update_message_content(message)
+        await self.create_reaction_role_with_type(ctx, message, r, e, 'normal')
 
     @reactrole.command()
     @commands.bot_has_permissions(add_reactions=True, manage_messages=True)
@@ -278,7 +291,7 @@ class ReactionRole(commands.Cog):
 
         if message.id not in self.messages:
             return await ctx.send('That message does not seem to have any reaction roles!')
-        if self.messages[message.id][0] == 'normal' and toggle is not False:
+        if self.messages[message.id][0] != 'group' and toggle is not False:
             query = '''UPDATE reaction_roles
                        SET type = 'group',
                            data = reaction_roles.data::jsonb || '{"max": 1}'::jsonb
@@ -330,8 +343,9 @@ class ReactionRole(commands.Cog):
         if self.messages[message.id][0] != 'group':
             await self.toggle(ctx, message, True)
         query = '''UPDATE reaction_roles
-                   SET data = reaction_roles.data::jsonb || $1::jsonb;'''
-        await self.bot.pool.execute(query, {'max': number})
+                   SET data = reaction_roles.data::jsonb || $1::jsonb
+                   WHERE message = $2;'''
+        await self.bot.pool.execute(query, {'max': number}, message.id)
         e = discord.Embed(title='Reaction Role',
                           color=0x55dd55,
                           description=f'Users can now have up to {number} roles from [message]({message.jump_url})')
@@ -392,6 +406,57 @@ class ReactionRole(commands.Cog):
             await message.clear_reactions()
         except discord.HTTPException:
             pass
+
+    @reactrole.command(name='verify', aliases=['once'])
+    async def add_only(self, ctx, message: typing.Optional[MessageConverter], role: typing.Union[discord.Role, discord.Emoji, discord.PartialEmoji, str], emoji: typing.Union[discord.Role, discord.Emoji, discord.PartialEmoji, str]):
+        """Set a reaction role message to a verification message.
+        This essentially means removing the reaction will not remove the role, making it a 1 time interaction.
+
+        If you recently used a reaction role command, it will automatically be for the same message, otherwise you must specify a message
+        Role can be inputted with its ID, Mention or Name
+
+        Example:
+        `%rr verify [message id] :thinking: @Member` (See `%help rr msg` on how to enter a message id)
+        `%rr verify :gun: @Admin` Note this only works if you recently used another reaction role command
+        """
+        if message is None:
+            if ctx.author.id in self.interacting:
+                message = self.interacting[ctx.author.id]
+            else:
+                return await ctx.send(f'Please specify a message ID or use `{ctx.prefix}rr msg [message]` to set one')
+        else:
+            self.interacting[ctx.author.id] = message
+        e, r = sort_emoji_role(role, emoji)
+
+        if message.id in self.messages and e in self.messages[message.id][1]:
+            return await ctx.send(f'This emoji is already used for a role on this message!')
+
+        await self.create_reaction_role_with_type(ctx, message, r, e, 'verify')
+        query = '''UPDATE reaction_roles
+                   SET type = 'verify'
+                   WHERE message = $1;'''
+        await self.bot.pool.execute(query, message.id)
+        await self.update_message_data(message)
+
+
+    @reactrole.command(name='unverify')
+    async def unverify(self, ctx, message: MessageConverter):
+        """Undo setting a message as a verification
+        A message must be given"""
+        if not await confirm_prompt(ctx, 'Are you sure you want to undo setting message to be verification\n'
+                                         'This will make it be a regular reaction role.\n'):
+            return
+
+        if message.id in self.messages and self.messages[message.id][0] != 'verify':
+            return await ctx.send(f'This message is not a verification message!')
+
+        query = '''UPDATE reaction_roles
+                   SET type = 'normal'
+                   WHERE message = $1;'''
+        await self.bot.pool.execute(query, message.id)
+        await self.update_message_data(message)
+        await ctx.message.add_reaction('<:greenTick:602811779835494410>')
+
 
 
 def setup(bot):
