@@ -10,3 +10,4 @@ googletrans
 wolframalpha
 asyncpg
 pillow
+aenum

@@ -98,7 +98,7 @@ class OwnerCog(commands.Cog, name='Owner'):
             botmember = ctx.me
         status = botmember.status
         url = url or 'https://www.twitch.tv/directory'
-        await self.bot.change_presence(discord.Streaming(name=name, url=url), status=status)
+        await self.bot.change_presence(activity=discord.Streaming(name=name, url=url), status=status)
         await ctx.message.add_reaction('\u2705')
 
     @change_presence.command(name='watching', aliases=['w'])
