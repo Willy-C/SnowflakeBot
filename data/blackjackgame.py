@@ -41,6 +41,7 @@ class GamePhase(Enum):
     DEALER  = 3
     END     = 4
     NATURAL = 5
+    DEALER_NATURAL= 6
 
 
 display_cards = {
@@ -196,14 +197,19 @@ class Game:
     def deal_cards(self):
         for _ in range(2):
             self.player.add_card(self.deck.draw_card())
-            self.dealer.add_card(self.deck.draw_card())
+            # self.dealer.add_card(self.deck.draw_card())
+        self.dealer.add_card(Card.ace())
+        self.dealer.add_card(Card(CardValue.Jack, CardSuit.Clubs))
 
     async def play_round(self, ctx):
         self.ctx = ctx
         self.deal_cards()
         self.message = await self.ctx.send(embed=self.build_game_embed())
         if self.dealer.is_blackjack():
-            self.phase = GamePhase.END
+            if self.player.is_blackjack():
+                self.phase = GamePhase.END
+            else:
+                self.phase = GamePhase.DEALER_NATURAL
             return
         elif self.player.is_blackjack():
             self.phase = GamePhase.NATURAL
@@ -213,7 +219,7 @@ class Game:
         reactions = ['👇', '🛑']
         [await self.message.add_reaction(r) for r in reactions]
         def check(r, u):
-            return str(r) in reactions and u == self.ctx.author
+            return str(r) in reactions and u == self.ctx.author and r.message == self.message
 
         while self.phase is GamePhase.PLAYER:
             try:
@@ -226,6 +232,9 @@ class Game:
                 self.player.add_card(self.deck.draw_card())
                 if self.player.state is HandState.BUST:
                     self.phase = GamePhase.END
+                    break
+                if self.player.state is HandState.BLACKJACK:
+                    self.phase = GamePhase.DEALER
                     break
                 await self.message.edit(embed=self.build_game_embed())
                 await self.message.remove_reaction('👇', self.ctx.author)
@@ -242,21 +251,25 @@ class Game:
             self.dealer.calculate_hand()
             self.phase = GamePhase.END
 
-        await self.calculate_outcome()
-
     async def calculate_outcome(self):
         if self.phase is GamePhase.NATURAL:
             embed = self.result_embed('win', 'Natural Blackjack')
+        elif self.phase is GamePhase.DEALER_NATURAL:
+            embed = self.result_embed('lose', 'Dealer Natural Blackjack')
         elif self.player.state is HandState.BUST:
             embed = self.result_embed('lose', 'Bust')
         elif self.dealer.state is HandState.BUST:
             embed = self.result_embed('win', 'Dealer Bust')
         elif self.dealer.value == self.player.value:
             embed = self.result_embed('tie', 'Push')
+        elif self.player.state is HandState.BLACKJACK:
+            embed = self.result_embed('win', 'Blackjack')
+        elif self.dealer.state is HandState.BLACKJACK:
+            embed = self.result_embed('lose', 'Dealer Blackjack')
         elif self.player.value > self.dealer.value:
-            embed = self.result_embed('win', 'Win - closer to 21')
+            embed = self.result_embed('win', 'Closer to 21')
         else:
-            embed = self.result_embed('lose', 'Lose - Dealer closer to 21')
+            embed = self.result_embed('lose', 'Dealer closer to 21')
         await self.message.edit(embed=embed)
         self.reset_hands()
 
