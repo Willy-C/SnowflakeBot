@@ -35,13 +35,14 @@ class HandState(Enum):
     BUST      = 3
     HIDDEN    = 4
 
+
 class GamePhase(Enum):
     IDLE    = 1
     PLAYER  = 2
     DEALER  = 3
     END     = 4
     NATURAL = 5
-    DEALER_NATURAL= 6
+    DEALER_NATURAL = 6
 
 
 display_cards = {
@@ -67,6 +68,7 @@ display_suits = {
     'Hearts'  : '❤',
     'Spades'  : '♠'
 }
+
 
 class Card:
     def __init__(self, value, suit):
@@ -197,9 +199,7 @@ class Game:
     def deal_cards(self):
         for _ in range(2):
             self.player.add_card(self.deck.draw_card())
-            # self.dealer.add_card(self.deck.draw_card())
-        self.dealer.add_card(Card.ace())
-        self.dealer.add_card(Card(CardValue.Jack, CardSuit.Clubs))
+            self.dealer.add_card(self.deck.draw_card())
 
     async def play_round(self, ctx):
         self.ctx = ctx
@@ -218,6 +218,7 @@ class Game:
         self.phase = GamePhase.PLAYER
         reactions = ['👇', '🛑']
         [await self.message.add_reaction(r) for r in reactions]
+
         def check(r, u):
             return str(r) in reactions and u == self.ctx.author and r.message == self.message
 
