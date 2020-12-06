@@ -203,16 +203,9 @@ class Game:
         self.deal_cards()
         self.message = await self.ctx.send(embed=self.build_game_embed())
         if self.dealer.is_blackjack():
-            if self.player.is_blackjack():
-                print('GAME TIED')
-            else:
-                self.dealer.reveal()
-                print(self.dealer)
-                print('DEALER BLACKJACK')
             self.phase = GamePhase.END
             return
         elif self.player.is_blackjack():
-            print('BLACKJACK')
             self.phase = GamePhase.NATURAL
             return
 
@@ -254,16 +247,12 @@ class Game:
     async def calculate_outcome(self):
         if self.phase is GamePhase.NATURAL:
             embed = self.result_embed('win', 'Natural Blackjack')
-            print('Win x1.5')
         elif self.player.state is HandState.BUST:
             embed = self.result_embed('lose', 'Bust')
-            print('Lose - Busted')
         elif self.dealer.state is HandState.BUST:
             embed = self.result_embed('win', 'Dealer Bust')
-            print('Win x1.0')
         elif self.dealer.value == self.player.value:
             embed = self.result_embed('tie', 'Push')
-            print('Push')
         elif self.player.value > self.dealer.value:
             embed = self.result_embed('win', 'Win - closer to 21')
         else:
