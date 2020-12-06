@@ -180,7 +180,7 @@ class DealerHand(Hand):
 
     def __str__(self):
         if self.state is HandState.HIDDEN:
-            return f'Cards: {self.cards[0].display} - XX.\nValue: {self.display}'
+            return f'Cards: {self.cards[0].display} - XX\nValue: {self.display}'
         return super().__str__()
 
     def reveal(self):
@@ -243,7 +243,6 @@ class Game:
                 self.phase = GamePhase.DEALER
                 break
 
-        self.dealer.reveal()
         if self.phase is GamePhase.DEALER:
             if self.dealer.value >= 17:
                 self.phase = GamePhase.END
@@ -253,6 +252,7 @@ class Game:
             self.phase = GamePhase.END
 
     async def calculate_outcome(self):
+        self.dealer.reveal()
         if self.phase is GamePhase.NATURAL:
             embed = self.result_embed('win', 'Natural Blackjack')
         elif self.phase is GamePhase.DEALER_NATURAL:
