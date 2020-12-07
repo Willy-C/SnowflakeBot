@@ -1,5 +1,5 @@
+import data.blackjackgame as bj
 from discord.ext import commands
-from data.blackjackgame import Game
 
 
 class BlackJack(commands.Cog):
@@ -15,7 +15,7 @@ class BlackJack(commands.Cog):
     @commands.max_concurrency(1, per=commands.BucketType.user)
     @commands.command(aliases=['bj'])
     async def blackjack(self, ctx, decks=4):
-        game = self.games.setdefault(ctx.author.id, Game(ctx, decks=decks))
+        game = self.games.setdefault(ctx.author.id, bj.Game(ctx, decks=decks))
         await game.play_round(ctx)
         await game.calculate_outcome()
         if len(game.deck) < 10:

@@ -1,12 +1,10 @@
 import discord
 import asyncio
 import random
-from itertools import islice
 from aenum import Enum, IntEnum, NoAlias
 
 
 class CardValue(IntEnum, settings=NoAlias):
-    SAce  = 11
     Ace   = 1
     Two   = 2
     Three = 3
@@ -46,7 +44,6 @@ class GamePhase(Enum):
 
 
 display_cards = {
-    'SAce':  'A',
     'Ace':   'A',
     'Two':   '2',
     'Three': '3',
@@ -100,10 +97,6 @@ class Card:
         return cls(CardValue.Ace, CardSuit.Spades)
 
     @property
-    def is_soft(self):
-        return self.value is CardValue.SAce
-
-    @property
     def display(self):
         return f'{display_cards[self.value.name]}{display_suits[self.suit.name]}'
 
@@ -111,7 +104,7 @@ class Card:
 class Deck:
     def __init__(self, decks=1):
         self.deck = [Card(value, suit)
-                     for _ in range(decks) for value in islice(CardValue, 1, None) for suit in CardSuit]
+                     for _ in range(decks) for value in CardValue for suit in CardSuit]
         self.shuffle()
 
     def shuffle(self):
@@ -137,8 +130,7 @@ class Hand:
         if Card.ace() in self.cards:
             for card in self.cards:
                 if card.value is CardValue.Ace and total < 12:
-                    card.value = CardValue.SAce
-                    total = sum(self.cards)
+                    total += 10
                     self.is_soft = True
         self.value = total
         if self.value == 21:
@@ -160,7 +152,7 @@ class Hand:
 
     def __str__(self):
         value = 'Blackjack' if self.state is HandState.BLACKJACK else self.display
-        return f'Cards: {" - ".join(c.display for c in self.cards)}.\nValue: {value}'
+        return f'Cards: {" - ".join(c.display for c in self.cards)}\nValue: {value}'
 
 
 class DealerHand(Hand):
@@ -184,7 +176,8 @@ class DealerHand(Hand):
         return super().__str__()
 
     def reveal(self):
-        self.state = HandState.PLAYING
+        if self.state is HandState.HIDDEN:
+            self.state = HandState.PLAYING
 
 
 class Game:
@@ -243,16 +236,18 @@ class Game:
                 self.phase = GamePhase.DEALER
                 break
 
+        self.dealer.reveal()
         if self.phase is GamePhase.DEALER:
             if self.dealer.value >= 17:
                 self.phase = GamePhase.END
-            while self.dealer.value < 17 and not self.dealer.is_soft:
+            while (self.dealer.value < 17 or (self.dealer.value == 17 and self.dealer.is_soft)) and self.dealer.value < self.player.value:
                 self.dealer.add_card(self.deck.draw_card())
             self.dealer.calculate_hand()
             self.phase = GamePhase.END
 
     async def calculate_outcome(self):
         self.dealer.reveal()
+        self.dealer.calculate_hand()
         if self.phase is GamePhase.NATURAL:
             embed = self.result_embed('win', 'Natural Blackjack')
         elif self.phase is GamePhase.DEALER_NATURAL:
