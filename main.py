@@ -11,6 +11,7 @@ from datetime import datetime
 from sys import exit
 
 from config import BOT_TOKEN, DBURI
+from utils.context import Context
 
 DESCR = 'This is a general purpose bot I am making for fun'
 
@@ -91,6 +92,9 @@ class SnowflakeBot(commands.Bot):
         self.session = aiohttp.ClientSession(loop=self.loop)
 
         self.loop.create_task(set_prefixes(self))
+
+    async def get_context(self, message, *, cls=Context):
+        return await super().get_context(message, cls=cls)
 
     async def close(self):
         await self.session.close()
