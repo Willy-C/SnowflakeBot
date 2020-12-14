@@ -48,9 +48,11 @@ class Voice(commands.Cog):
                 else:
                     await ctx.author.edit(mute=True)
                     muted = True
-                await ctx.message.add_reaction('<:status_dnd:602811779931701259>')
+                with contextlib.suppress(discord.HTTPException):
+                    await ctx.message.add_reaction('<:status_dnd:602811779931701259>')
             else:
-                await ctx.message.add_reaction('<:status_idle:602811780129095701>')
+                with contextlib.suppress(discord.HTTPException):
+                    await ctx.message.add_reaction('<:status_idle:602811780129095701>')
         finally:
             with contextlib.suppress(discord.HTTPException):
                 await ctx.message.remove_reaction('<a:typing:559157048919457801>', ctx.me)

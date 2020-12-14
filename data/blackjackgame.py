@@ -76,7 +76,7 @@ class Card:
         return f'{self.value.name} of {self.suit.name}'
 
     def __eq__(self, other):
-        if not isinstance(other, Card):
+        if not isinstance(other, self.__class__):
             return False
         return self.value is other.value
 
@@ -299,7 +299,3 @@ class Game:
         self.player = Hand()
         self.dealer = DealerHand()
         self.phase = GamePhase.IDLE
-
-
-
-
