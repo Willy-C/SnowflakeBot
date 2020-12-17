@@ -65,52 +65,55 @@ class OwnerCog(commands.Cog, name='Owner'):
         else:
             await ctx.send(f'<:greenTick:602811779835494410> reloaded {cog}')
 
+    def get_bot_member(self, ctx):
+        if ctx.guild is None:
+            botmember = self.bot.guilds[0].me
+        else:
+            botmember = ctx.me
+        return botmember
+
     @commands.group(name='presence', invoke_without_command=True, case_insensitive=True)
     async def change_presence(self, ctx):
         await ctx.send_help(ctx.command)
 
     @change_presence.command(name='listen', aliases=['l'])
     async def listen(self, ctx, *, name):
-        if ctx.guild is None:
-            botmember = self.bot.guilds[0].me
-        else:
-            botmember = ctx.me
+        botmember = self.get_bot_member(ctx)
         status = botmember.status
         await self.bot.change_presence(activity=discord.Activity(name=name, type=discord.ActivityType.listening),
                                        status=status)
-        await ctx.message.add_reaction('\u2705')
+        await ctx.tick()
 
     @change_presence.command(name='playing', aliases=['play', 'p'])
     async def playing(self, ctx, *, name):
-        if ctx.guild is None:
-            botmember = self.bot.guilds[0].me
-        else:
-            botmember = ctx.me
+        botmember = self.get_bot_member(ctx)
         status = botmember.status
         await self.bot.change_presence(activity=discord.Game(name=name), status=status)
-        await ctx.message.add_reaction('\u2705')
+        await ctx.tick()
 
     @change_presence.command(name='streaming', aliases=['s'])
     async def streaming(self, ctx, name, url=None):
-        if ctx.guild is None:
-            botmember = self.bot.guilds[0].me
-        else:
-            botmember = ctx.me
+        botmember = self.get_bot_member(ctx)
         status = botmember.status
         url = url or 'https://www.twitch.tv/directory'
         await self.bot.change_presence(activity=discord.Streaming(name=name, url=url), status=status)
-        await ctx.message.add_reaction('\u2705')
+        await ctx.tick()
 
     @change_presence.command(name='watching', aliases=['w'])
     async def watching(self, ctx, *, name):
-        if ctx.guild is None:
-            botmember = self.bot.guilds[0].me
-        else:
-            botmember = ctx.me
+        botmember = self.get_bot_member(ctx)
         status = botmember.status
         await self.bot.change_presence(activity=discord.Activity(name=name, type=discord.ActivityType.watching),
                                        status=status)
-        await ctx.message.add_reaction('\u2705')
+        await ctx.tick()
+
+    @change_presence.command(name='competing', aliases=['c'])
+    async def competing(self, ctx, *, name):
+        botmember = self.get_bot_member(ctx)
+        status = botmember.status
+        await self.bot.change_presence(activity=discord.Activity(name=name, type=discord.ActivityType.competing),
+                                       status=status)
+        await ctx.tick()
 
     @change_presence.command(name='status')
     async def status(self, ctx, status):
@@ -123,23 +126,20 @@ class OwnerCog(commands.Cog, name='Owner'):
         status = status.lower()
         if status not in statuses:
             return await ctx.send(f'Not a valid status! Choose: [{", ".join(statuses.keys())}]')
-        if ctx.guild is None:
-            botmember = self.bot.guilds[0].me
-        else:
-            botmember = ctx.me
+        botmember = self.get_bot_member(ctx)
         activity = botmember.activity
         await self.bot.change_presence(status=statuses[status], activity=activity)
-        await ctx.message.add_reaction('\u2705')
+        await ctx.tick()
 
     @change_presence.command()
     async def clear(self, ctx):
         await self.bot.change_presence()
-        await ctx.message.add_reaction('\u2705')
+        await ctx.tick()
 
     @change_presence.command()
     async def reset(self, ctx):
         await self.bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name='you :)'))
-        await ctx.message.add_reaction('\u2705')
+        await ctx.tick()
 
     @commands.command(name='aeval')
     async def _eval(self, ctx, *, code: str):
