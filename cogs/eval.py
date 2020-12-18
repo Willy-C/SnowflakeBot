@@ -18,7 +18,7 @@ class Evaluation(commands.Cog):
         self.bot = bot
 
     @commands.command(aliases=['e'])
-    @commands.max_concurrency(3, commands.BucketType.user)
+    @commands.max_concurrency(1, commands.BucketType.user)
     async def eval(self, ctx: commands.Context, *, code):
         """Evaluates your python code.
         Codeblocks are optional

@@ -13,6 +13,13 @@ class Context(commands.Context):
     def session(self):
         return self.bot.session
 
+    @discord.utils.cached_property
+    def replied_reference(self):
+        ref = self.message.reference
+        if ref and isinstance(ref.resolved, discord.Message):
+            return ref.resolved.to_reference()
+        return None
+
     async def confirm_prompt(self, msg):
         """Asks author for confirmation, returns True if confirmed, False if user typed abort or timed out"""
         def confirm(m):
