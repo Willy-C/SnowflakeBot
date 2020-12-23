@@ -2,12 +2,9 @@ import discord
 from discord.ext import commands
 
 import io
-import asyncio
-import datetime
 import textwrap
 import tabulate
 import traceback
-from collections import Counter
 from typing import Optional, Union
 from contextlib import redirect_stdout
 from utils.errors import BlacklistedUser

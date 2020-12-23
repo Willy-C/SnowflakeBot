@@ -7,7 +7,7 @@ from discord.ext import commands
 from collections import defaultdict
 from datetime import datetime, timedelta
 from asyncpg import UniqueViolationError
-from utils.converters import CaseInsensitiveVoiceChannel, CaseInsensitiveMember
+from utils.converters import CaseInsensitiveVoiceChannel
 
 
 class TrackerCog(commands.Cog):
