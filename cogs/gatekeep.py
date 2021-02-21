@@ -7,16 +7,21 @@ from utils.time import human_timedelta
 
 GUILD_ID = 709264610200649738
 VERIFIED_ROLE = 709265266709626881
-GENERAL_ROLE = 714363973063016499
-GENERAL = 709264610200649741
+GENERAL_CHANNEL = 709264610200649741
 BOT_CHANNEL = 709277913471647824
-BF_ROLE = 713953248226050058
+
+MOVIE_ROLE = 803011517028237332
+LEAGUE_ROLE = 803009777830854677
+VALORANT_ROLE = 803009851080310824
+SPECIAL_ROLES = [MOVIE_ROLE, LEAGUE_ROLE, VALORANT_ROLE]
 
 
 class Gatekeep(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.verified = set()
         bot.loop.create_task(self.get_verified_ids())
+        self.tasks = {}
 
     async def get_verified_ids(self):
         query = '''SELECT id FROM gatekeep;'''
@@ -40,51 +45,46 @@ class Gatekeep(commands.Cog):
     async def on_member_join(self, member):
         if member.guild.id != GUILD_ID:
             return
-
         if member.id in self.verified:
             await member.add_roles(discord.Object(id=VERIFIED_ROLE), reason='Automatic verification')
-            await member.add_roles(discord.Object(id=GENERAL_ROLE), reason='Automatic verification')
-            general = member.guild.get_channel(GENERAL)
+            general = member.guild.get_channel(GENERAL_CHANNEL)
             await general.set_permissions(member, read_messages=True, read_message_history=True)
 
-    @commands.command(name='bf')
-    async def twom_bf_notify_toggle(self, ctx, toggle: bool=None):
-        """Toggles TWOM battlefield notifications
-        Example usage: `%bf ON/OFF`
+    async def temporary_visibility(self, obj, channel):
+        await channel.set_permissions(obj, read_message_history=True, read_messages=True)
+        await asyncio.sleep(900)
+        await channel.set_permissions(obj, read_message_history=None, read_messages=None)
 
-        If neither ON or OFF is specified then defaults to ON"""
-        if toggle is None:
-            toggle = True
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if message.guild is None or message.guild.id != GUILD_ID:
+            return
+        if message.author.id == 477572797850189834 and message.content in {"<@542951902669963271>", "<@!542951902669963271>"}:
+            return await message.channel.send('Assuming you meant: <@218845228612714499>')
 
-        if toggle:
-            if self.twom_task.done():
-                self.twom_task = self.bot.loop.create_task(self.twom_bf_notification_loop())
-            await ctx.send(f'Next battlefield notification is in **{human_timedelta(self.calculate_next_interval())}**')
-        else:
-            self.twom_task.cancel()
-        await ctx.send(f'Battlefield notifications are now: {"ON" if toggle else "OFF"}')
+        if message.channel.id != GENERAL_CHANNEL:
+            return
 
-    async def twom_bf_notification_loop(self):
-        await self.bot.wait_until_ready()
-        channel = self.bot.get_channel(BOT_CHANNEL)
-        while not self.bot.is_closed():
-            bf_time = self.calculate_next_interval()
-            seconds = (bf_time - datetime.datetime.utcnow()).total_seconds()
-            await asyncio.sleep(seconds)
-            await channel.send(f'<@&{BF_ROLE}> Its time for battlefield!', delete_after=300)
-            await discord.utils.sleep_until(datetime.datetime.utcnow().replace(minute=59, second=0, microsecond=0))
-            await channel.send(f'<@&{BF_ROLE}> 1 minute left you weebtards', delete_after=60)
+        general = message.guild.get_channel(GENERAL_CHANNEL)
+        for r in message.role_mentions:
+            if r.id in SPECIAL_ROLES:
+                task = self.bot.loop.create_task(self.temporary_visibility(r, general))
+                if r.id in self.tasks:
+                    try:
+                        self.tasks.get(r.id).cancel()
+                    except asyncio.CancelledError:
+                        pass
+                self.tasks[r.id] = task
 
-    def calculate_next_interval(self):
-        now = datetime.datetime.utcnow()
-        if now.hour % 2 == 0 and now >= now.replace(minute=55, second=0, microsecond=0):
-            now += datetime.timedelta(minutes=5)
-        top_hour = now.replace(minute=0, second=0, microsecond=0)
-        if top_hour.hour % 2 == 0:
-            td = datetime.timedelta(minutes=55)
-        else:
-            td = datetime.timedelta(hours=1, minutes=55)
-        return top_hour + td
+        for u in message.mentions:
+            if u.id not in self.verified:
+                task = self.bot.loop.create_task(self.temporary_visibility(u, general))
+                if u.id in self.tasks:
+                    try:
+                        self.tasks.get(u.id).cancel()
+                    except asyncio.CancelledError:
+                        pass
+                self.tasks[u.id] = task
 
 
 def setup(bot):
