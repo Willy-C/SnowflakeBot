@@ -51,9 +51,9 @@ class Gatekeep(commands.Cog):
             await general.set_permissions(member, read_messages=True, read_message_history=True)
 
     async def temporary_visibility(self, obj, channel):
-        await channel.set_permissions(obj, read_message_history=True, read_messages=True)
-        await asyncio.sleep(900)
-        await channel.set_permissions(obj, read_message_history=None, read_messages=None)
+        await channel.set_permissions(obj, read_message_history=True, read_messages=True, reason='Pinged')
+        await asyncio.sleep(1800)
+        await channel.set_permissions(obj, overwrite=None)
 
     @commands.Cog.listener()
     async def on_message(self, message):

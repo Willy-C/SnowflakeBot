@@ -92,6 +92,7 @@ class ReactionRole(commands.Cog):
             for t in current_roles[:to_remove]:
                 e, r = t
                 _remove_roles.append(discord.Object(r))
+                e = e.strip('<>')
                 await self.bot.http.remove_reaction(payload.channel_id, payload.message_id, e, payload.user_id)
             await member.remove_roles(*_remove_roles)
         await member.add_roles(discord.Object(info[1][str(payload.emoji)]))
