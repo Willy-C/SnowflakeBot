@@ -65,6 +65,26 @@ class Gatekeep(commands.Cog):
         if message.author.id == 477572797850189834 and message.content in {"<@542951902669963271>", "<@!542951902669963271>"}:
             return await message.channel.send('Assuming you meant: <@218845228612714499>')
 
+        if message.type is discord.MessageType.pins_add and message.channel.id != PINS_CHANNEL:
+            ref = message.reference
+            ref_msg = await self.bot.get_channel(ref.channel_id).fetch_message(ref.message_id)
+            if ref_msg.id in self.pinned:
+                await message.channel.send('This message is already pinned')
+            else:
+                embed = self.build_embed(ref_msg)
+                prox = await message.guild.get_channel(PINS_CHANNEL).send(embed=embed)
+                e = discord.Embed(color=discord.Color.dark_theme(),
+                                  description=f'{message.author.mention} pinned a [message]({ref_msg.jump_url}). It has been [posted]({prox.jump_url}) in <#{PINS_CHANNEL}>')
+                await message.channel.send(embed=e)
+                self.pinned.add(ref_msg.id)
+            await message.delete()
+            await ref_msg.unpin(reason='Pinned in #pins')
+            return
+
+        if message.channel.id == PINS_CHANNEL:
+            if message.author != self.bot.user:
+                await message.delete()
+
         if message.channel.id != GENERAL_CHANNEL:
             return
 
