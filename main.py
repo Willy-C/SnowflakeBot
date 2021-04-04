@@ -1,7 +1,4 @@
-import discord
-import asyncpg
-from discord.ext import commands
-
+import os
 import json
 import aiohttp
 import asyncio
@@ -10,45 +7,14 @@ import platform
 from datetime import datetime
 from sys import exit
 
+import discord
+import asyncpg
+from discord.ext import commands
+
 from config import BOT_TOKEN, DBURI
 from utils.context import Context
 
 DESCR = 'This is a general purpose bot I am making for fun'
-
-# File names of extensions we are loading on startup
-startup_extensions = ['jishaku',
-                      'cogs.error_handler',
-                      'cogs.guild',
-                      'cogs.owner',
-                      'cogs.meta',
-                      'cogs.logger',
-                      'cogs.random',
-                      'cogs.general',
-                      'cogs.highlight',
-                      'cogs.mod',
-                      'cogs.prefix',
-                      'cogs.latex',
-                      'cogs.info',
-                      'cogs.wavelink',
-                      'cogs.wash',
-                      'cogs.gatekeep',
-                      'cogs.reddit',
-                      'cogs.emoji',
-                      'cogs.waifu2x',
-                      'cogs.help',
-                      'cogs.reminder',
-                      'cogs.timezone',
-                      'cogs.tracker',
-                      'cogs.guild_config',
-                      'cogs.avatars',
-                      'cogs.invites',
-                      'cogs.stealth',
-                      'cogs.voice',
-                      'cogs.jose',
-                      'cogs.eval',
-                      'cogs.reaction_role',
-                      'cogs.blackjack',
-                      'cogs.chloe']
 
 
 def get_prefix(bot, message):
@@ -127,9 +93,12 @@ async def on_ready():
     print(f'Ready! {datetime.utcnow()}\n')
 
 
-total = len(startup_extensions)
+ignored = []
+extensions = ['jishaku']
+extensions += [f'cogs.{f[:-3]}' for f in os.listdir('./cogs') if f.endswith('.py') and f[:-3] not in ignored]
+total = len(extensions)
 successes = 0
-for extension in startup_extensions:
+for extension in extensions:
     try:
         bot.load_extension(extension)
         print(f'Successfully loaded extension {extension}.')
