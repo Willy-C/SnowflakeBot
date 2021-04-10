@@ -108,8 +108,9 @@ class Context(commands.Context):
             return await self.send(content, **kwargs)
         elif file:
             fp = io.BytesIO(content.encode())
+            kwargs.pop('file', None)
             return await self.send(file=discord.File(fp, filename=filename), **kwargs)
         else:
-            hastebin_url = await self.upload_hastebin(self, content, url)
+            hastebin_url = await self.upload_hastebin(content, url)
             return await self.send(f'Output too long, uploaded here instead: {hastebin_url}', **kwargs)
 

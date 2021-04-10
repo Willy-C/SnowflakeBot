@@ -97,7 +97,7 @@ class InfoCog(commands.Cog, name='Info'):
             nicks = await self.get_nicknames(user)
             if nicks:
                 e.add_field(name='Previous Nicknames(within 90days)', value=nicks)
-        e.add_field(name='Previous names (within 90days)', value=(await self.get_usernames(user) or str(user)))
+        e.add_field(name='Previous names', value=(await self.get_usernames(user) or str(user)))
 
         await ctx.send(embed=e)
 
