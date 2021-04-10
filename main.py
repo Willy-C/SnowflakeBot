@@ -93,7 +93,7 @@ async def on_ready():
     print(f'Ready! {datetime.utcnow()}\n')
 
 
-ignored = []
+ignored = ['vi']
 extensions = ['jishaku']
 extensions += [f'cogs.{f[:-3]}' for f in os.listdir('./cogs') if f.endswith('.py') and f[:-3] not in ignored]
 total = len(extensions)
