@@ -111,6 +111,6 @@ class Context(commands.Context):
             kwargs.pop('file', None)
             return await self.send(file=discord.File(fp, filename=filename), **kwargs)
         else:
-            hastebin_url = await self.upload_hastebin(content, url)
-            return await self.send(f'Output too long, uploaded here instead: {hastebin_url}', **kwargs)
+            paste_url = await self.upload_hastebin(content, url)
+            return await self.send(f'Output too long, uploaded here instead: {paste_url}', **kwargs)
 

@@ -1228,6 +1228,12 @@ class Music(commands.Cog):
         if ctx.author.voice:
             await ctx.invoke(self._playnext, query='https://www.youtube.com/watch?v=U06jlgpMtQs')
 
+    @play_.error
+    @playlist.error
+    async def no_node_error(self, ctx, error):
+        if isinstance(error, wavelink.errors.ZeroConnectedNodes):
+            await ctx.send('Sorry music playing is temporarily not available.')
+
     # Anti-afk
     @commands.command(name='noafk', hidden=True)
     async def no_afk_toggle(self, ctx):
