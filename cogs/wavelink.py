@@ -1233,6 +1233,10 @@ class Music(commands.Cog):
     async def no_node_error(self, ctx, error):
         if isinstance(error, wavelink.errors.ZeroConnectedNodes):
             await ctx.send('Sorry music playing is temporarily not available.')
+            appinfo = await self.bot.application_info()
+            owner = appinfo.owner
+            await owner.send('Lavalink node died!')
+            ctx.local_handled = True
 
     # Anti-afk
     @commands.command(name='noafk', hidden=True)
