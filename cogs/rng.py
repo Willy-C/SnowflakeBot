@@ -19,7 +19,7 @@ class DiceRoll(commands.Converter):
         if not match:
             raise commands.BadArgument(f'Invalid dice notation. See {ctx.prefix}help dice for more info')
 
-        dice, faces, _, operator, modifier = match.groups()  # 1d2-3 -> (1, 2, -3, -, 3 ) (num_dice, faces, _, operator, modifier)
+        dice, faces, _, operator, modifier = match.groups()  # 1d2-3 -> (1, 2, -3, -, 3) (num_dice, faces, _, operator, modifier)
         if modifier and modifier.isnumeric():
             modifier = int(modifier)
         elif modifier is not None:
@@ -73,6 +73,7 @@ class RNG(commands.Cog):
         B = number to add/subtract to the sum of the dice
         -L/H = drop the lowest or highest result
         """
+        # Converter not automatically called when arg is not provided, we will just shortcut it instead
         if diceroll == '1d6':
             dice, faces, operator, modifier = (1, 6, None, None)
         else:

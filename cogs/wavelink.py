@@ -1231,6 +1231,7 @@ class Music(commands.Cog):
     @play_.error
     @playlist.error
     async def no_node_error(self, ctx, error):
+        error = getattr(error, 'original', error)
         if isinstance(error, wavelink.errors.ZeroConnectedNodes):
             await ctx.send('Sorry music playing is temporarily not available.')
             appinfo = await self.bot.application_info()
