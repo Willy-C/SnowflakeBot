@@ -14,6 +14,13 @@ class Context(commands.Context):
         return self.bot.session
 
     @discord.utils.cached_property
+    def replied_message(self):
+        ref = self.message.reference
+        if ref and isinstance(ref.resolved, discord.Message):
+            return ref.resolved
+        return None
+
+    @discord.utils.cached_property
     def replied_reference(self):
         ref = self.message.reference
         if ref and isinstance(ref.resolved, discord.Message):

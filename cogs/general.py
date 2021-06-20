@@ -180,14 +180,17 @@ class GeneralCog(commands.Cog, name='General'):
     @commands.command()
     async def translate(self, ctx, *, text: commands.clean_content=None):
         """Translates a message to English using Google translate.
-        If no message is given, I will try and find the last message with text"""
+        If no message is given, I will try and find the last message with text or use the replied message if available"""
         if text is None:
-            async for message in ctx.channel.history(limit=25, before=ctx.message):
-                if message.content:
-                    text = message.content
-                    break
-            if text is None:
-                return await ctx.send('Unable to find text to translate!')
+            if ctx.replied_message and ctx.replied_message.content:
+                text = ctx.replied_message.clean_content
+            else:
+                async for message in ctx.channel.history(limit=25, before=ctx.message):
+                    if message.content:
+                        text = message.clean_content
+                        break
+                if text is None:
+                    return await ctx.send('Unable to find text to translate!')
         loop = self.bot.loop
         try:
             res = await loop.run_in_executor(None, self.translator.translate, text)
