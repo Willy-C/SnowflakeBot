@@ -93,25 +93,27 @@ class MetaCog(commands.Cog, name='Meta'):
         if command is None:
             return await ctx.send(url)
 
-        if len(command.split()) == 1:
-            cmd = self.bot.get_command(command.replace('.', ' '))
+        if command == 'help':
+            src = type(self.bot.help_command)
+            module = src.__module__
+            filename = inspect.getsourcefile(src)
         else:
-            cmd = self.bot.get_command(command)
+            cmd = self.bot.get_command(command.replace('.', ' '))
+            if cmd is None:
+                return await ctx.send('Sorry. I am unable to find that command.')
 
-        if cmd is None:
-            return await ctx.send('Sorry. I am unable to find that command.')
-
-        src = cmd.callback.__code__
-        module = cmd.callback.__module__
-        file = src.co_filename
+            src = cmd.callback.__code__
+            module = cmd.callback.__module__
+            filename = src.co_filename
 
         lines, firstlineno = inspect.getsourcelines(src)
         if not module.startswith('discord'):
             # not a built-in command
-            location = os.path.relpath(file).replace('\\', '/')
+            location = os.path.relpath(filename).replace('\\', '/')
         else:
             location = module.replace('.', '/') + '.py'
             url = 'https://github.com/Rapptz/discord.py'
+            branch = 'v1.x'  # master is 2.0 development
 
         final_url = f'<{url}/blob/{branch}/{location}#L{firstlineno}-L{firstlineno + len(lines) - 1}>'
         await ctx.send(final_url)
