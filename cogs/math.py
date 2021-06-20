@@ -1,8 +1,10 @@
 import discord
 from discord.ext import commands
-
 import aiohttp
 import io
+from datetime import datetime
+from utils.global_utils import bright_color
+from config import WOLFRAM_ALPHA_APPID
 
 TEX_API = 'http://rtex.probablyaweb.site/api/v2'
 TEMPLATE = r'''
@@ -14,6 +16,7 @@ TEMPLATE = r'''
 \usepackage{mathtools}
 \usepackage{amsthm}
 \usepackage{amssymb}
+\usepackage{amsfonts}
 \usepackage{chemfig}
 \usepackage{color}
 \usepackage{xcolor}
@@ -37,9 +40,10 @@ class TexRenderError(commands.CommandError):
         self.logs = logs
 
 
-class LatexCog(commands.Cog, name='Misc.'):
+class MathCog(commands.Cog, name='Math'):
     def __init__(self, bot):
         self.bot = bot
+        self.wolfram_url = 'http://api.wolframalpha.com/v1/simple'
 
     @commands.command(aliases=['tex'])
     async def latex(self, ctx, *, latex):
@@ -63,9 +67,34 @@ class LatexCog(commands.Cog, name='Misc.'):
                 data = io.BytesIO(await fr.read())
                 await ctx.send(file=discord.File(data, 'latex.png'))
 
-        except aiohttp.client_exceptions.ClientResponseError:
+        except aiohttp.ClientResponseError:
             raise TexRenderError(None)
+
+    @commands.command(name='wolframalpha', aliases=['wolfram','wa', 'math', 'solve'])
+    async def wolframalpha(self, ctx, *, query):
+        wolfram_payload = {
+            'appid': WOLFRAM_ALPHA_APPID,
+            'i': query,
+            'layout': 'labelbar',
+            'background': 'black',
+            'foreground': 'white',
+            'width': '800',
+            'fontsize': '22',
+            'units': 'metric',
+        }
+        await ctx.trigger_typing()
+        async with self.bot.session.get(self.wolfram_url, params=wolfram_payload) as resp:
+            print(resp.status)
+            if resp.status == 501:
+                return await ctx.reply('Invalid query')
+            data = io.BytesIO(await resp.read())
+
+        e = discord.Embed(color=bright_color(), timestamp=datetime.utcnow())
+        e.set_image(url='attachment://response.png')
+        e.set_footer(text=f'Query: {query[:30] + "..." if len(query)>30 else query}')
+        await ctx.reply(embed=e, file=discord.File(data, filename='response.png'), mention_author=False)
+        await ctx.tick()
 
 
 def setup(bot):
-    bot.add_cog(LatexCog(bot))
+    bot.add_cog(MathCog(bot))
