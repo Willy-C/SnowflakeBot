@@ -6,7 +6,7 @@ import re
 
 from utils.global_utils import upload_hastebin
 from utils.errors import BlacklistedUser, TimezoneNotFound
-from .latex import TexRenderError
+from math import TexRenderError
 
 
 class CommandErrorHandler(commands.Cog):
