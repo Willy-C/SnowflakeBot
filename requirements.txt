@@ -7,7 +7,6 @@ python-dateutil
 tabulate
 pytz
 googletrans
-wolframalpha
 asyncpg
 pillow
 aenum
