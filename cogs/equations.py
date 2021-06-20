@@ -7,6 +7,7 @@ from utils.global_utils import bright_color
 from config import WOLFRAM_ALPHA_APPID
 
 TEX_API = 'http://rtex.probablyaweb.site/api/v2'
+WOLFRAM_API = 'http://api.wolframalpha.com/v1/simple'
 TEMPLATE = r'''
 \documentclass{article}
 
@@ -43,7 +44,6 @@ class TexRenderError(commands.CommandError):
 class MathCog(commands.Cog, name='Math'):
     def __init__(self, bot):
         self.bot = bot
-        self.wolfram_url = 'http://api.wolframalpha.com/v1/simple'
 
     @commands.command(aliases=['tex'])
     async def latex(self, ctx, *, latex):
@@ -83,7 +83,7 @@ class MathCog(commands.Cog, name='Math'):
             'units': 'metric',
         }
         await ctx.trigger_typing()
-        async with self.bot.session.get(self.wolfram_url, params=wolfram_payload) as resp:
+        async with self.bot.session.get(WOLFRAM_API, params=wolfram_payload) as resp:
             print(resp.status)
             if resp.status == 501:
                 return await ctx.reply('Invalid query')
