@@ -6,16 +6,15 @@ from utils.global_utils import bright_color
 
 GUILD_ID = 709264610200649738
 VERIFIED_ROLE = 709265266709626881
-GENERAL_CHANNEL = 709264610200649741
+PRIVATE_GENERAL_CHANNEL = 709264610200649741
+PUBLIC_GENERAL_CHANNEL = 868639752105132032
 BOT_CHANNEL = 709277913471647824
 PINS_CHANNEL = 824496525144096768
 
-MOVIE_ROLE = 803011517028237332
-LEAGUE_ROLE = 803009777830854677
-VALORANT_ROLE = 803009851080310824
-SPECIAL_ROLES = [MOVIE_ROLE, LEAGUE_ROLE, VALORANT_ROLE]
-
-PIN_EMOJI = '\U0001f4cc'
+SPECIAL_ROLES = [803011517028237332,  # MOVIE ROLE
+                 803009777830854677,  # League Role
+                 803009851080310824,  # Valorant Role
+                 ]
 
 
 class Gatekeep(commands.Cog):
@@ -24,12 +23,23 @@ class Gatekeep(commands.Cog):
         self.verified = set()
         bot.loop.create_task(self.get_verified_ids())
         self.tasks = {}
+        self.is_redirecting = False
         self.pinned = set()
+        self._webhooks = {}
 
     async def get_verified_ids(self):
         query = '''SELECT id FROM gatekeep;'''
         records = await self.bot.pool.fetch(query)
         self.verified = {record.get('id') for record in records}
+
+    async def get_webhook(self, channel: discord.TextChannel):
+        webhook = discord.utils.get(await channel.webhooks(),
+                                    user=self.bot.user)
+        if webhook is None:
+            webhook = await channel.create_webhook(name='Redirect')
+            self._webhooks[channel.id] = webhook
+
+        return webhook
 
     def cog_check(self, ctx):
         if ctx.guild is None or ctx.guild.id != GUILD_ID:
@@ -41,73 +51,48 @@ class Gatekeep(commands.Cog):
         if isinstance(error, commands.CheckFailure):
             ctx.local_handled = True
 
-    def cog_unload(self):
-        self.twom_task.cancel()
-
     @commands.Cog.listener()
     async def on_member_join(self, member):
         if member.guild.id != GUILD_ID:
             return
         if member.id in self.verified:
             await member.add_roles(discord.Object(id=VERIFIED_ROLE), reason='Automatic verification')
-            general = member.guild.get_channel(GENERAL_CHANNEL)
-            await general.set_permissions(member, read_messages=True, read_message_history=True)
+        else:
+            private = member.guild.get_channel(PRIVATE_GENERAL_CHANNEL)
+            public = member.guild.get_channel(PUBLIC_GENERAL_CHANNEL)
+            await private.set_permissions(member, read_message_history=True, read_messages=True)
+            await public.set_permissions(member, read_messages=False)
+            await asyncio.sleep(3600)
+            await private.set_permissions(member, overwrite=None)
+            await public.set_permissions(member, overwrite=None)
 
-    async def temporary_visibility(self, obj, channel):
-        await channel.set_permissions(obj, read_message_history=True, read_messages=True, reason='Pinged')
-        await asyncio.sleep(1200)
+    async def temporary_visibility_task(self, obj, channel, duration=1200):
+        await channel.set_permissions(obj, read_message_history=True, read_messages=True)
+        await asyncio.sleep(duration)
         await channel.set_permissions(obj, overwrite=None)
 
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.guild is None or message.guild.id != GUILD_ID:
-            return
-        if message.author.id == 477572797850189834 and message.content in {"<@542951902669963271>", "<@!542951902669963271>"}:
-            return await message.channel.send('Assuming you meant: <@218845228612714499>')
+    async def temporary_visbility(self, obj, channel, duration=1200):
+        task = self.bot.loop.create_task(self.temporary_visibility_task(obj, channel, duration=duration))
+        if obj.id in self.tasks:
+            try:
+                self.tasks.get(obj.id).cancel()
+            except asyncio.CancelledError:
+                pass
+        self.tasks[obj.id] = task
 
-        if message.type is discord.MessageType.pins_add and message.channel.id != PINS_CHANNEL:
-            ref = message.reference
-            ref_msg = await self.bot.get_channel(ref.channel_id).fetch_message(ref.message_id)
-            if ref_msg.id in self.pinned:
-                await message.channel.send('This message is already pinned')
-            else:
-                embed = self.build_embed(ref_msg)
-                prox = await message.guild.get_channel(PINS_CHANNEL).send(embed=embed)
-                e = discord.Embed(color=discord.Color.dark_theme(),
-                                  description=f'{message.author.mention} pinned a [message]({ref_msg.jump_url}). It has been [posted]({prox.jump_url}) in <#{PINS_CHANNEL}>')
-                await message.channel.send(embed=e)
-                self.pinned.add(ref_msg.id)
-            await message.delete()
-            await ref_msg.unpin(reason='Pinned in #pins')
-            return
+    async def redirect_task(self, duration=1200):
+        self.is_redirecting = True
+        await asyncio.sleep(duration)
+        self.is_redirecting = False
 
-        if message.channel.id == PINS_CHANNEL:
-            if message.author != self.bot.user:
-                await message.delete()
-
-        if message.channel.id != GENERAL_CHANNEL:
-            return
-
-        general = message.guild.get_channel(GENERAL_CHANNEL)
-        for r in message.role_mentions:
-            if r.id in SPECIAL_ROLES:
-                task = self.bot.loop.create_task(self.temporary_visibility(r, general))
-                if r.id in self.tasks:
-                    try:
-                        self.tasks.get(r.id).cancel()
-                    except asyncio.CancelledError:
-                        pass
-                self.tasks[r.id] = task
-
-        for u in message.mentions:
-            if u.id not in self.verified:
-                task = self.bot.loop.create_task(self.temporary_visibility(u, general))
-                if u.id in self.tasks:
-                    try:
-                        self.tasks.get(u.id).cancel()
-                    except asyncio.CancelledError:
-                        pass
-                self.tasks[u.id] = task
+    async def start_redirect(self, duration=1200):
+        task = self.bot.loop.create_task(self.redirect_task(duration))
+        if 'redirect' in self.tasks:
+            try:
+                self.tasks.get('redirect').cancel()
+            except asyncio.CancelledError:
+                pass
+        self.tasks['redirect'] = task
 
     def build_embed(self, message: discord.Message):
         e = discord.Embed(description=message.content,
@@ -132,23 +117,81 @@ class Gatekeep(commands.Cog):
         e.set_author(name=message.author.display_name, icon_url=message.author.avatar_url_as(format='png'))
         return e
 
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-        if payload.guild_id != GUILD_ID or payload.channel_id == PINS_CHANNEL:
+    @commands.Cog.listener('on_message')
+    async def redirect_new_pins(self, message):
+        if message.guild is None or message.guild.id != GUILD_ID or message.channel.id == PUBLIC_GENERAL_CHANNEL:
             return
-        if str(payload.emoji) == PIN_EMOJI:
-            try:
-                message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
-            except discord.NotFound:
-                return
-            for r in message.reactions:
-                if str(r) == PIN_EMOJI:
-                    count = r.count
-                    if count == 1 and message.id not in self.pinned:
-                        embed = self.build_embed(message)
-                        await self.bot.get_channel(PINS_CHANNEL).send(embed=embed)
-                        self.pinned.add(message.id)
-                    return
+
+        if message.type is discord.MessageType.pins_add and message.channel.id != PINS_CHANNEL:
+            ref = message.reference
+            ref_msg = await self.bot.get_channel(ref.channel_id).fetch_message(ref.message_id)
+            if ref_msg.id in self.pinned:
+                await message.channel.send('This message is already pinned')
+            else:
+                embed = self.build_embed(ref_msg)
+                prox = await message.guild.get_channel(PINS_CHANNEL).send(embed=embed)
+                e = discord.Embed(color=0x2F3136,  # rounded corners
+                                  description=f'{message.author.mention} pinned a [message]({ref_msg.jump_url}). It has been [posted]({prox.jump_url}) in <#{PINS_CHANNEL}>')
+                await message.channel.send(embed=e)
+                self.pinned.add(ref_msg.id)
+            await message.delete()
+            await ref_msg.unpin(reason='Pinned in #pins')
+            return
+
+        if message.channel.id == PINS_CHANNEL:
+            if message.author != self.bot.user:
+                await message.delete()
+
+    @commands.Cog.listener('on_message')
+    async def visbility_control(self, message):
+        if message.channel.id != PRIVATE_GENERAL_CHANNEL:
+            return
+
+        mirror = message.guild.get_channel(PUBLIC_GENERAL_CHANNEL)
+        private = message.guild.get_channel(PRIVATE_GENERAL_CHANNEL)
+        redirect = False
+        for m in message.mentions:
+            if not m.permissions_in(private).view_channel:
+                await self.temporary_visbility(m, mirror, 1200)
+                redirect = True
+
+        for r in message.role_mentions:
+            if r.id in SPECIAL_ROLES:
+                await self.temporary_visbility(r, mirror, 1200)
+                redirect = True
+
+        if redirect:
+            await self._redirect_message(message, private)
+            await self.start_redirect(1200)
+
+    async def _redirect_message(self, original: discord.Message, destination: discord.TextChannel):
+        webhook = self._webhooks.get(destination.id)
+        if webhook is None:
+            webhook = await self.get_webhook(destination)
+
+        if original.embeds:
+            embeds = [e for e in original.embeds if
+                      e.type == 'rich' and e.footer.icon_url != 'https://abs.twimg.com/icons/apple-touch-icon-192x192.png']
+        else:
+            embeds = None
+        files = [await attachment.to_file() for attachment in original.attachments]
+        await webhook.send(content=original.content,
+                           embeds=embeds,
+                           files=files,
+                           username=original.author.display_name,
+                           avatar_url=original.author.avatar_url)
+
+    @commands.Cog.listener('on_message')
+    async def forward_messages(self, message):
+        if not self.is_redirecting or message.channel.id not in {PUBLIC_GENERAL_CHANNEL, PRIVATE_GENERAL_CHANNEL}:
+            return
+
+        if message.channel.id == PUBLIC_GENERAL_CHANNEL:
+            output_channel = message.guild.get_channel(PRIVATE_GENERAL_CHANNEL)
+        elif message.channel.id == PRIVATE_GENERAL_CHANNEL:
+            output_channel = message.guild.get_channel(PUBLIC_GENERAL_CHANNEL)
+
+        await self._redirect_message(message, output_channel)
 
 
 def setup(bot):
