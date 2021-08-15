@@ -168,7 +168,7 @@ class Gatekeep(commands.Cog):
             await voice_text_channel.set_permissions(member, read_messages=True)
         elif before.channel is not None and after.channel is None:
             # left voice channel
-            await voice_text_channel.set_permissions(member, None)
+            await voice_text_channel.set_permissions(member, overwrite=None)
 
 
 def setup(bot):
