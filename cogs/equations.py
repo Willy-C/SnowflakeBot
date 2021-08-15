@@ -70,7 +70,7 @@ class MathCog(commands.Cog, name='Math'):
         except aiohttp.ClientResponseError:
             raise TexRenderError(None)
 
-    @commands.command(name='wolframalpha', aliases=['wolfram','wa', 'math', 'solve'])
+    @commands.command(name='wolframalpha', aliases=['wolfram', 'wa', 'math', 'solve'])
     async def wolframalpha(self, ctx, *, query):
         wolfram_payload = {
             'appid': WOLFRAM_ALPHA_APPID,
