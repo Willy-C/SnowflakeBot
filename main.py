@@ -1,4 +1,4 @@
-import os
+import glob
 import json
 import aiohttp
 import asyncio
@@ -95,7 +95,7 @@ async def on_ready():
 
 ignored = ['vi']
 extensions = ['jishaku']
-extensions += [f'cogs.{f[:-3]}' for f in os.listdir('./cogs') if f.endswith('.py') and f[:-3] not in ignored]
+extensions += [f[:-3].replace('/', '.') for f in glob.iglob('cogs/*.py') if f[5:-3] not in ignored]
 total = len(extensions)
 successes = 0
 for extension in extensions:
