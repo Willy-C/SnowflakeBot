@@ -1,23 +1,23 @@
 import discord
 from discord.ext import commands
 
-import re
 import copy
 import colorsys
 import random
 import pytz
 import traceback
 from asyncio import TimeoutError
-from aiohttp import ClientConnectionError, InvalidURL
+from aiohttp import InvalidURL
 
 
+# noinspection PyProtectedMember
 async def copy_context(ctx: commands.Context, *, author=None, channel=None, **kwargs):
     """
     Makes a new :class:`Context` with changed message properties.
     """
     # copy the message and update the attributes
     alt_message: discord.Message = copy.copy(ctx.message)
-    alt_message._update(kwargs)  # pylint: disable=protected-access
+    alt_message._update(kwargs)
 
     if author is not None:
         alt_message.author = author

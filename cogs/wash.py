@@ -3,7 +3,6 @@ from discord.ext import commands
 
 GUILD_ID = 528403806984077312
 CHANNEL_ID = 528405322168270849
-HAD_ID = 299205173878849537
 NOTIFY_ROLE = 715623011616555669
 
 
@@ -41,21 +40,6 @@ class WASHCog(commands.Cog):
 
     # If a new conversation started, then ping
     # new conversation = new message where the previous message is over `self._timeout` seconds old
-
-    @commands.command(name='setalert', hidden=True)
-    async def set_timeout(self, ctx, time: int):
-        """Send a notification if a new conversation started.
-        New conversation = new message where the previous message is over `time` seconds old
-        If the new message contains a mention, then notification will not be sent
-
-        Example usage `%setalert 300` - sets the time to be 5 minutes
-        """
-        if ctx.guild and ctx.guild.id != GUILD_ID:
-            return
-        if time < 0:
-            return await ctx.send(f'Please enter a positive number.')
-        self._timeout = time
-        await ctx.send(f'I will now send a ping when there is a new message after {time}s of silence')
 
 
 def setup(bot):
