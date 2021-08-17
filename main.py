@@ -23,6 +23,7 @@ def get_prefix(bot, message):
     prefixes = [f'<@{bot_id}> ', f'<@!{bot_id}> ']  # Accept mentioning the bot as prefix
     if message.guild is None:
         prefixes.append('%')
+        prefixes.append('')
     else:
         prefixes.extend(bot.prefixes.get(message.guild.id, '%'))
     return prefixes
