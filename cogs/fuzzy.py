@@ -3,6 +3,7 @@ import rapidfuzz
 from discord.ext import commands
 from utils.global_utils import copy_context
 from typing import List, Tuple, Optional
+from asyncio import TimeoutError
 
 
 class Levenshtein(commands.Cog):
@@ -30,9 +31,9 @@ class Levenshtein(commands.Cog):
         return all_command_names
 
     async def correct_command_name(self, ctx: commands.Context) -> Optional[Tuple[str, int, int]]:
-        """Returns an Optional[Tuple] for closest command name matched within 1 levenshtein distance.
-        Returns (command name, similarity score (this is always 1), index of command in list of commands)
-        Returns None if no match found within 1 levenshtein distance"""
+        """Returns an Optional[Tuple] for closest command name matched within 2 levenshtein distance.
+        Returns (command name, similarity score (levenshtein distance here), index of command in list of commands)
+        Returns None if no match found within 2 levenshtein distance"""
         runnable_commands = await self.get_all_runnable_commands(ctx, include_aliases=False)
         if not runnable_commands:
             return
@@ -40,7 +41,7 @@ class Levenshtein(commands.Cog):
         return rapidfuzz.process.extractOne(ctx.invoked_with,
                                             runnable_commands,
                                             scorer=rapidfuzz.string_metric.levenshtein,
-                                            score_cutoff=1)
+                                            score_cutoff=2)
 
     async def confirm_correction(self, ctx: commands.Context, message: str):
         emojis = ['<:greenTick:602811779835494410>', '<:redTick:602811779474522113>']
@@ -67,6 +68,8 @@ class Levenshtein(commands.Cog):
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error: Exception):
         if isinstance(error, commands.CommandNotFound):
+            if len(ctx.invoked_with) < 3:
+                return
             correction = await self.correct_command_name(ctx)
             if not correction:
                 return
