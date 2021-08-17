@@ -15,6 +15,8 @@ def can_manage_messages():
     async def predicate(ctx):
         if await ctx.bot.is_owner(ctx.author):
             return True
+        if not ctx.guild:
+            return True
         if ctx.channel.permissions_for(ctx.author).manage_messages:
             return True
         raise commands.MissingPermissions(['Manage Messages'])
@@ -23,6 +25,8 @@ def can_manage_messages():
 def can_kick():
     async def predicate(ctx):
         if await ctx.bot.is_owner(ctx.author):
+            return True
+        if not ctx.guild:
             return True
         if ctx.channel.permissions_for(ctx.author).kick_members:
             return True
@@ -33,6 +37,8 @@ def can_ban():
     async def predicate(ctx):
         if await ctx.bot.is_owner(ctx.author):
             return True
+        if not ctx.guild:
+            return True
         if ctx.channel.permissions_for(ctx.author).ban_members:
             return True
         raise commands.MissingPermissions(['Ban Members'])
@@ -41,6 +47,8 @@ def can_ban():
 def can_manage_roles():
     async def predicate(ctx):
         if await ctx.bot.is_owner(ctx.author):
+            return True
+        if not ctx.guild:
             return True
         if ctx.channel.permissions_for(ctx.author).manage_roles:
             return True
@@ -51,6 +59,8 @@ def can_manage_channels():
     async def predicate(ctx):
         if await ctx.bot.is_owner(ctx.author):
             return True
+        if not ctx.guild:
+            return True
         if ctx.channel.permissions_for(ctx.author).manage_channels:
             return True
         raise commands.MissingPermissions(['Manage Channels'])
@@ -60,6 +70,8 @@ def can_mute():
     async def predicate(ctx):
         if await ctx.bot.is_owner(ctx.author):
             return True
+        if not ctx.guild:
+            return True
         if ctx.channel.permissions_for(ctx.author).manage_roles:
             return True
         raise commands.MissingPermissions(['Manage Roles'])
@@ -68,6 +80,8 @@ def can_mute():
 def can_move_members():
     async def predicate(ctx):
         if await ctx.bot.is_owner(ctx.author):
+            return True
+        if not ctx.guild:
             return True
         if ctx.author.guild_permissions.move_members or (ctx.author.voice and ctx.author.voice.channel.permissions_for(ctx.author).move_members):
             return True
