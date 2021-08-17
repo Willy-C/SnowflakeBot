@@ -10,3 +10,4 @@ googletrans
 asyncpg
 pillow
 aenum
+rapidfuzz
