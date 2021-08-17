@@ -107,7 +107,8 @@ venv.bak/
 .mypy_cache/
 
 config.py
-logger.py
-/deprecated
-avatars.py
-reddit.py
+deprecated/
+cogs/logger.py
+cogs/avatars.py
+cogs/reddit.py
+cogs/command_logger.py
