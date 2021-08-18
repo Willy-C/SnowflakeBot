@@ -39,7 +39,7 @@ class Context(commands.Context):
         if extra:
             msg += '\nPlease type **confirm** within 1 minute to continue or type **abort** if you change your mind.'
 
-        prompt = await self.send(msg)
+        prompt = await self.reply(msg)
 
         try:
             reply = await self.bot.wait_for('message', check=confirm, timeout=60)
@@ -70,7 +70,7 @@ class Context(commands.Context):
         if extra:
             msg += '\nPlease react with <:greenTick:602811779835494410> within 1 minute to continue or <:redTick:602811779474522113> if you change your mind.'
 
-        prompt = await self.send(msg)
+        prompt = await self.reply(msg)
 
         for e in emojis:
             await prompt.add_reaction(e)

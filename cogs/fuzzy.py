@@ -43,28 +43,6 @@ class Levenshtein(commands.Cog):
                                             scorer=rapidfuzz.string_metric.levenshtein,
                                             score_cutoff=2)
 
-    async def confirm_correction(self, ctx: commands.Context, message: str):
-        emojis = ['<:greenTick:602811779835494410>', '<:redTick:602811779474522113>']
-
-        def confirm(r, u):
-            return ctx.author.id == u.id and prompt == r.message and str(r.emoji) in emojis
-
-        prompt = await ctx.reply(message)
-        for e in emojis:
-            await prompt.add_reaction(e)
-
-        try:
-            reaction, _ = await self.bot.wait_for('reaction_add', check=confirm, timeout=60)
-        except TimeoutError:
-            return False
-        else:
-            return str(reaction.emoji) == '<:greenTick:602811779835494410>'
-        finally:
-            try:
-                await prompt.delete()
-            except discord.HTTPException:
-                pass
-
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error: Exception):
         if isinstance(error, commands.CommandNotFound):
@@ -76,7 +54,9 @@ class Levenshtein(commands.Cog):
             corrected_ctx = await copy_context(ctx,
                                                content=ctx.message.content.replace(ctx.invoked_with, correction[0], 1))
 
-            do_correct = await self.confirm_correction(ctx, f'Did you mean `{correction[0]}` instead of `{ctx.invoked_with}`?')
+            do_correct = await ctx.confirm_reaction(f'Did you mean `{correction[0]}` instead of `{ctx.invoked_with}`?',
+                                                    extra=False)
+
             if not do_correct:
                 return
 
