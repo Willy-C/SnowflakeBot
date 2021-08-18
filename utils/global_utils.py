@@ -13,7 +13,7 @@ from aiohttp import InvalidURL
 # noinspection PyProtectedMember
 async def copy_context(ctx: commands.Context, *, author=None, channel=None, **kwargs):
     """
-    Makes a new :class:`Context` with changed message properties.
+    Returns a new Context with changed message properties.
     """
     # copy the message and update the attributes
     alt_message: discord.Message = copy.copy(ctx.message)
@@ -38,7 +38,9 @@ def bright_color():
 
 
 async def confirm_prompt(ctx: commands.Context, msg):
-    """Asks author for confirmation, returns True if confirmed, False if user typed abort or timed out"""
+    """
+    Asks author for confirmation, returns True if confirmed, False if user typed abort or timed out
+    """
     cont = False
 
     def confirm(msg):
@@ -77,7 +79,9 @@ async def confirm_prompt(ctx: commands.Context, msg):
 
 
 def cleanup_code(content):
-    """Automatically removes code blocks from the code."""
+    """
+    Automatically removes code blocks from the code.
+    """
     if content.startswith('```'):
         split = content.split('\n')
         if ' ' not in split[0][3:].rstrip():  # Is language
@@ -90,7 +94,9 @@ def cleanup_code(content):
 
 
 async def last_image(ctx):
-    """Tries to find the last image in chat and return its url."""
+    """
+    Tries to find the last image in chat and return its url.
+    """
     async for message in ctx.channel.history(limit=50):
         for embed in message.embeds:
             if embed.thumbnail and embed.thumbnail.proxy_url:
@@ -112,7 +118,9 @@ async def is_image(ctx, url, gif=False):
 
 
 async def upload_hastebin(ctx_or_bot, content, url='https://mystb.in'):
-    """Uploads content to hastebin"""
+    """
+    Uploads content to hastebin
+    """
     bot = ctx_or_bot if isinstance(ctx_or_bot, commands.Bot) else ctx_or_bot.bot
     try:
         async with bot.session.post(f'{url}/documents', data=content.encode('utf-8')) as post:
@@ -127,7 +135,9 @@ async def upload_hastebin(ctx_or_bot, content, url='https://mystb.in'):
 
 
 async def send_or_hastebin(ctx, content, code=None, url='https://mystb.in'):
-    """Sends to ctx.channel if possible, upload to hastebin if too long"""
+    """
+    Sends to ctx.channel if possible, upload to hastebin if too long
+    """
     if code is not None:
         cb = f'```{code}\n{content}\n```'
     else:
@@ -140,7 +150,9 @@ async def send_or_hastebin(ctx, content, code=None, url='https://mystb.in'):
 
 
 async def get_user_timezone(ctx, user):
-    """Returns a pytz.timezone for a user if set, returns None otherwise"""
+    """
+    Returns a pytz.timezone for a user if set, returns None otherwise
+    """
     query = '''SELECT tz
                FROM timezones
                WHERE "user" = $1;'''

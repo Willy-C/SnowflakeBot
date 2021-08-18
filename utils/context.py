@@ -27,15 +27,19 @@ class Context(commands.Context):
             return ref.resolved.to_reference()
         return None
 
-    async def confirm_prompt(self, msg):
-        """Asks author for confirmation, returns True if confirmed, False if user typed abort or timed out"""
+    async def confirm_prompt(self, msg, extra=True):
+        """
+        Asks author for confirmation, returns True if confirmed, False if user typed abort or timed out
+        """
         def confirm(m):
             if self.author.id != m.author.id or self.channel.id != m.channel.id:
                 return False
             return m.content.lower() in ('**confirm**', 'confirm', '**abort**', 'abort')
 
-        prompt = await self.send(f'{msg}\n'
-                                f'Please type **confirm** within 1 minute to continue or type **abort** if you change your mind.')
+        if extra:
+            msg += '\nPlease type **confirm** within 1 minute to continue or type **abort** if you change your mind.'
+
+        prompt = await self.send(msg)
 
         try:
             reply = await self.bot.wait_for('message', check=confirm, timeout=60)
@@ -54,14 +58,20 @@ class Context(commands.Context):
             with contextlib.suppress(discord.HTTPException):
                 await prompt.delete()
 
-    async def confirm_reaction(self, msg):
+    async def confirm_reaction(self, msg, extra=True):
+        """
+        Asks author for confirmation via reactions, returns True if confirmed, False if user clicked X or timed out
+        """
         emojis = ['<:greenTick:602811779835494410>', '<:redTick:602811779474522113>']
 
         def confirm(r, u):
             return self.author.id == u.id and prompt == r.message and str(r.emoji) in emojis
 
-        prompt = await self.send(f'{msg}\n'
-                                f'Please react with <:greenTick:602811779835494410> within 1 minute to continue or <:redTick:602811779474522113> if you change your mind.')
+        if extra:
+            msg += '\nPlease react with <:greenTick:602811779835494410> within 1 minute to continue or <:redTick:602811779474522113> if you change your mind.'
+
+        prompt = await self.send(msg)
+
         for e in emojis:
             await prompt.add_reaction(e)
         try:
@@ -100,7 +110,9 @@ class Context(commands.Context):
             return f'{url}/{(await post.json())["key"]}'
 
     async def upload_hastebin(self, content, url='https://mystb.in'):
-        """Uploads content to hastebin and return the url"""
+        """
+        Uploads content to hastebin and return the url
+        """
         try:
             return await self._upload_content(content, url)
         except:
@@ -110,7 +122,9 @@ class Context(commands.Context):
                 traceback.print_exc()
 
     async def safe_send(self, content, file=False, filename='message_too_long.txt', url='https://mystb.in', **kwargs):
-        """Sends to ctx.channel if possible, upload to hastebin or send text file if too long"""
+        """
+        Sends to ctx.channel if possible, upload to hastebin or send text file if too long
+        """
         if len(content) <= 2000:
             return await self.send(content, **kwargs)
         elif file:
