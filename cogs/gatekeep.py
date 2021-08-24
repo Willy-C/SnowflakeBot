@@ -138,7 +138,7 @@ class Gatekeep(commands.Cog):
                 to_ping.update({m.id for m in r.members})
 
         for u in message.mentions:
-            if u.id not in self.verified:
+            if u.id not in self.verified and not u.bot:
                 to_ping.add(u.id)
 
         if not to_ping:

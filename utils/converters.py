@@ -5,7 +5,6 @@ from discord.ext import commands
 from utils import errors
 
 
-
 class CaseInsensitiveMember(commands.MemberConverter):
     async def convert(self, ctx, argument):
         try:

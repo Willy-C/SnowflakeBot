@@ -228,7 +228,7 @@ class ReminderCog(commands.Cog, name='Reminders'):
         self.have_timer.set()
 
     @commands.command()
-    async def desktop(self, ctx, *, reminder):
+    async def desktop(self, ctx, *, reminder='...'):
         """Set a reminder that triggers next time you login your desktop client
         Reminder expires if not triggered after 36 hours
         Example usage: %desktop check out this video https://youtu.be/D0q0QeQbw9U"""
