@@ -9,18 +9,18 @@ Copyright (c) 2019 EvieePy(MysterialPy)
 import asyncio
 import datetime
 import discord
-import humanize
 import itertools
 import math
 import random
 import re
+
+import humanize
 import wavelink
 from async_timeout import timeout
 from discord.ext import commands
 from asyncpg import UniqueViolationError
 
 
-from utils.global_utils import confirm_prompt
 
 RURL = re.compile(r'https?://(?:www\.)?.+')
 
@@ -745,7 +745,7 @@ class Music(commands.Cog):
             return await ctx.send('Please enter a value that is at least 0!')
 
         if value > 100:
-            if not await confirm_prompt(ctx, f'Set the volume to **{value}**%? High volumes can damage people\'s hearing!'):
+            if not await ctx.confirm_prompt(f'Set the volume to **{value}**%? High volumes can damage people\'s hearing!'):
                 return
 
         await player.set_volume(value)

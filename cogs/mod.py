@@ -4,7 +4,6 @@ from discord.ext import commands
 from collections import Counter
 from datetime import datetime
 from utils.converters import Member, CaseInsensitiveMember, CaseInsensitiveVoiceChannel, BannedUser
-from utils.global_utils import confirm_prompt
 from utils.time import human_timedelta, FutureTime, ShortTime
 
 
@@ -310,7 +309,7 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.bot_has_permissions(manage_roles=True, manage_channels=True)
     @can_manage_roles()
     @commands.guild_only()
-    async def create_mute_role(self, ctx):
+    async def create_mute_role(self, ctx: Context):
         """Creates a role name 'Muted' and denies Send Message permission to all text channels"""
         query = '''SELECT mute_role
                    FROM guild_mod_config
@@ -322,7 +321,7 @@ class ModCog(commands.Cog, name='Mod'):
                                   f'You can use `{ctx.prefix}config role mute` to remove this setting\n'
                                   f'or `{ctx.prefix}updatemute` to apply permissions again for `{role}`')
 
-        cont = await confirm_prompt(ctx, 'You are about to create the `Muted` role')
+        cont = await ctx.confirm_prompt('This will create the `Muted` role. Are you sure?')
         if not cont:
             return
 
@@ -356,7 +355,7 @@ class ModCog(commands.Cog, name='Mod'):
                                   f'If you believe this is an error please contact my owner')
 
         role = ctx.guild.get_role(config.get('mute_role'))
-        cont = await confirm_prompt(ctx, f'You are about to update permissions for {role} in all text channels')
+        cont = await ctx.confirm_prompt(f'You are about to update permissions for {role} in all text channels. Are you sure?')
         if not cont:
             return
 
@@ -509,7 +508,7 @@ class ModCog(commands.Cog, name='Mod'):
             return await ctx.send('Sorry this command is not available at the moment')
 
         time = human_timedelta(duration.dt)
-        if not await confirm_prompt(ctx, f'Are you sure you want to self-mute for **{time}**?'):
+        if not await ctx.confirm_prompt(f'Are you sure you want to self-mute for **{time}**?'):
             return
         reason = f'Self-mute for {time}'
         await ctx.author.add_roles(role, reason=reason)
@@ -564,7 +563,7 @@ class ModCog(commands.Cog, name='Mod'):
                 return await ctx.send('Please specify users or join a voice channel')
 
         if not channel and len(members) > 2:
-            if not await confirm_prompt(ctx, 'Are you sure you want to disconnect users from voice?'):
+            if not await ctx.confirm_prompt('Are you sure you want to disconnect users from voice?'):
                 return
 
         total = len(members)
@@ -650,7 +649,7 @@ class ModCog(commands.Cog, name='Mod'):
     async def everything(self, ctx, limit=20):
         """Deletes the last `limit` messages in the channel
         If no limit is given, defaults to 20"""
-        if not await confirm_prompt(ctx, f'Delete {limit} messages?'):
+        if not await ctx.confirm_prompt(f'Delete {limit} messages?'):
             return
         await self.purge_messages(ctx, limit, lambda m: True)
         await ctx.message.add_reaction('\U00002705')  # React with checkmark

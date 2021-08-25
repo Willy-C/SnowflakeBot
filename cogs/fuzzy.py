@@ -1,16 +1,17 @@
+from typing import List, Tuple, Optional
+
 import discord
 import rapidfuzz
 from discord.ext import commands
+from utils.context import Context
 from utils.global_utils import copy_context
-from typing import List, Tuple, Optional
-from asyncio import TimeoutError
 
 
 class Levenshtein(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def get_all_runnable_commands(self, ctx: commands.Context, include_aliases=False) -> List[str]:
+    async def get_all_runnable_commands(self, ctx: Context, include_aliases=False) -> List[str]:
         """Returns a list of command names that the user can run. This does not include aliases and subcommands."""
         all_command_names = []
         is_owner = await self.bot.is_owner(ctx.author)
@@ -30,7 +31,7 @@ class Levenshtein(commands.Cog):
 
         return all_command_names
 
-    async def correct_command_name(self, ctx: commands.Context) -> Optional[Tuple[str, int, int]]:
+    async def correct_command_name(self, ctx: Context) -> Optional[Tuple[str, int, int]]:
         """Returns an Optional[Tuple] for closest command name matched within 2 levenshtein distance.
         Returns (command name, similarity score (levenshtein distance here), index of command in list of commands)
         Returns None if no match found within 2 levenshtein distance"""
@@ -44,21 +45,21 @@ class Levenshtein(commands.Cog):
                                             score_cutoff=2)
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx: commands.Context, error: Exception):
+    async def on_command_error(self, ctx: Context, error: Exception):
         if isinstance(error, commands.CommandNotFound):
             if len(ctx.invoked_with) < 3:
                 return
             correction = await self.correct_command_name(ctx)
             if not correction:
                 return
-            corrected_ctx = await copy_context(ctx,
-                                               content=ctx.message.content.replace(ctx.invoked_with, correction[0], 1))
 
-            do_correct = await ctx.confirm_reaction(f'Did you mean `{correction[0]}` instead of `{ctx.invoked_with}`?',
-                                                    extra=False)
-
+            do_correct = await ctx.confirm_prompt(f'Did you mean `{correction[0]}` instead of `{ctx.invoked_with}`?',
+                                                  timeout=15)
             if not do_correct:
                 return
+
+            corrected_ctx = await copy_context(ctx,
+                                               content=ctx.message.content.replace(ctx.invoked_with, correction[0], 1))
 
             await self.bot.invoke(corrected_ctx)
 

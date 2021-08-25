@@ -1,19 +1,16 @@
-import discord
-from discord.ext import commands
-
 import copy
 import pytz
 import random
 import colorsys
 import datetime
 import traceback
-
 from asyncio import TimeoutError
 from aiohttp import InvalidURL
 
+import discord
+from discord.ext import commands
 
 
-# noinspection PyProtectedMember
 async def copy_context(ctx: commands.Context, *, author=None, channel=None, **kwargs):
     """
     Returns a new Context with changed message properties.
@@ -38,47 +35,6 @@ def bright_color():
     values = [int(x*255) for x in colorsys.hsv_to_rgb(random.random(), 1, 1)]
     color = discord.Color.from_rgb(*values)
     return color
-
-
-async def confirm_prompt(ctx: commands.Context, msg):
-    """
-    Asks author for confirmation, returns True if confirmed, False if user typed abort or timed out
-    """
-    cont = False
-
-    def confirm(msg):
-        nonlocal cont
-        if ctx.author.id != msg.author.id or ctx.channel.id != msg.channel.id:
-            return False
-        if msg.content in ('**confirm**', '**Confirm**', 'confirm', 'Confirm'):
-            cont = True
-            return True
-        elif msg.content in ('**abort**', '**Abort**', 'abort', 'Abort'):
-            cont = False  # don't continue
-            return True
-        return False  # author typed something else in the same channel, keep waiting
-
-    prompt = await ctx.send(f'{msg}\n'
-                            f'Please type **confirm** within 1 minute to continue or type **abort** if you change your mind.')
-
-    try:
-        reply = await ctx.bot.wait_for('message', check=confirm, timeout=60)
-        await reply.delete()
-    except TimeoutError:
-        await ctx.send('1 minute has passed. Aborting...', delete_after=5)
-        return False
-    except discord.HTTPException:
-        pass
-    finally:
-        try:
-            await prompt.delete()
-        except (discord.HTTPException, discord.NotFound):
-            pass
-
-    if not cont:  # Author typed abort, don't continue
-        await ctx.send('Aborting...', delete_after=5)
-
-    return cont
 
 
 def cleanup_code(content):

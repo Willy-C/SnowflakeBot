@@ -1,15 +1,16 @@
+import io
+import textwrap
+import traceback
+import tabulate
+from typing import Optional, Union
+from contextlib import redirect_stdout
+
 import discord
 from discord.ext import commands
 
-import io
-import textwrap
-import tabulate
-import traceback
-from typing import Optional, Union
-from contextlib import redirect_stdout
 from utils.errors import BlacklistedUser
 from utils.converters import CaseInsensitiveUser, CaseInsensitiveMember, CachedUserID, CachedGuildID
-from utils.global_utils import confirm_prompt, cleanup_code, copy_context, upload_hastebin, send_or_hastebin
+from utils.global_utils import cleanup_code, copy_context, upload_hastebin, send_or_hastebin
 
 
 class OwnerCog(commands.Cog, name='Owner'):
@@ -230,7 +231,7 @@ class OwnerCog(commands.Cog, name='Owner'):
         """
         Logs out the bot.
         """
-        if not await confirm_prompt(ctx, 'Shutdown?'):
+        if not await ctx.confirm_prompt('Shutdown?'):
             return
         await ctx.message.add_reaction('\U0001f620')
         await ctx.bot.logout()

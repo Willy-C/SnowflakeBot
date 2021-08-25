@@ -1,14 +1,12 @@
-import discord
-from discord.ext import commands
-
 import re
 import random
-from datetime import datetime, timedelta
-from asyncio import TimeoutError
 from typing import Union
-from asyncpg import UniqueViolationError
+from asyncio import TimeoutError
+from datetime import datetime, timedelta
 
-from utils.global_utils import confirm_prompt
+import discord
+from discord.ext import commands
+from asyncpg import UniqueViolationError
 
 
 class HighlightCog(commands.Cog, name='Highlights'):
@@ -378,7 +376,7 @@ class HighlightCog(commands.Cog, name='Highlights'):
         If used in DM with no guild specified, clears all words from all guilds
         Note: This will also disable highlight for mentions/pings"""
         if ctx.guild is None and guild_id is None:
-            if not await confirm_prompt(ctx, 'Clear all highlight words from **every** server?'):
+            if not await ctx.confirm_prompt('Clear all highlight words from **every** server?'):
                 return
 
             query = '''DELETE FROM highlights
@@ -398,7 +396,7 @@ class HighlightCog(commands.Cog, name='Highlights'):
 
         else:
             guild = self.bot.get_guild(guild_id) or ctx.guild
-            if not await confirm_prompt(ctx, f'Clear all highlight words for `{guild}`?'):
+            if not await ctx.confirm_prompt(f'Clear all highlight words for `{guild}`?'):
                 return
             query = '''DELETE FROM highlights
                        WHERE guild = $1

@@ -1,12 +1,11 @@
-import discord
-from discord.ext import commands
-
 import asyncio
 import typing
 import contextlib
 
+import discord
+from discord.ext import commands
+
 from utils.converters import MessageConverter
-from utils.global_utils import confirm_prompt
 
 
 def sort_emoji_role(arg1, arg2):
@@ -184,8 +183,8 @@ class ReactionRole(commands.Cog):
           Note: You need Developer Mode enabled to retrieve message IDs```
         """
         if not message:
-            if not await confirm_prompt(ctx, 'You have not specified a message, do you want me to create one for you?\n'
-                                             'Note: Emojis from servers I am not in will not work for this.\n'):
+            if not await ctx.confirm_prompt('You have not specified a message, do you want me to create one for you?\n'
+                                            'Note: Emojis from servers I am not in will not work for this.'):
                 await ctx.send(f'If you are having trouble specifying an existing message, see `{ctx.prefix}help rr msg`')
                 return
             message = await ctx.send('Setting up reaction roles...')
@@ -394,8 +393,8 @@ class ReactionRole(commands.Cog):
     async def clear(self, ctx, message: MessageConverter):
         """Remove all reaction roles from a message
         A message must be given"""
-        if not await confirm_prompt(ctx, 'Are you sure you want to completely remove reaction roles from this message?\n'
-                                         'This will make it be a regular message. This cannot be undone.\n'):
+        if not await ctx.confirm_prompt('Are you sure you want to completely remove reaction roles from this message?\n'
+                                        'This will make it be a regular message. **This cannot be undone.**'):
             return
         query = '''DELETE FROM reaction_roles WHERE message = $1;'''
         status = await self.bot.pool.execute(query, message.id)
@@ -444,8 +443,8 @@ class ReactionRole(commands.Cog):
     async def unverify(self, ctx, message: MessageConverter):
         """Undo setting a message as a verification
         A message must be given"""
-        if not await confirm_prompt(ctx, 'Are you sure you want to undo setting message to be verification\n'
-                                         'This will make it be a regular reaction role.\n'):
+        if not await ctx.confirm_prompt('Are you sure you want to undo setting message to be verification\n'
+                                        'This will make it be a regular reaction role.\n'):
             return
 
         if message.id in self.messages and self.messages[message.id][0] != 'verify':
