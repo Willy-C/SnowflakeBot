@@ -1,12 +1,12 @@
-python_version >= '3.7'
-discord.py[voice]
+python_version >= '3.8'
+git+https://github.com/Rapptz/discord.py@master
+git+https://github.com/ssut/py-googletrans@master
 jishaku
 wavelink
 parsedatetime
 python-dateutil
 tabulate
 pytz
-googletrans
 asyncpg
 pillow
 aenum
