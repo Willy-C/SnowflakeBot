@@ -33,15 +33,17 @@ class GeneralCog(commands.Cog, name='General'):
         Defaults to author if no user is provided."""
 
         user = ctx.author if user is None else user  # Defaults to invoker if no user is specified
-        avatar_url = user.avatar_url_as(static_format='png')
+        avatar_url = user.display_avatar.with_static_format('png')
 
         if user.avatar:
             query = '''SELECT url
                        FROM avatar_changes
                        WHERE hash = $1'''
-            record = await self.bot.pool.fetchrow(query, user.avatar)
+            record = await self.bot.pool.fetchrow(query, user.avatar.key)
             if record:
                 avatar_url = record['url']
+            else:
+                avatar_url = await self.bot.get_cog('TrackerCog').log_avatar(user)
 
         embed = discord.Embed(colour=user.colour)
         embed.set_image(url=avatar_url)
@@ -62,7 +64,7 @@ class GeneralCog(commands.Cog, name='General'):
 
         await webhook.send(message,
                            username=user.display_name,
-                           avatar_url=user.avatar_url_as(format='png'),
+                           avatar_url=user.display_avatar.with_static_format('png'),
                            allowed_mentions=discord.AllowedMentions.none())
         try:
             await ctx.message.delete()

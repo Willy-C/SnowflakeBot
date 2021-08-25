@@ -681,7 +681,7 @@ class ModCog(commands.Cog, name='Mod'):
                               color=color,
                               timestamp=datetime.utcnow(),
                               description=descr)
-            e.set_author(icon_url=member.avatar_url, name=member)
+            e.set_author(icon_url=member.display_avatar.url, name=member)
             e.add_field(name='ID', value=member.id)
             e.add_field(name='Created', value=human_timedelta(member.created_at))
 
@@ -698,7 +698,7 @@ class ModCog(commands.Cog, name='Mod'):
             e = discord.Embed(title='Member leave',
                               color=0xff0000,
                               timestamp=datetime.utcnow())
-            e.set_author(icon_url=member.avatar_url, name=member)
+            e.set_author(icon_url=member.display_avatar.url, name=member)
             e.add_field(name='ID', value=member.id)
             e.add_field(name='Created', value=human_timedelta(member.created_at))
             e.add_field(name='Last Joined', value=human_timedelta(member.joined_at))

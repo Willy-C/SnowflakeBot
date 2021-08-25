@@ -37,7 +37,7 @@ class GuildCog(commands.Cog, name='Server'):
                              f'<:status_dnd:602811779931701259> {statuses.get(discord.Status.dnd, 0)}'
 
         e = discord.Embed(color=bright_color(), timestamp=datetime.utcnow())
-        e.set_author(name=f'{ctx.guild}\'s member count',  icon_url=ctx.guild.icon_url)
+        e.set_author(name=f'{ctx.guild}\'s member count',  icon_url=ctx.guild.icon)
         e.add_field(name='Total', value=ctx.guild.member_count)
         e.add_field(name='Humans', value=bots.get(False, 0))
         e.add_field(name='Bots', value=bots.get(True, 0))
@@ -68,7 +68,7 @@ class GuildCog(commands.Cog, name='Server'):
         e = discord.Embed(title=f'Channel permissions in #{channel}:',
                           description=perms,
                           colour=member.colour)
-        e.set_author(icon_url=member.avatar_url, name=str(member))
+        e.set_author(icon_url=member.display_avatar.url, name=str(member))
         e.set_footer(text=f'Channel Type: {str(channel.type).capitalize()}')
 
         await ctx.send(embed=e)
@@ -83,7 +83,7 @@ class GuildCog(commands.Cog, name='Server'):
                           for perm, value in member.guild_permissions)
 
         e = discord.Embed(title='Server Permissions', description=perms, colour=member.colour)
-        e.set_author(icon_url=member.avatar_url, name=member)
+        e.set_author(icon_url=member.display_avatar.url, name=member)
         await ctx.send(embed=e)
 
     @commands.command(name='sharescreen', aliases=['share', 'ss', 'video'], hidden=True)

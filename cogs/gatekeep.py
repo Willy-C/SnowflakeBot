@@ -77,7 +77,7 @@ class Gatekeep(commands.Cog):
             e.add_field(name='Replying to...', value=f'[{ref.resolved.author}]({ref.resolved.jump_url})', inline=False)
 
         e.add_field(name='Original Message', value=f'[Jump!]({message.jump_url})', inline=False)
-        e.set_author(name=message.author.display_name, icon_url=message.author.avatar_url_as(format='png'))
+        e.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.with_static_format('png').url)
         return e
 
     @commands.Cog.listener('on_message')
@@ -125,7 +125,7 @@ class Gatekeep(commands.Cog):
                            embeds=embeds,
                            files=files,
                            username=original.author.display_name,
-                           avatar_url=original.author.avatar_url)
+                           avatar_url=original.author.display_avatar)
 
     @commands.Cog.listener('on_message')
     async def echo_pings(self, message):

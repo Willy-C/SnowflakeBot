@@ -91,7 +91,7 @@ class CommandErrorHandler(commands.Cog):
                           description=f'Invocation message: {ctx.message.content}\n'
                                       f'[Jump to message]({ctx.message.jump_url})',
                           color=discord.Color.red())
-        e.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+        e.set_author(name=ctx.author, icon_url=ctx.author.display_avatar.url)
 
         await self.owner.send(embed=e)
         fmt = "".join(tb)

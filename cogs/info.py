@@ -60,7 +60,7 @@ class InfoCog(commands.Cog, name='Info'):
             show_roles = f'{len(guild.roles)} roles: {roles}, @everyone'
 
         e = discord.Embed(title='Server Info', color=bright_color())
-        e.set_author(icon_url=guild.icon_url, name=guild.name)
+        e.set_author(icon_url=guild.icon, name=guild.name)
 
         e.add_field(name='ID', value=guild.id)
         e.add_field(name='Owner', value=guild.owner)
@@ -80,7 +80,7 @@ class InfoCog(commands.Cog, name='Info'):
         else:
             color = user.color
         e = discord.Embed(title='User Info', color=color)
-        e.set_author(icon_url=user.avatar_url, name=user)
+        e.set_author(icon_url=user.display_avatar.url, name=user)
 
         e.add_field(name='ID', value=user.id)
         if isinstance(user, discord.Member) and user.nick:

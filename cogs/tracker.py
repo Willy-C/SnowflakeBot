@@ -20,6 +20,11 @@ class TrackerCog(commands.Cog):
         self.vc_joins  = defaultdict(lambda: defaultdict(tuple))
         self.vc_leaves = defaultdict(lambda: defaultdict(tuple))
         # {guild: {channel: (member, datetime)}}
+        self._default_avatar_names = {0: 'blurple',
+                                      1: 'grey',
+                                      2: 'green',
+                                      3: 'orange',
+                                      4: 'red'}
 
     async def add_join_dates(self):
         await self.bot.wait_until_ready()
@@ -48,7 +53,16 @@ class TrackerCog(commands.Cog):
         data = {(record['id'], record['hash']) for record in records}
         new = 0
         for user in self.bot.users:
-            if (user.id, user.avatar) not in data and (user.id, user.default_avatar.name) not in data:
+            if not user.avatar:
+                _hash = self._default_avatar_names.get(int(user.display_avatar.key))
+                if _hash is None:
+                    print(f'Unknown default avatar: {user.avatar.key} | {user.avatar}')
+                    continue
+
+            else:
+                _hash = user.avatar.key
+
+            if (user.id, _hash) not in data:
                 await self.log_avatar(user)
                 new += 1
         print(f'Added {new} untracked avatars')
@@ -127,32 +141,36 @@ class TrackerCog(commands.Cog):
 
     async def log_avatar(self, user: discord.User):
         if user.avatar:
-            hash = user.avatar
-            type = 'gif' if hash.startswith('a_') else 'png'
-            file = discord.File(BytesIO(await user.avatar_url_as(static_format='png').read()),
-                                filename=f'{hash}.{type}')
+            _hash = user.avatar.key
+            _type = 'gif' if _hash.startswith('a_') else 'png'
+            file = discord.File(BytesIO(await user.avatar.with_static_format('png').read()),
+                                filename=f'{_hash}.{_type}')
             wh = discord.utils.get(await self.bot.get_guild(557306479191916555).webhooks(),
                                    channel_id=703171905435467956)
             if wh is not None:
                 try:
-                    msg = await wh.send(content=user.id, file=file, wait=True, username=hash)
+                    msg = await wh.send(content=user.id, file=file, wait=True, username=_hash)
                 except discord.HTTPException as e:
                     if 'Payload Too Large' in str(e):
-                        file = discord.File(BytesIO(await user.avatar_url_as(format='png').read()),
-                                            filename=f'{hash}.png')
-                        msg = await wh.send(content=user.id, file=file, wait=True, username=hash)
+                        file = discord.File(BytesIO(await user.avatar.with_static_format('png').read()),
+                                            filename=f'{_hash}.png')
+                        msg = await wh.send(content=user.id, file=file, wait=True, username=_hash)
             else:
                 self.bot.get_channel(703171905435467956)
                 msg = await self.bot.get_channel(703171905435467956).send(content=user.id, file=file)
             url = msg.attachments[0].url
             message_id = msg.id
         else:
-            hash = user.default_avatar.name
-            url = str(user.default_avatar_url)
+            _hash = self._default_avatar_names.get(int(user.display_avatar.key))
+            if _hash is None:
+                print(f'Unknown default avatar: {user.avatar.key} | {user.avatar}')
+                return
+            url = user.default_avatar.url
             message_id = None
         query = '''INSERT INTO avatar_changes(id, hash, url, message, changed_at)
                    VALUES($1, $2, $3, $4, $5);'''
-        await self.bot.pool.execute(query, user.id, hash, url, message_id, datetime.utcnow())
+        await self.bot.pool.execute(query, user.id, _hash, url, message_id, datetime.utcnow())
+        return url
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):

@@ -345,7 +345,7 @@ class HighlightCog(commands.Cog, name='Highlights'):
                           title=f'Highlights for {(ctx.guild or ctx.author)}',
                           description=words)
         e.add_field(name='Mentions', value="ON" if ctx.author.id in self.mentions else "OFF")
-        e.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+        e.set_author(name=ctx.author, icon_url=ctx.author.display_avatar.url)
 
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
         await ctx.send(embed=e, delete_after=delete_after)
