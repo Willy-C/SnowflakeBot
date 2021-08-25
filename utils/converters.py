@@ -1,6 +1,7 @@
-import discord
 import pytz
 import typing
+import discord
+
 from discord.ext import commands
 from utils import errors
 
@@ -25,6 +26,14 @@ class Member(commands.MemberConverter):
             return await super().convert(ctx, argument)
         except commands.BadArgument:
             raise errors.MemberNotFound()
+
+
+class User(commands.UserConverter):
+    async def convert(self, ctx, argument):
+        try:
+            return await super().convert(ctx, argument)
+        except commands.BadArgument:
+            raise errors.UserNotFound()
 
 
 class CaseInsensitiveUser(commands.UserConverter):
@@ -79,6 +88,16 @@ class CachedGuildID(commands.Converter):
         if guild is None:
             raise commands.BadArgument(f'Unable to find server with ID {argument}')
         return guild
+
+
+class UserID(commands.Converter):
+    async def convert(self, ctx, argument):
+        try:
+            await ctx.bot.fetch_user(int(argument))
+        except ValueError:
+            raise commands.BadArgument('That is not a valid ID')
+        except discord.NotFound:
+            raise commands.BadArgument(f'Unable to find User with ID {argument}')
 
 
 class Timezone(commands.Converter):
@@ -145,6 +164,7 @@ class CaseInsensitiveCategoryChannel(commands.CategoryChannelConverter):
 CaseInsensitiveChannel = typing.Union[CaseInsensitiveTextChannel,
                                       CaseInsensitiveVoiceChannel,
                                       CaseInsensitiveCategoryChannel]
+
 
 class BannedUser(commands.Converter):
     async def convert(self, ctx, argument):

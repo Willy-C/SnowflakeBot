@@ -2,12 +2,15 @@ import discord
 from discord.ext import commands
 
 import copy
-import colorsys
-import random
 import pytz
+import random
+import colorsys
+import datetime
 import traceback
+
 from asyncio import TimeoutError
 from aiohttp import InvalidURL
+
 
 
 # noinspection PyProtectedMember
@@ -174,3 +177,8 @@ async def toggle_role(member, role):
     else:
         await member.add_roles(role)
 
+
+def make_naive(dt: datetime.datetime):
+    """Returns a naive datetime
+    This is mainly for our database as it does not deal with timezones"""
+    return dt.astimezone(datetime.timezone.utc).replace(tzinfo=None)

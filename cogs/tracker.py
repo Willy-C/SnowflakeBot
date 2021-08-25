@@ -7,6 +7,7 @@ from discord.ext import commands
 from collections import defaultdict
 from datetime import datetime, timedelta
 from asyncpg import UniqueViolationError
+from utils.global_utils import make_naive
 from utils.converters import CaseInsensitiveVoiceChannel
 
 
@@ -31,7 +32,7 @@ class TrackerCog(commands.Cog):
                 if (guild.id, member.id) not in data:
                     query = '''INSERT INTO first_join(guild, "user", time)
                            VALUES($1, $2, $3);'''
-                    join_time = member.joined_at or datetime.utcnow()
+                    join_time = make_naive(member.joined_at or discord.utils.utcnow())
                     try:
                         await self.bot.pool.execute(query, member.guild.id, member.id, join_time)
                     except Exception:
@@ -69,7 +70,7 @@ class TrackerCog(commands.Cog):
         query = '''INSERT INTO first_join(guild, "user", time)
                    VALUES($1, $2, $3);'''
         # In the rare case that it is None, default to utcnow
-        join_time = member.joined_at or datetime.utcnow()
+        join_time = make_naive(member.joined_at or discord.utils.utcnow())
         try:
             await self.bot.pool.execute(query, member.guild.id, member.id, join_time)
         except UniqueViolationError:
@@ -91,7 +92,7 @@ class TrackerCog(commands.Cog):
         for member in guild.members:
             query = '''INSERT INTO first_join(guild, "user", time)
                    VALUES($1, $2, $3);'''
-            join_time = member.joined_at or datetime.utcnow()
+            join_time = make_naive(member.joined_at or discord.utils.utcnow())
             try:
                 await self.bot.pool.execute(query, member.guild.id, member.id, join_time)
             except Exception:
