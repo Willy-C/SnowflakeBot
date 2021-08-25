@@ -1,9 +1,9 @@
-import discord
-from discord.ext import commands
-
 import json
 import datetime
 from typing import Union
+
+import discord
+from discord.ext import commands
 
 from utils.global_utils import bright_color, upload_hastebin
 from utils.time import human_timedelta

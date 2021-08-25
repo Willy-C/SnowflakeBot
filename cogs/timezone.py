@@ -1,9 +1,10 @@
+import datetime
+from typing import Union
+
 import discord
+from pytz import utc
 from discord.ext import commands
 
-import datetime
-from pytz import utc
-from typing import Union
 from utils.global_utils import get_user_timezone
 from utils.converters import CaseInsensitiveMember, Timezone
 

@@ -1,9 +1,9 @@
-import discord
-from discord.ext import commands
-
 from typing import Optional
 from datetime import datetime
 from collections import Counter
+
+import discord
+from discord.ext import commands
 
 from utils.global_utils import bright_color
 from utils.converters import CaseInsensitiveMember, CaseInsensitiveChannel

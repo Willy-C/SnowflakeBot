@@ -1,7 +1,6 @@
+import traceback
 import discord
 from discord.ext import commands
-
-import traceback
 
 
 def get_mention(ctx, record, obj):

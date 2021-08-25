@@ -1,8 +1,9 @@
+import io
+import aiohttp
+from datetime import datetime
+
 import discord
 from discord.ext import commands
-import aiohttp
-import io
-from datetime import datetime
 from utils.global_utils import bright_color
 from config import WOLFRAM_ALPHA_APPID
 

@@ -1,7 +1,7 @@
+import asyncio
 import discord
 from discord.ext import commands
 
-import asyncio
 
 GUILD_ID = 749462495713820766
 EMOJI = '\U0001f621'

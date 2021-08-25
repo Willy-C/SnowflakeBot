@@ -1,9 +1,9 @@
-import discord
-from discord.ext import commands
-
 import re
 import random
 import operator
+
+import discord
+from discord.ext import commands
 
 from utils.global_utils import upload_hastebin
 

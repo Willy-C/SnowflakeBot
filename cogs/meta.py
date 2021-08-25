@@ -1,9 +1,9 @@
-import discord
-from discord.ext import commands
-
 import os
 import time
 import inspect
+
+import discord
+from discord.ext import commands
 
 from utils.time import human_timedelta
 from utils.global_utils import copy_context

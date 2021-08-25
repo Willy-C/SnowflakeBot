@@ -1,8 +1,6 @@
 import discord
 from discord.ext import commands
-
 from signal import SIGKILL
-
 from config import SNEKBOX_URL
 from utils.global_utils import cleanup_code, upload_hastebin
 

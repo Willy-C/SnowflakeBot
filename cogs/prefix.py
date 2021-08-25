@@ -1,7 +1,7 @@
+import re
+
 import discord
 from discord.ext import commands
-
-import re
 
 
 class PrefixCog(commands.Cog, name='Prefix'):

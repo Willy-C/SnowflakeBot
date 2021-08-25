@@ -1,11 +1,10 @@
-import discord
-from discord.ext import commands
-
 import io
 import random
 import zipfile
 from typing import Union
 
+import discord
+from discord.ext import commands
 from utils.global_utils import is_image
 
 

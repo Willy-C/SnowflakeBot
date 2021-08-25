@@ -1,8 +1,8 @@
-import discord
-from discord.ext import commands
-
 import contextlib
 from asyncio import TimeoutError
+
+import discord
+from discord.ext import commands
 from utils.converters import CaseInsensitiveVoiceChannel
 
 

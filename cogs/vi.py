@@ -1,7 +1,6 @@
 import discord
-from discord.ext import commands
-
 import humanize
+from discord.ext import commands
 from datetime import datetime
 
 GUILD_ID = 567520394215686144
