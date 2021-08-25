@@ -33,7 +33,8 @@ class EmojiCog(commands.Cog, name='Emojis'):
     @emoji.command(name='find', aliases=['get', 'search'])
     async def get_emoji(self, ctx, *, name):
         """Find all emojis with the given name
-        Also gives its ID and guild"""
+        Also gives its ID and server
+        """
         if len(name) < 3 and not await self.bot.is_owner(ctx.author):
             return await ctx.send('Name too short! Please enter at least 3 characters to search')
         name = name.lower()
@@ -56,7 +57,8 @@ class EmojiCog(commands.Cog, name='Emojis'):
         """Create new emoji from url
         The url must point to a png/jpeg/jpg/gif file
         Example:
-        %emoji create arrow https://i.imgur.com/0cptOAb.jpg"""
+        %emoji create arrow https://i.imgur.com/0cptOAb.jpg
+        """
         url = url.split('?')[0]
         if not await is_image(ctx, url, gif=True):
             return await ctx.send('Invalid file type! Must be one of the following: `.png .jpeg .jpg .gif`')
@@ -82,6 +84,22 @@ class EmojiCog(commands.Cog, name='Emojis'):
                 await ctx.send(f'An error has occurred:\n```{e}```')
             else:
                 await ctx.message.add_reaction('\U00002705')
+
+    @emoji.command(name='steal', aliases=['copy'])
+    @commands.bot_has_permissions(manage_emojis=True)
+    @commands.has_permissions(manage_emojis=True)
+    @commands.guild_only()
+    async def steal_emoji(self, ctx, emoji: discord.PartialEmoji, name=None):
+        """Copy an emoji to the server
+        A new name can be provided, otherwise the name is copied
+        Example:
+        %emoji steal <:meowpuffyblush:876190347137548288>
+        """
+        if not emoji.is_custom_emoji():
+            return await ctx.send(f'That is not a valid emoji')
+        url = emoji.url
+        emoji_name = name or emoji.name
+        await self.create_emoji(ctx, emoji_name, url)
 
     @emoji.group(name='list', invoke_without_command=True, case_insensitive=True)
     @guild_has_emojis()
