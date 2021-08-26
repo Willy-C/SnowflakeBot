@@ -234,7 +234,7 @@ class OwnerCog(commands.Cog, name='Owner'):
         if not await ctx.confirm_prompt('Shutdown?'):
             return
         await ctx.message.add_reaction('\U0001f620')
-        await ctx.bot.logout()
+        await ctx.bot.close()
 
     @commands.command(name='guilds')
     async def get_shared_guilds(self, ctx, user: discord.User):
