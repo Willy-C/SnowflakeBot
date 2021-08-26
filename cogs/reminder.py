@@ -7,7 +7,7 @@ import discord
 from discord.ext import commands, tasks
 
 from utils.time import UserFriendlyTime, human_timedelta
-from utils.global_utils import get_user_timezone
+from utils.global_utils import get_user_timezone, make_naive
 
 
 class ReminderCog(commands.Cog, name='Reminders'):
@@ -75,6 +75,7 @@ class ReminderCog(commands.Cog, name='Reminders'):
 
     async def create_timer(self, end, user, channel, message, content=None, event='reminder', start=None):
         now = start or datetime.datetime.utcnow()
+        end = make_naive(end)
         channel_id = channel if isinstance(channel, int) else getattr(channel, 'id', None)
         message_id = message if isinstance(message, int) else getattr(message, 'id', None)
         delta = (end - now).total_seconds()
