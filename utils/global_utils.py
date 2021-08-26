@@ -4,11 +4,10 @@ import random
 import colorsys
 import datetime
 import traceback
-from asyncio import TimeoutError
-from aiohttp import InvalidURL
 
 import discord
 from discord.ext import commands
+from aiohttp import InvalidURL
 
 
 async def copy_context(ctx: commands.Context, *, author=None, channel=None, **kwargs):
