@@ -11,3 +11,4 @@ asyncpg
 pillow
 aenum
 rapidfuzz
+humanize
