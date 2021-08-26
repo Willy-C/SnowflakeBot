@@ -309,7 +309,7 @@ class ModCog(commands.Cog, name='Mod'):
     @commands.bot_has_permissions(manage_roles=True, manage_channels=True)
     @can_manage_roles()
     @commands.guild_only()
-    async def create_mute_role(self, ctx: Context):
+    async def create_mute_role(self, ctx):
         """Creates a role name 'Muted' and denies Send Message permission to all text channels"""
         query = '''SELECT mute_role
                    FROM guild_mod_config
