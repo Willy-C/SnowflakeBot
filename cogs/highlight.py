@@ -141,7 +141,7 @@ class HighlightCog(commands.Cog, name='Highlights'):
         if member is None:
             del self.highlights[message.guild.id][member_id]
             return
-        if not member.permissions_in(message.channel).read_messages and member_id != self.bot.owner_id:
+        if not message.channel.permissions_for(member).read_messages and member_id != self.bot.owner_id:
             return
         context = await self.get_msg_context(message, member_id, word)
         if context is None:
@@ -161,7 +161,7 @@ class HighlightCog(commands.Cog, name='Highlights'):
 
     async def dm_mention(self, message, member_id):
         member = message.guild.get_member(member_id)
-        if (member is None or not member.permissions_in(message.channel).read_messages) and id != self.bot.owner_id:
+        if (member is None or not message.channel.permissions_for(member).read_messages) and id != self.bot.owner_id:
             return
         context = await self.get_msg_context(message, member_id, None, is_mention=True)
         if context is None:
