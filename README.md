@@ -25,7 +25,7 @@ Here is a brief list of some of the things the bot can do:
  - Generate LaTeX as image in chat
  - Hot reload modules without restart
  - Use custom emojis across servers without Nitro
- - Stream music from Youtube, Twitch, Soundcloud, Mixer, Vimeo, etc with [Lavalink](https://github.com/Frederikam/Lavalink) 
+ - Stream music from Youtube, Spotify, Soundcloud, Twitch, Mixer, Vimeo, etc with [Lavalink](https://github.com/Frederikam/Lavalink) 
  - and more...
 
 ## Future Features
@@ -45,8 +45,8 @@ Shoutout to these people for creating amazing libraries:
 I would not recommend trying to host your own instance of this bot as some crucial parts are not public. Instead, use the `invite` command to get an invite URL to add to your server or send me a message. 
 
 If you *really* want to run your own instance you would need the following:
-- Python 3.7+
-- discord.py >= 1.5
+- Python 3.8+
+- [discord.py](https://github.com/Rapptz/discord.py) 2.0
 - A PostgreSQL database
 - [asyncpg](https://github.com/MagicStack/asyncpg) for interacting with the database
 - A [Lavalink](https://github.com/Frederikam/Lavalink) server for music playing
