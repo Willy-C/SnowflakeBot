@@ -85,7 +85,6 @@ class MathCog(commands.Cog, name='Math'):
         }
         await ctx.trigger_typing()
         async with self.bot.session.get(WOLFRAM_API, params=wolfram_payload) as resp:
-            print(resp.status)
             if resp.status == 501:
                 return await ctx.reply('Invalid query')
             data = io.BytesIO(await resp.read())
