@@ -21,6 +21,8 @@ class ConfirmView(discord.ui.View):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user is None:
             return False
+        if await self.ctx.bot.is_owner(interaction.user):
+            return True
         if interaction.user == self.author:
             return True
         else:
