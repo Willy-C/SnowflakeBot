@@ -128,7 +128,7 @@ class Gatekeep(commands.Cog):
                            avatar_url=original.author.display_avatar)
 
     @commands.Cog.listener('on_message')
-    async def echo_pings(self, message):
+    async def echo_pings(self, message: discord.Message):
         if message.channel.id != PRIVATE_GENERAL_CHANNEL:
             return
 
@@ -158,10 +158,12 @@ class Gatekeep(commands.Cog):
                 await public_channel.set_permissions(user, overwrite=None)
 
     @commands.Cog.listener()
-    async def on_voice_state_update(self, member, before: discord.VoiceState, after):
+    async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
         if member.guild.id != GUILD_ID:
             return
 
+        if member.guild_permissions.administrator:
+            return
         voice_text_channel = member.guild.get_channel(VOICE_TEXT_CHANNEL)
         if before.channel is None and after.channel is not None:
             # joined voice channel
