@@ -242,7 +242,7 @@ class ReminderCog(commands.Cog, name='Reminders'):
                     or (before.desktop_status is discord.Status.offline and after.desktop_status is not discord.Status.offline))
 
         try:
-            await self.bot.wait_for('member_update', check=check, timeout=129600)
+            await self.bot.wait_for('presence_update', check=check, timeout=129600)
         except asyncio.TimeoutError:
             await ctx.message.add_reaction('<:redTick:602811779474522113>')
         else:
