@@ -5,13 +5,14 @@ import discord
 from discord.ext import commands
 
 from utils.global_utils import upload_hastebin
-from utils.errors import BlacklistedUser, TimezoneNotFound
+from utils.errors import BlacklistedUser, TimezoneNotFound, NoVoiceChannel
 from .equations import TexRenderError
 
 
 class CommandErrorHandler(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.owner = None
         bot.on_error = self.on_error
         bot.loop.create_task(self.set_owner())
 
@@ -50,21 +51,23 @@ class CommandErrorHandler(commands.Cog):
                                           f'Timezones are not case-sensitive',
                               colour=discord.Colour.blue())
             await ctx.send('Unable to find a timezone with that name', embed=e)
+            return
+
+        elif isinstance(error, NoVoiceChannel):
+            await ctx.send(str(error))
+            return
 
         elif isinstance(error, commands.BadArgument):
             return await ctx.send(f'Bad argument: {error}')
-
-        # elif isinstance(error, commands.NotOwner):
-        #     return await ctx.send(f'Sorry, this command can only be used by my owner. If you believe this is a mistake, please contact @{self.owner}')
 
         elif isinstance(error, commands.MissingRequiredArgument):
             return await ctx.send(f'Missing required argument: `{error.param.name}` See {ctx.prefix}help {ctx.command} for more info')
 
         elif isinstance(error, commands.MissingPermissions):
-            return await ctx.send(f'I cannot complete this command, you are missing the following permission{"" if len(error.missing_perms) == 1 else "s"}: {", ".join(error.missing_perms)}')
+            return await ctx.send(f'I cannot complete this command, you are missing the following permission{"" if len(error.missing_permissions) == 1 else "s"}: {", ".join(error.missing_permissions)}')
 
         elif isinstance(error, commands.BotMissingPermissions):
-            return await ctx.send(f'I cannot complete this command, I am missing the following permission{"" if len(error.missing_perms) == 1 else "s"}: {", ".join(error.missing_perms)}')
+            return await ctx.send(f'I cannot complete this command, I am missing the following permission{"" if len(error.missing_permissions) == 1 else "s"}: {", ".join(error.missing_permissions)}')
 
         elif isinstance(error, commands.CheckFailure):
             return await ctx.send('Sorry, you cannot use this command')
@@ -80,6 +83,9 @@ class CommandErrorHandler(commands.Cog):
                 url = await upload_hastebin(ctx, err_msg)
                 return await ctx.send(f'Rendering failed. Please check your code. {url}')
             return await ctx.send(f'Rendering failed.\n```{err_msg}```')
+
+        if self.owner is None:
+            return
 
         # Unhandled error, so just return the traceback
         tb = traceback.format_exception(type(error), error, error.__traceback__)

@@ -80,3 +80,9 @@ class MessageNotFound(commands.BadArgument):
 class RoleNotFound(commands.BadArgument):
     def __init__(self, message=None):
         super().__init__(message or 'No role found with that name or ID')
+
+
+class NoVoiceChannel(commands.CommandError):
+    def __init__(self, message=None, *args) -> None:
+        message = message or 'No voice channel to connect to. Please join one or use `%connect/join [channel]` first.'
+        super().__init__(message, *args)
