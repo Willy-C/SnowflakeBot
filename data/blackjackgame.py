@@ -1,6 +1,6 @@
-import discord
-import asyncio
 import random
+import discord
+from discord.ext import commands
 from aenum import Enum, IntEnum, NoAlias
 
 
@@ -43,6 +43,17 @@ class GamePhase(Enum):
     DEALER_NATURAL = 6
 
 
+class GameResult(Enum):
+    WIN  = 1
+    LOSS = 2
+    TIE  = 3
+
+
+class PlayerChoice(Enum):
+    HIT = 1
+    STAND = 2
+    DOUBLE = 3
+
 display_cards = {
     'Ace':   'A',
     'Two':   '2',
@@ -65,6 +76,83 @@ display_suits = {
     'Hearts'  : '❤',
     'Spades'  : '♠'
 }
+
+
+class BlackJackView(discord.ui.View):
+    def __init__(self, game=None):
+        super().__init__(timeout=3600)
+        self.choice = None
+        self.message = None
+        self.game = game
+        self.player = game.ctx.author
+
+    async def disable(self):
+        for c in self.children:
+            c.disabled = True
+        await self.message.edit(view=self)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user is None:
+            return False
+        if interaction.user == self.player:
+            return True
+        else:
+            await interaction.response.send_message('This game is not yours', ephemeral=True)
+            return False
+
+    @discord.ui.button(label='Hit')
+    async def hit(self, button: discord.ui.Button, interaction: discord.Interaction):
+        self.choice = PlayerChoice.HIT
+        self.game.player.add_card(self.game.deck.draw_card())
+        if self.game.player.state is HandState.BUST:
+            self.game.phase = GamePhase.END
+        if self.game.player.state is HandState.BLACKJACK:
+            self.game.phase = GamePhase.DEALER
+        await interaction.response.edit_message(embed=self.game.build_game_embed(), view=self)
+        if self.game.phase is not GamePhase.PLAYER:
+            self.stop()
+
+    @discord.ui.button(label='Stand')
+    async def stand(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
+        self.choice = PlayerChoice.STAND
+        self.game.phase = GamePhase.DEALER
+        self.stop()
+
+    async def on_timeout(self):
+        self.choice = PlayerChoice.STAND
+        await self.disable()
+        self.stop()
+
+
+class PlayAgainView(discord.ui.View):
+    def __init__(self, *, game=None, embed=None):
+        super().__init__(timeout=60)
+        self.message = None
+        self.game = game
+        self.embed = embed
+        self.player = game.ctx.author
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user is None:
+            return False
+        if interaction.user == self.player:
+            return True
+        else:
+            await interaction.response.send_message('This game is not yours', ephemeral=True)
+            return False
+
+    @discord.ui.button(label='Play Again')
+    async def play_again(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await interaction.response.defer()
+        if self.message:
+            await self.message.edit(embed=self.embed, view=None)
+        self.stop()
+        await self.game.play_round(self.game.ctx)
+
+    async def on_timeout(self) -> None:
+        if self.message:
+            await self.message.edit(embed=self.embed, view=None)
 
 
 class Card:
@@ -182,96 +270,103 @@ class DealerHand(Hand):
 
 class Game:
     def __init__(self, ctx, decks=4):
+        self.num_decks = decks
         self.deck = Deck(decks)
         self.player = Hand()
         self.dealer = DealerHand()
         self.phase = GamePhase.IDLE
         self.ctx = ctx
         self.message = None
+        self.is_playing = False
+
+    def reset(self):
+        self.deck = Deck(self.num_decks)
+        self.player = Hand()
+        self.dealer = DealerHand()
+        self.phase = GamePhase.IDLE
+        self.message = None
+
+    async def update_embed(self, view=None):
+        await self.message.edit(embed=self.build_game_embed(), view=view)
 
     def deal_cards(self):
         for _ in range(2):
             self.player.add_card(self.deck.draw_card())
             self.dealer.add_card(self.deck.draw_card())
 
-    async def play_round(self, ctx):
+    async def play_round(self, ctx: commands.Context):
+        if self.is_playing:
+            return
+        self.is_playing = True
         self.ctx = ctx
         self.deal_cards()
-        self.message = await self.ctx.send(embed=self.build_game_embed())
         if self.dealer.is_blackjack():
+            self.message = await self.ctx.send(embed=self.build_game_embed())
             if self.player.is_blackjack():
                 self.phase = GamePhase.END
             else:
                 self.phase = GamePhase.DEALER_NATURAL
+            await self.calculate_outcome()
+            if len(self.deck) < 12:
+                self.reset()
+            self.is_playing = False
             return
         elif self.player.is_blackjack():
+            self.message = await self.ctx.send(embed=self.build_game_embed())
             self.phase = GamePhase.NATURAL
+            await self.calculate_outcome()
+            if len(self.deck) < 12:
+                self.reset()
+            self.is_playing = False
             return
-
+        view = BlackJackView(game=self)
+        self.message = await self.ctx.send(embed=self.build_game_embed(), view=view)
+        view.message = self.message
         self.phase = GamePhase.PLAYER
-        reactions = ['👇', '🛑']
-        [await self.message.add_reaction(r) for r in reactions]
-
-        def check(r, u):
-            return str(r) in reactions and u == self.ctx.author and r.message == self.message
-
-        while self.phase is GamePhase.PLAYER:
-            try:
-                reaction, _ = await self.ctx.bot.wait_for('reaction_add', check=check, timeout=3600)
-            except asyncio.TimeoutError:
-                choice = '🛑'
-            else:
-                choice = str(reaction)
-            if choice == '👇':
-                self.player.add_card(self.deck.draw_card())
-                if self.player.state is HandState.BUST:
-                    self.phase = GamePhase.END
-                    break
-                if self.player.state is HandState.BLACKJACK:
-                    self.phase = GamePhase.DEALER
-                    break
-                await self.message.edit(embed=self.build_game_embed())
-                await self.message.remove_reaction('👇', self.ctx.author)
-            elif choice == '🛑':
-                self.phase = GamePhase.DEALER
-                break
+        await view.wait()
 
         self.dealer.reveal()
         if self.phase is GamePhase.DEALER:
             if self.dealer.value >= 17:
                 self.phase = GamePhase.END
-            while (self.dealer.value < 17 or (self.dealer.value == 17 and self.dealer.is_soft)) and self.dealer.value < self.player.value:
+            while self.dealer.value < 17:
                 self.dealer.add_card(self.deck.draw_card())
             self.dealer.calculate_hand()
             self.phase = GamePhase.END
+        await self.calculate_outcome()
+        if len(self.deck) < 12:
+            self.reset()
+        self.is_playing = False
 
     async def calculate_outcome(self):
         self.dealer.reveal()
         self.dealer.calculate_hand()
         if self.phase is GamePhase.NATURAL:
-            embed = self.result_embed('win', 'Natural Blackjack')
+            embed = self.result_embed(GameResult.WIN, 'Natural Blackjack')
         elif self.phase is GamePhase.DEALER_NATURAL:
-            embed = self.result_embed('lose', 'Dealer Natural Blackjack')
+            embed = self.result_embed(GameResult.LOSS, 'Dealer Natural Blackjack')
         elif self.player.state is HandState.BUST:
-            embed = self.result_embed('lose', 'Bust')
+            embed = self.result_embed(GameResult.LOSS, 'Bust')
         elif self.dealer.state is HandState.BUST:
-            embed = self.result_embed('win', 'Dealer Bust')
+            embed = self.result_embed(GameResult.WIN, 'Dealer Bust')
         elif self.dealer.value == self.player.value:
-            embed = self.result_embed('tie', 'Push')
+            embed = self.result_embed(GameResult.TIE, 'Push')
         elif self.player.state is HandState.BLACKJACK:
-            embed = self.result_embed('win', 'Blackjack')
+            embed = self.result_embed(GameResult.WIN, 'Blackjack')
         elif self.dealer.state is HandState.BLACKJACK:
-            embed = self.result_embed('lose', 'Dealer Blackjack')
+            embed = self.result_embed(GameResult.LOSS, 'Dealer Blackjack')
         elif self.player.value > self.dealer.value:
-            embed = self.result_embed('win', 'Closer to 21')
+            embed = self.result_embed(GameResult.WIN, 'Closer to 21')
         else:
-            embed = self.result_embed('lose', 'Dealer closer to 21')
-        await self.message.edit(embed=embed)
+            embed = self.result_embed(GameResult.LOSS, 'Dealer closer to 21')
+        view = PlayAgainView(game=self, embed=embed)
+        end_msg = await self.message.edit(embed=embed, view=view)
+        view.message = end_msg
         self.reset_hands()
 
     def build_game_embed(self):
         embed = discord.Embed(title=f'Blackjack | {self.ctx.author}',
-                              description='Press 👇 to Hit (draw another card) or 🛑 to Stand (end turn)',
+                              description='Press the buttons to play: Hit (get a card) or Stand (end turn)',
                               color=0xFFFFFE)
         embed.add_field(name='Your Hand', value=str(self.player))
         embed.add_field(name='Dealer\'s Hand', value=str(self.dealer))
@@ -280,16 +375,16 @@ class Game:
 
     def result_embed(self, result, hand):
         results = {
-            'win': ('You won', 0x55dd55),
-            'lose': ('You lost', 0xff0000),
-            'tie': ('You tied', 0xFAA935)
+            GameResult.WIN: ('You won', 0x55dd55),
+            GameResult.LOSS: ('You lost', 0xff0000),
+            GameResult.TIE: ('You tied', 0xFAA935)
         }
         description, colour = results[result]
 
         embed = discord.Embed(title=f'Blackjack | {self.ctx.author}',
                               description=description,
                               color=colour)
-        embed.add_field(name='Your Hand', value=f'{self.player}\nResult: {hand}')
+        embed.add_field(name='Your Hand', value=f'{self.player}\nResult: **{hand}**')
         embed.add_field(name='Dealer\'s Hand', value=str(self.dealer))
         embed.set_footer(text=f'Cards remaining: {len(self.deck)}')
         return embed

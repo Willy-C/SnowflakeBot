@@ -23,9 +23,6 @@ class BlackJack(commands.Cog):
         """
         game = self.games.setdefault(ctx.author.id, bj.Game(ctx, decks=decks))
         await game.play_round(ctx)
-        await game.calculate_outcome()
-        if len(game.deck) < 12:
-            del self.games[ctx.author.id]
 
     @commands.command(name='bjreset', hidden=True)
     async def reset_bj_deck(self, ctx):
