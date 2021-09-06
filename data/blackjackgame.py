@@ -100,7 +100,7 @@ class BlackJackView(discord.ui.View):
             await interaction.response.send_message('This game is not yours', ephemeral=True)
             return False
 
-    @discord.ui.button(label='Hit')
+    @discord.ui.button(label='Hit', style=discord.ButtonStyle.green)
     async def hit(self, button: discord.ui.Button, interaction: discord.Interaction):
         self.choice = PlayerChoice.HIT
         self.game.player.add_card(self.game.deck.draw_card())
@@ -112,7 +112,7 @@ class BlackJackView(discord.ui.View):
         if self.game.phase is not GamePhase.PLAYER:
             self.stop()
 
-    @discord.ui.button(label='Stand')
+    @discord.ui.button(label='Stand', style=discord.ButtonStyle.red)
     async def stand(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.defer()
         self.choice = PlayerChoice.STAND
@@ -144,9 +144,10 @@ class PlayAgainView(discord.ui.View):
 
     @discord.ui.button(label='Play Again')
     async def play_again(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await interaction.response.defer()
         if self.message:
-            await self.message.edit(embed=self.embed, view=None)
+            await interaction.response.edit_message(embed=self.embed, view=None)
+        else:
+            await interaction.response.defer()
         self.stop()
         await self.game.play_round(self.game.ctx)
 
@@ -285,9 +286,6 @@ class Game:
         self.dealer = DealerHand()
         self.phase = GamePhase.IDLE
         self.message = None
-
-    async def update_embed(self, view=None):
-        await self.message.edit(embed=self.build_game_embed(), view=view)
 
     def deal_cards(self):
         for _ in range(2):
