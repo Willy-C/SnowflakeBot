@@ -18,7 +18,7 @@ from asyncpg import UniqueViolationError
 from utils.converters import CaseInsensitiveVoiceChannel
 from utils.context import Context
 from utils.errors import NoVoiceChannel
-from utils.views import AskChoice
+from utils.views import AskChoice, MusicPlayerView
 from config import SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, LAVALINK_PASSWORD
 
 
@@ -28,24 +28,26 @@ class QueryType(enum.Enum):
     SOUNDCLOUD = 3
     SPOTIFYTRACK = 4
     SPOTIFYPLAYLIST = 5
+    CANCELLED = 6
 
 
 class Player(wavelink.Player):
-    def __init__(self, *, ctx: Context):
+    def __init__(self, *, ctx: Context, view: MusicPlayerView):
         super().__init__()
         self.ctx = ctx
+        self.view = view
         self.text_channel: discord.TextChannel = ctx.channel
         self.looping: bool = False
-        self._paused: bool = False
-        self.volume = 50
+        self.volume = 25
         self._queue: asyncio.Queue = asyncio.Queue()
-        self._looping_queue: asyncio.Queue = asyncio.Queue()
+        # self._looping_queue: asyncio.Queue = asyncio.Queue()
         self._played: collections.deque = collections.deque(maxlen=10)
-        self._controller: Optional[discord.Message] = None
         self.next_event: asyncio.Event = asyncio.Event()
-        self.current_song: Optional[wavelink.Track] = None
-        ctx.bot.loop.create_task(self._player_loop())
-
+        self._controller: Optional[discord.Message] = None
+        self.updating: bool = False
+        self._player_loop = ctx.bot.loop.create_task(self._player_loop())
+        self._controller_lock: asyncio.Lock = asyncio.Lock()
+        ctx.bot.loop.create_task(self.invoke_controller())
 
     @property
     def entries(self):
@@ -76,8 +78,11 @@ class Player(wavelink.Player):
                 with timeout(300):
                     song = await self._queue.get()
             except asyncio.TimeoutError:
-                await self.disconnect(force=False)
-                return
+                if self.is_empty:
+                    await self.stop()
+                    await self.disconnect(force=False)
+                    return
+                continue
             if not song:
                 continue
 
@@ -85,6 +90,77 @@ class Player(wavelink.Player):
                 self._queue.put_nowait(song)
             await self.play(song)
             await self.next_event.wait()
+
+    async def invoke_controller(self, track: wavelink.Track=None, force_delete: bool = False):
+        async with self._controller_lock:
+            if not track:
+                track = self.track
+            if track is None:
+                return
+            if self.updating:
+                return
+
+            self.updating = True
+            embed = discord.Embed(title='Music Controller',
+                                  description=f'{"<a:eq:628825184941637652> Now Playing:" if self.is_playing() and not self.is_paused() else "⏸ PAUSED"}```ini\n{track.title}\n```',
+                                  colour=0x16D1EF)
+            if thumbnail := getattr(track, 'thumbnail', None):
+                embed.set_thumbnail(url=thumbnail)
+            if track.is_stream():
+                embed.add_field(name='Duration', value='🔴`Streaming`')
+            else:
+                embed.add_field(name='Duration(approx.)', value=datetime.timedelta(seconds=int(self.position)))
+
+            embed.add_field(name='Video URL', value=f'[Click Here!]({track.uri})')
+            embed.add_field(name='Queue Length', value=str(len(self.entries)))
+            embed.add_field(name='Volume', value=f'**`{self.volume}%`**')
+            embed.add_field(name='Looping', value='ON' if self.looping else 'OFF')
+
+            if self.size > 0:
+                data = '\n'.join(f'**-** `{t.title[0:45]}{"..." if len(t.title) > 45 else ""}`\n{"-"*10}'
+                                 for t in itertools.islice([e for e in self.entries], 0, 3, None))
+                embed.add_field(name='Coming Up:', value=data, inline=False)
+
+            if self._controller and ((force_delete and not self.is_last()) or not await self.is_current_fresh()):
+                try:
+                    await self._controller.delete()
+                except discord.HTTPException:
+                    pass
+
+                self._controller = await self.text_channel.send(embed=embed, view=self.view)
+            elif not self._controller:
+                self._controller = await self.text_channel.send(embed=embed, view=self.view)
+            else:
+                self._controller = await self._controller.edit(embed=embed, view=self.view)
+            self.updating = False
+
+    def is_last(self):
+        return self._controller and self.text_channel.last_message_id == self._controller.id
+
+    async def is_current_fresh(self):
+        """Check whether our controller is fresh in message history."""
+        try:
+            async for m in self.text_channel.history(limit=5):
+                if m.id == self._controller.id:
+                    return True
+        except (discord.HTTPException, AttributeError):
+            return False
+        return False
+
+    async def stop(self) -> None:
+        if self._controller:
+            try:
+                await self._controller.delete()
+            except discord.HTTPException:
+                pass
+        await super().stop()
+
+    def cleanup(self) -> None:
+        try:
+            self._player_loop.cancel()
+        except (asyncio.CancelledError, AttributeError):
+            pass
+        super().cleanup()
 
 
 class Music(commands.Cog):
@@ -99,6 +175,12 @@ class Music(commands.Cog):
     async def create_node(self, bot):
         await self.bot.wait_until_ready()
         await asyncio.sleep(2)
+        try:
+            self._node = wavelink.NodePool.get_node()
+            if self._node:
+                return
+        except wavelink.ZeroConnectedNodes:
+            pass
         self._node = await wavelink.NodePool.create_node(bot=bot,
                                                          host='127.0.0.1',
                                                          port=2333,
@@ -111,25 +193,25 @@ class Music(commands.Cog):
 
     def cog_unload(self):
         if not any(p.is_playing() for p in self._node.players):
-            self.bot.loop.create_task(self._node.disconnect(force=False))
+            self.bot.loop.create_task(self._node.disconnect(force=True))
         else:
             for player in self._node.players:
                 if not player.is_connected():
-                    self.bot.loop.create_task(player.disconnect(force=False))
+                    self.bot.loop.create_task(player.disconnect(force=True))
 
     @commands.Cog.listener()
     async def on_wavelink_track_end(self, player: Player, track: wavelink.Track, reason: str):
         await player.track_end(track)
+        await player.invoke_controller()
 
     @commands.Cog.listener()
     async def on_wavelink_track_exception(self, player: Player, track: wavelink.Track, error: Exception):
-        await player.text_channel.send(f'An error occurred while trying to play track `{track.title}` Please try again later.\n'
-                                       f'{error.__class__.__name__}')
+        await player.text_channel.send(f'An error occurred while trying to play track `{track.title}`. Skipping...')
         player.next_event.set()
 
     @commands.Cog.listener()
     async def on_wavelink_track_stuck(self, player: Player, track: wavelink.Track, threshold: int):
-        await player.text_channel.send(f'It appears track `{track.title}` got stuck. Please try again later.')
+        await player.text_channel.send(f'It appears track `{track.title}` got stuck. Skipping...')
         player.next_event.set()
 
     async def is_in_vc(self, ctx: Context, member: discord.Member):
@@ -154,8 +236,10 @@ class Music(commands.Cog):
             return vc
 
         else:
-            _player = Player(ctx=ctx)
+            view = MusicPlayerView(context=ctx)
+            _player = Player(ctx=ctx, view=view)
             player = await channel.connect(cls=_player)
+            view.player = player
             return player
 
     @commands.command(name='connect', aliases=['join'])
@@ -222,7 +306,15 @@ class Music(commands.Cog):
                 message = await ctx.reply(embed=e, view=view)
                 view.message = message
                 await view.wait()
-                tracks = tracks[view.chosen_index]
+                if view.chosen_index is not None:
+                    tracks = tracks[view.chosen_index]
+                elif view.cancelled:
+                    query_type = QueryType.CANCELLED
+                else:
+                    tracks = None
+
+        elif query_type is QueryType.SOUNDCLOUD and isinstance(tracks, list):
+            tracks = tracks[0]
 
         elif isinstance(tracks, list):
             if len(tracks) == 1:
@@ -238,6 +330,9 @@ class Music(commands.Cog):
         async with ctx.typing():
             tracks, query_type = await self.get_tracks(ctx, query)
 
+        if query_type is QueryType.CANCELLED:
+            return await ctx.reply('Cancelled', mention_author=False)
+
         if not tracks:
             msg = 'Sorry no tracks found with that query.'
             if query_type is QueryType.SOUNDCLOUD:
@@ -250,7 +345,7 @@ class Music(commands.Cog):
         if isinstance(tracks, wavelink.YouTubePlaylist):
             for track in tracks.tracks:
                 await player.add_track(track)
-            await ctx.reply(f'Added {len(tracks.tracks)} songs from `{tracks.name} to the queue')
+            await ctx.reply(f'Added {len(tracks.tracks)} songs from `{tracks.name}` to the queue')
         elif isinstance(tracks, list):
             for track in tracks:
                 await player.add_track(track)
@@ -261,6 +356,8 @@ class Music(commands.Cog):
                 await ctx.reply(f'Playing `{tracks.title}`')
             else:
                 await ctx.reply(f'Added `{tracks.title}` to the queue')
+
+        await player.invoke_controller(force_delete=True)
 
     @commands.command(name='pause')
     async def pause(self, ctx: Context):
@@ -293,6 +390,7 @@ class Music(commands.Cog):
             return
 
         await ctx.send(f'Currently playing: {player.track}')
+        await player.invoke_controller(force_delete=True)
 
     @commands.command(name='skip')
     async def skip_songs(self, ctx: Context):
@@ -304,6 +402,7 @@ class Music(commands.Cog):
 
         await player.stop()
         await ctx.send(f'{ctx.author.mention} has skipped the song', allowed_mentions=discord.AllowedMentions.none())
+        await player.invoke_controller(force_delete=True)
 
     @commands.command(name='stop', aliases=['leave'])
     async def stop(self, ctx: Context):
@@ -418,7 +517,7 @@ class Music(commands.Cog):
         else:
             player.looping = not player.looping
 
-        if not _prev and player.looping and player.is_playing:
+        if not _prev and player.looping and player.is_playing():
             await player.add_track(player.track)
 
         await ctx.send(f'{ctx.author.mention} Looping is now {"on" if player.looping else "off"}!',
