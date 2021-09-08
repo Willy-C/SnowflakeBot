@@ -102,6 +102,7 @@ class BlackJackView(discord.ui.View):
 
     @discord.ui.button(label='Hit', style=discord.ButtonStyle.green)
     async def hit(self, button: discord.ui.Button, interaction: discord.Interaction):
+        self.double.disabled = True
         self.choice = PlayerChoice.HIT
         self.game.player.add_card(self.game.deck.draw_card())
         if self.game.player.state is HandState.BUST:
@@ -119,6 +120,28 @@ class BlackJackView(discord.ui.View):
         self.game.phase = GamePhase.DEALER
         self.stop()
 
+    @discord.ui.button(label='Double', style=discord.ButtonStyle.grey)
+    async def double(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if not self.game.is_betting:
+            await interaction.response.send_message(f'You are not betting!',
+                                                    ephemeral=True)
+            return
+        cog = self.game.ctx.bot.get_cog('Currency')
+        balance = await cog.get_balance(self.game.ctx.author)
+        if balance < (self.game.bet * 2):
+            await interaction.response.send_message(f'You do not have enough money to double to ${self.game.bet * 2}. (Balance: ${balance:.2f})',
+                                                    ephemeral=True)
+            return
+        self.game.bet *= 2
+        self.choice = PlayerChoice.DOUBLE
+        self.game.player.add_card(self.game.deck.draw_card())
+        if self.game.player.state is HandState.BUST:
+            self.game.phase = GamePhase.END
+        else:
+            self.game.phase = GamePhase.DEALER
+        await interaction.response.edit_message(embed=self.game.build_game_embed(), view=self)
+        self.stop()
+
     async def on_timeout(self):
         self.choice = PlayerChoice.STAND
         await self.disable()
@@ -129,7 +152,7 @@ class PlayAgainView(discord.ui.View):
     def __init__(self, *, game=None, embed=None):
         super().__init__(timeout=60)
         self.message = None
-        self.game = game
+        self.game: Game = game
         self.embed = embed
         self.player = game.ctx.author
 
@@ -149,7 +172,7 @@ class PlayAgainView(discord.ui.View):
         else:
             await interaction.response.defer()
         self.stop()
-        await self.game.play_round(self.game.ctx)
+        await self.game.play_round(self.game.ctx, bet=self.game.original_bet)
 
     async def on_timeout(self) -> None:
         if self.message:
@@ -256,6 +279,7 @@ class DealerHand(Hand):
                 self.is_soft = True
                 return 11
             else:
+                self.is_soft = False
                 return self.cards[0].value
         return self.value
 
@@ -279,24 +303,45 @@ class Game:
         self.ctx = ctx
         self.message = None
         self.is_playing = False
+        self.bet: float = 0
+        self.original_bet = 0
 
-    def reset(self):
+    @property
+    def is_betting(self):
+        return self.bet > 0
+
+    def reset_deck(self):
         self.deck = Deck(self.num_decks)
         self.player = Hand()
         self.dealer = DealerHand()
         self.phase = GamePhase.IDLE
         self.message = None
 
+    def reset_hands(self):
+        self.message = None
+        self.player = Hand()
+        self.dealer = DealerHand()
+        self.phase = GamePhase.IDLE
+
     def deal_cards(self):
         for _ in range(2):
             self.player.add_card(self.deck.draw_card())
             self.dealer.add_card(self.deck.draw_card())
 
-    async def play_round(self, ctx: commands.Context):
+    async def play_round(self, ctx: commands.Context, bet: float = 0):
         if self.is_playing:
             return
         self.is_playing = True
         self.ctx = ctx
+        self.original_bet = self.bet = bet
+        if self.is_betting:
+            cog = self.ctx.bot.get_cog('Currency')
+            balance = await cog.get_balance(self.ctx.author)
+            if balance < bet:
+                self.is_playing = False
+                await self.ctx.send(f'{self.ctx.author.mention} you do not have enough money to bet ${bet} (Balance: ${balance:.2f})')
+                return
+
         self.deal_cards()
         if self.dealer.is_blackjack():
             self.message = await self.ctx.send(embed=self.build_game_embed())
@@ -306,7 +351,7 @@ class Game:
                 self.phase = GamePhase.DEALER_NATURAL
             await self.calculate_outcome()
             if len(self.deck) < 12:
-                self.reset()
+                self.reset_deck()
             self.is_playing = False
             return
         elif self.player.is_blackjack():
@@ -314,7 +359,7 @@ class Game:
             self.phase = GamePhase.NATURAL
             await self.calculate_outcome()
             if len(self.deck) < 12:
-                self.reset()
+                self.reset_deck()
             self.is_playing = False
             return
         view = BlackJackView(game=self)
@@ -333,45 +378,50 @@ class Game:
             self.phase = GamePhase.END
         await self.calculate_outcome()
         if len(self.deck) < 12:
-            self.reset()
+            self.reset_deck()
         self.is_playing = False
 
     async def calculate_outcome(self):
         self.dealer.reveal()
         self.dealer.calculate_hand()
         if self.phase is GamePhase.NATURAL:
-            embed = self.result_embed(GameResult.WIN, 'Natural Blackjack')
+            embed = await self.result_embed(GameResult.WIN, 'Natural Blackjack', multiplier=1.5)
         elif self.phase is GamePhase.DEALER_NATURAL:
-            embed = self.result_embed(GameResult.LOSS, 'Dealer Natural Blackjack')
+            embed = await self.result_embed(GameResult.LOSS, 'Dealer Natural Blackjack')
         elif self.player.state is HandState.BUST:
-            embed = self.result_embed(GameResult.LOSS, 'Bust')
+            embed = await self.result_embed(GameResult.LOSS, 'Bust')
         elif self.dealer.state is HandState.BUST:
-            embed = self.result_embed(GameResult.WIN, 'Dealer Bust')
+            embed = await self.result_embed(GameResult.WIN, 'Dealer Bust')
         elif self.dealer.value == self.player.value:
-            embed = self.result_embed(GameResult.TIE, 'Push')
+            embed = await self.result_embed(GameResult.TIE, 'Push', multiplier=0)
         elif self.player.state is HandState.BLACKJACK:
-            embed = self.result_embed(GameResult.WIN, 'Blackjack')
+            embed = await self.result_embed(GameResult.WIN, 'Blackjack')
         elif self.dealer.state is HandState.BLACKJACK:
-            embed = self.result_embed(GameResult.LOSS, 'Dealer Blackjack')
+            embed = await self.result_embed(GameResult.LOSS, 'Dealer Blackjack')
         elif self.player.value > self.dealer.value:
-            embed = self.result_embed(GameResult.WIN, 'Closer to 21')
+            embed = await self.result_embed(GameResult.WIN, 'Closer to 21')
         else:
-            embed = self.result_embed(GameResult.LOSS, 'Dealer closer to 21')
+            embed = await self.result_embed(GameResult.LOSS, 'Dealer closer to 21')
         view = PlayAgainView(game=self, embed=embed)
         end_msg = await self.message.edit(embed=embed, view=view)
         view.message = end_msg
         self.reset_hands()
 
     def build_game_embed(self):
-        embed = discord.Embed(title=f'Blackjack | {self.ctx.author}',
-                              description='Press the buttons to play: Hit (get a card) or Stand (end turn)',
+        if self.is_betting:
+            title = f'Blackjack | {self.ctx.author} | ${self.original_bet}'
+        else:
+            title = f'Blackjack | {self.ctx.author}'
+
+        embed = discord.Embed(title=title,
+                              description='Press the buttons to play',
                               color=0xFFFFFE)
         embed.add_field(name='Your Hand', value=str(self.player))
         embed.add_field(name='Dealer\'s Hand', value=str(self.dealer))
         embed.set_footer(text=f'Cards remaining: {len(self.deck)}')
         return embed
 
-    def result_embed(self, result, hand):
+    async def result_embed(self, result, hand, multiplier: float = 1):
         results = {
             GameResult.WIN: ('You won', 0x55dd55),
             GameResult.LOSS: ('You lost', 0xff0000),
@@ -379,7 +429,15 @@ class Game:
         }
         description, colour = results[result]
 
-        embed = discord.Embed(title=f'Blackjack | {self.ctx.author}',
+        if multiplier != 0 and self.is_betting:
+            winnings, balance = await self.process_bet(multiplier=multiplier, win=result is GameResult.WIN)
+            description += f' ${winnings} (Balance: ${balance:.2f})'
+
+        if self.is_betting:
+            title = f'Blackjack | {self.ctx.author} | ${self.original_bet}'
+        else:
+            title = f'Blackjack | {self.ctx.author}'
+        embed = discord.Embed(title=title,
                               description=description,
                               color=colour)
         embed.add_field(name='Your Hand', value=f'{self.player}\nResult: **{hand}**')
@@ -387,8 +445,24 @@ class Game:
         embed.set_footer(text=f'Cards remaining: {len(self.deck)}')
         return embed
 
-    def reset_hands(self):
-        self.message = None
-        self.player = Hand()
-        self.dealer = DealerHand()
-        self.phase = GamePhase.IDLE
+    async def process_bet(self, *, multiplier: float = 1, win: bool):
+        if multiplier == 0:
+            return
+        cog = self.ctx.bot.get_cog('Currency')
+        if not cog:
+            return
+        amount = self.bet
+        _out = amount * multiplier
+        if not win:
+            amount = -amount
+        amount = amount * multiplier
+        await cog._increase_money(self.ctx.author, amount)
+        balance = await cog.get_balance(self.ctx.author)
+        # if win:
+        #     await self.ctx.send(f'{self.ctx.author.mention} you won ${amount}',
+        #                         allowed_mentions=discord.AllowedMentions.none())
+        # else:
+        #     await self.ctx.send(f'{self.ctx.author.mention} you lost ${_out}',
+        #                         allowed_mentions=discord.AllowedMentions.none())
+
+        return _out, balance

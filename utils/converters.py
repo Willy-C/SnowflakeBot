@@ -203,3 +203,15 @@ class CaseInsensitiveRole(commands.RoleConverter):
         if role is None:
             raise errors.RoleNotFound()
         return role
+
+
+class CurrencyConverter(commands.Converter):
+    async def convert(self, ctx: commands.Context, argument: str):
+        try:
+            amount = float(argument)
+        except ValueError:
+            raise commands.BadArgument(f'{argument} is not a valid number')
+        else:
+            if amount < 0:
+                raise commands.BadArgument(f'Amount cannot be negative')
+            return round(amount, 2)
