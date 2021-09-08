@@ -19,7 +19,7 @@ class OwnerCog(commands.Cog, name='Owner'):
         self._last_result = None
         bot.loop.create_task(self.get_blacklist())
 
-    # Applies commands.is_owner() check for all methods in this cog
+    # Applies is_owner() check for all commands in this cog
     async def cog_check(self, ctx):
         if not await ctx.bot.is_owner(ctx.author):
             raise commands.NotOwner('Only my owner can use this command.')
@@ -139,7 +139,7 @@ class OwnerCog(commands.Cog, name='Owner'):
         await self.bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name='you :)'))
         await ctx.tick()
 
-    @commands.command(name='aeval')
+    @commands.command(name='eval')
     async def _eval(self, ctx, *, code: str):
         """Evaluates python code in a single line or code block"""
         env = {

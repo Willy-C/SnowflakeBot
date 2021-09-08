@@ -75,7 +75,7 @@ class Context(commands.Context):
         Returns True if confirmed, False if cancelled, None if timed out
         """
         view = ConfirmView(context=self, timeout=timeout, author=self.author, delete_after=delete_after)
-        view.message = await self.reply(msg, view=view)
+        view.message = await self.send(msg, view=view)
         await view.wait()
         return view.choice
 
