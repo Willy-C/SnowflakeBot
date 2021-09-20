@@ -139,7 +139,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
         emojis = sorted([emoji for emoji in ctx.guild.emojis if emoji.require_colons], key=lambda e: e.name)
         with zipfile.ZipFile(zip_buffer, mode='w') as zf:
             for e in emojis:
-                emoji_buffer = io.BytesIO(await e.url.read())
+                emoji_buffer = io.BytesIO(await e.read())
                 zf.writestr(f'{e.name}.{"png" if not e.animated else "gif"}', emoji_buffer.getvalue())
         zip_buffer.seek(0)
         await ctx.send(f'{ctx.author.mention} Emojis successfully zipped',
