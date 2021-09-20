@@ -115,11 +115,10 @@ class Gatekeep(commands.Cog):
         if webhook is None:
             webhook = await destination.create_webhook(name='Redirect')
 
-        if original.embeds:
-            embeds = [e for e in original.embeds if
-                      e.type == 'rich' and e.footer.icon_url != 'https://abs.twimg.com/icons/apple-touch-icon-192x192.png']
-        else:
-            embeds = None
+        embeds = [e for e in original.embeds if
+                  e.type == 'rich' and e.footer.icon_url != 'https://abs.twimg.com/icons/apple-touch-icon-192x192.png'
+                  and e.color != 0x1da1f2]
+
         files = [await attachment.to_file() for attachment in original.attachments]
         await webhook.send(content=original.content,
                            embeds=embeds,
@@ -138,7 +137,7 @@ class Gatekeep(commands.Cog):
                 to_ping.update({m.id for m in r.members})
 
         for u in message.mentions:
-            if u.id not in self.verified and not u.bot:
+            if not message.channel.permissions_for(u).read_messages and not u.bot:
                 to_ping.add(u.id)
 
         if not to_ping:
