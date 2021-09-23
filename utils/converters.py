@@ -208,10 +208,13 @@ class CaseInsensitiveRole(commands.RoleConverter):
 class CurrencyConverter(commands.Converter):
     async def convert(self, ctx: commands.Context, argument: str):
         try:
-            amount = float(argument)
+            amount = float(argument.replace(',', ''))
         except ValueError:
             raise commands.BadArgument(f'{argument} is not a valid number')
         else:
             if amount < 0:
                 raise commands.BadArgument(f'Amount cannot be negative')
             return round(amount, 2)
+
+
+MoneyConverter = typing.Union[CurrencyConverter, typing.Literal['half'], typing.Literal['all']]
