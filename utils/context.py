@@ -108,14 +108,25 @@ class Context(commands.Context):
         except Exception:
             traceback.print_exc()
 
-    async def safe_send(self, content, filename='message_too_long.txt', **kwargs):
+    async def safe_send(self, content, filename='message_too_long.txt', upload_file=False, **kwargs):
         """
-        Sends to ctx.channel if possible, upload to hastebin or send text file if too long
+        Sends to ctx.channel if possible, send text file if too long
+        pass upload_file=True to force output to be a file even if content < 2000 characters
         """
-        if len(content) <= 2000:
+        if len(content) <= 2000 and not upload_file:
             return await self.send(content, **kwargs)
         else:
             fp = io.BytesIO(content.encode())
-            kwargs.pop('file', None)
-            return await self.send(file=discord.File(fp, filename=filename), **kwargs)
+            files = [discord.File(fp, filename=filename)]
+            files.extend(kwargs.pop('file', []))
+            files.extend(kwargs.pop('files', []))
+            return await self.send(files=files, **kwargs)
 
+    async def reply(self, content: Optional[str] = None, **kwargs):
+        try:
+            return await super().reply(content, **kwargs)
+        except discord.HTTPException:
+            try:
+                return await self.send(content, **kwargs)
+            except discord.HTTPException:
+                return
