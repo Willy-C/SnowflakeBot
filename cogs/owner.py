@@ -221,10 +221,9 @@ class OwnerCog(commands.Cog, name='Owner'):
         values = [list(map(repr, v)) for v in results]
         table = tabulate.tabulate(values, tablefmt='psql', headers=headers)
         if len(table) > 1000:
-            url = await upload_hastebin(ctx, table)
-            return await ctx.send(f'Output too long, uploaded to hastebin instead: <{url}>')
-
-        await ctx.send(f'```\n{table}```')
+            await ctx.safe_send(table, upload_file=True)
+        else:
+            await ctx.send(f'```\n{table}```')
 
     @commands.command(name="shutdown")
     async def logout(self, ctx):
