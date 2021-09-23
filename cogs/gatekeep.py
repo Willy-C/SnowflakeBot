@@ -3,6 +3,7 @@ from discord.ext import commands
 
 import asyncio
 from utils.global_utils import bright_color
+from utils.converters import CaseInsensitiveMember
 
 GUILD_ID = 709264610200649738
 VERIFIED_ROLE = 709265266709626881
@@ -78,6 +79,7 @@ class Gatekeep(commands.Cog):
 
         e.add_field(name='Original Message', value=f'[Jump!]({message.jump_url})', inline=False)
         e.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.with_static_format('png').url)
+        e.set_footer(text=message.author.id)
         return e
 
     @commands.Cog.listener('on_message')
@@ -170,6 +172,15 @@ class Gatekeep(commands.Cog):
         elif before.channel is not None and after.channel is None:
             # left voice channel
             await voice_text_channel.set_permissions(member, overwrite=None)
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def verify(self, ctx, member: CaseInsensitiveMember, level):
+        query = '''INSERT INTO gatekeep(id, by, level)
+                   VALUES($1, $2, $3)'''
+        await self.bot.pool.execute(query, member.id, ctx.author.id, level)
+        await member.add_roles(discord.Object(id=VERIFIED_ROLE), reason='Manual verification')
+        await ctx.tick()
 
 
 def setup(bot):
