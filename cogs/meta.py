@@ -44,7 +44,7 @@ class MetaCog(commands.Cog, name='Meta'):
         """
         if not id:
             user = 'me'
-            url = f'https://discordapp.com/oauth2/authorize?client_id={self.bot.user.id}&permissions=8&scope=bot'
+            url = f'https://discordapp.com/oauth2/authorize?client_id={self.bot.user.id}&permissions=8&scope=bot%20applications.commands'
         else:
             try:
                 fetch = await self.bot.fetch_user(id)
