@@ -31,8 +31,7 @@ class GeneralCog(commands.Cog, name='General'):
     async def get_avatar(self, ctx, *, user: converters.CaseInsensitiveMember = None):
         """Retrieves the avatar of a user.
         Defaults to author if no user is provided."""
-
-        user = ctx.author if user is None else user  # Defaults to invoker if no user is specified
+        user = user or ctx.author
         avatar_url = user.display_avatar.with_static_format('png')
 
         if user.avatar:
@@ -47,7 +46,7 @@ class GeneralCog(commands.Cog, name='General'):
 
         embed = discord.Embed(colour=user.colour)
         embed.set_image(url=avatar_url)
-        embed.set_author(name=user.display_name, url=avatar_url)
+        embed.set_author(name=user, url=avatar_url)
 
         await ctx.send(embed=embed)
 
