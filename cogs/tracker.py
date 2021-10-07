@@ -153,7 +153,7 @@ class TrackerCog(commands.Cog):
                     msg = await wh.send(content=user.id, file=file, wait=True, username=_hash)
                 except discord.HTTPException as e:
                     if 'Payload Too Large' in str(e):
-                        file = discord.File(BytesIO(await user.avatar.with_static_format('png').read()),
+                        file = discord.File(BytesIO(await user.avatar.with_format('png').read()),
                                             filename=f'{_hash}.png')
                         msg = await wh.send(content=user.id, file=file, wait=True, username=_hash)
             else:
