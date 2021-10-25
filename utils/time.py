@@ -1,9 +1,11 @@
 import datetime
+import re
+
+import pytz
+import discord
 import parsedatetime as pdt
 from dateutil.relativedelta import relativedelta
 from discord.ext import commands
-import re
-import pytz
 
 from utils.global_utils import get_user_timezone, make_naive
 
@@ -271,4 +273,10 @@ def human_timedelta(dt, *, source=None, accuracy=3, brief=False, suffix=True):
         else:
             return ' '.join(output) + suffix
 
+
+def format_dt(dt, style=None):
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=datetime.timezone.utc)
+
+    return discord.utils.format_dt(dt, style=style)
 

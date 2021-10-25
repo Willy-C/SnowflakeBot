@@ -6,13 +6,19 @@ import discord
 from discord.ext import commands
 
 from utils.global_utils import bright_color, upload_hastebin
-from utils.time import human_timedelta
+from utils.time import human_timedelta, format_dt
 from utils.converters import CaseInsensitiveMember, CachedUserID, MessageConverter, CaseInsensitiveTextChannel, CaseInsensitiveRole
 
 
 class InfoCog(commands.Cog, name='Info'):
     def __init__(self, bot):
         self.bot = bot
+
+    @staticmethod
+    def fmt_dt(dt):
+        if dt is None:
+            return 'N/A'
+        return f'{format_dt(dt, "f")} ({human_timedelta(dt)})'
 
     async def get_join_date(self, member: discord.Member):
         query = '''SELECT time
@@ -67,7 +73,7 @@ class InfoCog(commands.Cog, name='Info'):
         e.add_field(name='Region', value=guild.region)
         e.add_field(name='Members', value=guild.member_count)
         e.add_field(name='Channels', value=f'{text_channels} Text | {voice_channels} Voice')
-        e.add_field(name='Created', value=human_timedelta(guild.created_at))
+        e.add_field(name='Created', value=self.fmt_dt(guild.created_at))
         e.add_field(name='Roles', value=show_roles)
 
         await ctx.send(embed=e)
@@ -86,17 +92,17 @@ class InfoCog(commands.Cog, name='Info'):
         if isinstance(user, discord.Member) and user.nick:
             e.add_field(name='Nick', value=user.nick)
         e.add_field(name='Severs Shared', value=sum(g.get_member(user.id) is not None for g in self.bot.guilds))
-        e.add_field(name='Created', value=human_timedelta(user.created_at))
+        e.add_field(name='Created', value=self.fmt_dt(user.created_at))
         if isinstance(user, discord.Member):
-            e.add_field(name='First Joined**', value=human_timedelta(await self.get_join_date(user)))
-            e.add_field(name='Last Joined', value=human_timedelta(user.joined_at))
+            e.add_field(name='First Joined**', value=self.fmt_dt(await self.get_join_date(user)))
+            e.add_field(name='Last Joined', value=self.fmt_dt(user.joined_at))
             roles = ['@everyone']
             roles.extend(r.mention for r in user.roles[1:])
             e.add_field(name='Roles', value=', '.join(roles))
             e.set_footer(text='**I can only get the earliest join date since I was added to the server')
             nicks = await self.get_nicknames(user)
             if nicks:
-                e.add_field(name='Previous Nicknames(within 90days)', value=nicks)
+                e.add_field(name='Previous Nicknames', value=nicks)
         e.add_field(name='Previous names', value=(await self.get_usernames(user) or str(user)))
 
         await ctx.send(embed=e)
@@ -189,7 +195,7 @@ class InfoCog(commands.Cog, name='Info'):
                  False: '<:redTick:602811779474522113>'}
         e.add_field(name='Name', value=role.name)
         e.add_field(name='ID', value=role.id)
-        e.add_field(name='Created at', value=f'{role.created_at}\n({human_timedelta(role.created_at)})')
+        e.add_field(name='Created at', value=self.fmt_dt(role.created_at))
         e.add_field(name='Members', value=len(role.members))
         e.add_field(name='Permissions', value=role.permissions.value)
         e.add_field(name='Position', value=role.position)
