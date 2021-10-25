@@ -210,7 +210,7 @@ class Music(commands.Cog):
         player.next_event.set()
 
     @commands.Cog.listener()
-    async def on_wavelink_track_stuck(self, player: Player, track: wavelink.Track, threshold: int):
+    async def on_wavelink_track_stuck(self, player: Player, track: wavelink.Track, threshold: int=0):
         await player.text_channel.send(f'It appears track `{track.title}` got stuck. Skipping...')
         player.next_event.set()
 
@@ -256,7 +256,7 @@ class Music(commands.Cog):
             if tracks:
                 return tracks
 
-    async def _query_music(self, query: str):
+    async def _query_music(self, ctx: Context, query: str):
         query = query.strip('<>')
 
         match = self.SPOTIFY_REGEX.match(query)
@@ -266,6 +266,11 @@ class Music(commands.Cog):
                 query += '?'
             search = spotify.SpotifyTrack.search(query=query)
             search_type = QueryType.SPOTIFYTRACK if match.group('entity') == 'track' else QueryType.SPOTIFYPLAYLIST
+            if search_type is QueryType.SPOTIFYPLAYLIST:
+                msg = await ctx.send('Large Spotify playlists can take a minute to query. Please bear with me.')
+                ret = await self._run_query(search), search_type
+                await msg.delete()
+                return ret
             return await self._run_query(search), search_type
 
         elif self.SOUNDCLOUD_REGEX.match(query):
@@ -284,7 +289,7 @@ class Music(commands.Cog):
             return await self._run_query(track_search), QueryType.YOUTUBETRACK
 
     async def get_tracks(self, ctx: Context, query: str):
-        tracks, query_type = await self._query_music(query)
+        tracks, query_type = await self._query_music(ctx, query)
         if query_type is QueryType.SPOTIFYTRACK and isinstance(tracks, list):
             tracks = tracks[0]
 

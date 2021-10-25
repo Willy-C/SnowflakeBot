@@ -198,7 +198,7 @@ class TrackerCog(commands.Cog):
         voicechannel = voicechannel or ctx.author.voice.channel
         author = voicechannel.guild.get_member(ctx.author.id) if not ctx.guild else ctx.author
 
-        # We will disallow checking history of channels you are not in if you do not have move members perms
+        # We will disallow checking history of channel you are not in it or if you do not have move members perms
         if not author.guild_permissions.move_members and author.id != self.bot.owner_id:
             if author.voice is None or author.voice.channel != voicechannel:
                 return await ctx.send('You are not in that voice channel!', delete_after=10)
