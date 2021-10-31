@@ -125,14 +125,15 @@ class ReminderCog(commands.Cog, name='Reminders'):
             channel_id = (await user.create_dm()).id
 
         delta = human_timedelta(timer.get("start"))
+        msg = f'{user.mention} {delta}: {message}'
         if message_id:
-            url = f'<https://discordapp.com/channels/{guild_id}/{channel_id}/{message_id}>'
-            msg = f'{user.mention} {delta}: {message}\n\n{url}'
+            url = f'https://discordapp.com/channels/{guild_id}/{channel_id}/{message_id}'
+            view = discord.ui.View()
+            view.add_item(discord.ui.Button(label='Go to original message', url=url))
         else:
-            msg = f'{user.mention} {delta}: {message}'
-
+            view = discord.utils.MISSING
         try:
-            await channel.send(msg)
+            await channel.send(msg, view=view)
         except discord.HTTPException:
             pass
 
@@ -246,7 +247,10 @@ class ReminderCog(commands.Cog, name='Reminders'):
         except asyncio.TimeoutError:
             await ctx.message.add_reaction('<:redTick:602811779474522113>')
         else:
-            await ctx.send(f'{ctx.author.mention} desktop reminder from {human_timedelta(start)}: {reminder}\n\n{ctx.message.jump_url}')
+            view = discord.ui.View()
+            view.add_item(discord.ui.Button(label='Go to original message', url=ctx.message.jump_url))
+            await ctx.send(f'{ctx.author.mention} desktop reminder from {human_timedelta(start)}: {reminder}',
+                           view=view)
             await ctx.message.add_reaction('<:greenTick:602811779835494410>')
         finally:
             await ctx.message.remove_reaction('<a:typing:559157048919457801>', ctx.me)
