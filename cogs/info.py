@@ -143,13 +143,35 @@ class InfoCog(commands.Cog, name='Info'):
         query = '''SELECT name
                    FROM nick_changes
                    WHERE id = $1
-                   AND guild = $2;'''
+                   AND guild = $2
+                   ORDER BY changed_at;'''
         records = await self.bot.pool.fetch(query, member.id, ctx.guild.id)
-        names = {record['name'] for record in records}
-        if not names:
+        if not records:
             return await ctx.send(f'Unable to find nicknames for {member} in this server')
-        await ctx.send(f'Nicknames of {member} on `{ctx.guild}`:\n'
-                       f'{", ".join(names)}')
+        paginator = commands.Paginator(suffix='', prefix='')
+        paginator.add_line(f'Nicknames of {member.mention} on `{ctx.guild}`:')
+
+        seen = set()
+        names = []
+        curr_len = 0
+        for record in records:
+            if record['name'] in seen and False:
+                continue
+            else:
+                if len(record['name']) + curr_len > 1900:
+                    paginator.add_line(", ".join(names))
+                    names = []
+                    curr_len = 0
+                curr_len += len(record['name']) + 2
+                names.append(record['name'])
+                seen.add(record['name'])
+
+        if names:
+            await ctx.send(len(names))
+            paginator.add_line(", ".join(names))
+
+        for page in paginator.pages:
+            await ctx.send(page, allowed_mentions=discord.AllowedMentions.none())
 
     @userinfo.error
     @names.error
