@@ -12,7 +12,7 @@ from utils.global_utils import make_naive
 from utils.converters import CaseInsensitiveVoiceChannel
 
 
-class TrackerCog(commands.Cog):
+class Tracker(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.bot.loop.create_task(self.add_join_dates())
@@ -233,4 +233,4 @@ class TrackerCog(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(TrackerCog(bot))
+    bot.add_cog(Tracker(bot))
