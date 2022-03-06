@@ -78,7 +78,8 @@ class Gatekeep(commands.Cog):
             e.add_field(name='Replying to...', value=f'[{ref.resolved.author}]({ref.resolved.jump_url})', inline=False)
 
         e.add_field(name='Original Message', value=f'[Jump!]({message.jump_url})', inline=False)
-        e.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.with_static_format('png').url)
+        e.set_author(name=f'{message.author.display_name} ({message.author})',
+                     icon_url=message.author.display_avatar.with_static_format('png').url)
         e.set_footer(text=message.author.id)
         return e
 
@@ -158,20 +159,20 @@ class Gatekeep(commands.Cog):
                 user = self.bot.get_user(uid)
                 await public_channel.set_permissions(user, overwrite=None)
 
-    @commands.Cog.listener()
-    async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
-        if member.guild.id != GUILD_ID:
-            return
-
-        if member.guild_permissions.administrator:
-            return
-        voice_text_channel = member.guild.get_channel(VOICE_TEXT_CHANNEL)
-        if before.channel is None and after.channel is not None:
-            # joined voice channel
-            await voice_text_channel.set_permissions(member, read_messages=True)
-        elif before.channel is not None and after.channel is None:
-            # left voice channel
-            await voice_text_channel.set_permissions(member, overwrite=None)
+    # @commands.Cog.listener()
+    # async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+    #     if member.guild.id != GUILD_ID:
+    #         return
+    #
+    #     if member.guild_permissions.administrator:
+    #         return
+    #     voice_text_channel = member.guild.get_channel(VOICE_TEXT_CHANNEL)
+    #     if before.channel is None and after.channel is not None:
+    #         # joined voice channel
+    #         await voice_text_channel.set_permissions(member, read_messages=True)
+    #     elif before.channel is not None and after.channel is None:
+    #         # left voice channel
+    #         await voice_text_channel.set_permissions(member, overwrite=None)
 
     @commands.command(hidden=True)
     @commands.is_owner()
@@ -180,6 +181,33 @@ class Gatekeep(commands.Cog):
                    VALUES($1, $2, $3)'''
         await self.bot.pool.execute(query, member.id, ctx.author.id, level)
         await member.add_roles(discord.Object(id=VERIFIED_ROLE), reason='Manual verification')
+        await ctx.tick()
+
+    @commands.command(name='nick')
+    async def change_nick(self, ctx, member: CaseInsensitiveMember, *, nick=None):
+        """Change nickname of someone
+        `%nick [user] [nickname]`
+        leave [nickname] blank to clear nickname"""
+        if ctx.author.id not in self.verified:
+            return
+
+        if member == ctx.guild.owner:
+            return await ctx.reply(f'Due to discord limitations, I cannot change the nickname of {member.mention} as they are the server owner',
+                                   allowed_mentions=discord.AllowedMentions.none())
+
+        before = member.nick
+        if before is None and nick is None:
+            return await ctx.reply(f'{member.mention} does not have a nickname',
+                                   allowed_mentions=discord.AllowedMentions.none())
+
+        await member.edit(nick=nick)
+        if nick is None:
+            msg = f"Cleared {member.mention}'s nickname (was `{before}`)"
+        else:
+            msg = f"Changed {member.mention} ({member})'s nickname to `{nick}`"
+            if before is not None:
+                msg += f" (from `{before}`)"
+        await ctx.reply(msg, allowed_mentions=discord.AllowedMentions.none())
         await ctx.tick()
 
 
