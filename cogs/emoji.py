@@ -100,7 +100,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
         emoji_name = name or emoji.name
         await self.create_emoji(ctx, emoji_name, url)
 
-    @emoji.group(name='list', invoke_without_command=True, case_insensitive=True)
+    @emoji.group(name='list', invoke_without_command=True, case_insensitive=True, usage='')
     @guild_has_emojis()
     async def guild_emojis(self, ctx, codepoint: bool = False):
         """Returns all usable emojis in the guild sorted by name
