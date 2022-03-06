@@ -6,14 +6,15 @@ from pytz import utc
 from discord.ext import commands
 
 from utils.global_utils import get_user_timezone
-from utils.converters import CaseInsensitiveMember, Timezone
+from utils.converters import CaseInsensitiveMember, Timezone, CaseInsensitiveChannel, CaseInsensitiveUser
+from utils.time import format_dt
 
 
 class TimezoneCog(commands.Cog, name='Timezones'):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.group(name='timezone', aliases=['tz'], invoke_without_command=True, case_insensitive=True)
+    @commands.group(name='timezone', aliases=['tz'], invoke_without_command=True, case_insensitive=True, usage='<command>')
     async def tz_group(self, ctx, *, arg: Union[CaseInsensitiveMember, Timezone] = 0):
         """Timezone settings
         Setting your timezone allows for reminders to use your timezone
@@ -95,9 +96,36 @@ class TimezoneCog(commands.Cog, name='Timezones'):
             await ctx.send('Unable to find that person/timezone')
 
     @commands.command(name='time')
-    async def get_user_time(self, ctx, user: CaseInsensitiveMember = None):
-        await ctx.invoke(self.get_timezone, user=(user or ctx.author))
+    async def get_datetime_md(self, ctx, obj: Union[CaseInsensitiveUser, CaseInsensitiveChannel, discord.Message, discord.PartialEmoji, discord.Object] = None):
+        """Get the timestamp for objection's creation time
+        This can accept mentions or IDs
+        Defaults to current time if no object is given
+        """
+        def build_timestamps(dt):
+            styles = ['t', 'T', 'd', 'D', 'f', 'F', 'R']
+            return [format_dt(dt, style) for style in styles]
 
+        if obj is None:
+            now = datetime.datetime.utcnow()
+            timestamps = build_timestamps(now)
+            await ctx.reply('\n'.join(f'{ts} (`{ts}`)' for ts in timestamps),
+                            mention_author=False)
+        else:
+            if isinstance(obj, discord.PartialEmoji):
+                title = f'Creation time for {obj}'
+            else:
+                title = f'Creation time for {getattr(obj, "mention", obj.id)}'
+            timestamps = build_timestamps(discord.utils.snowflake_time(obj.id))
+            times = '\n'.join(f'{ts} (`{ts}`)' for ts in timestamps)
+            await ctx.reply(f'{title}\n{times}',
+                            allowed_mentions=discord.AllowedMentions.none(),
+                            mention_author=False)
+
+    @get_datetime_md.error
+    async def get_dt_md_error(self, ctx, error):
+        if isinstance(error, commands.BadUnionArgument):
+            ctx.local_handled = True
+            await ctx.send('That is not a valid ID or object')
 
 def setup(bot):
     bot.add_cog(TimezoneCog(bot))
