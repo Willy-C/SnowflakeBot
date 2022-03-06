@@ -16,14 +16,14 @@ class Levenshtein(commands.Cog):
         all_command_names = []
         is_owner = await self.bot.is_owner(ctx.author)
         for command in self.bot.commands:
+            if not is_owner and command.hidden:
+                continue
             try:
                 can_run = await command.can_run(ctx)
             except commands.CommandError:
                 continue
             else:
                 if can_run:
-                    if not is_owner and command.hidden:
-                        continue
                     all_command_names.append(command.name)
                     if include_aliases:
                         for alias in command.aliases:
