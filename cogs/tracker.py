@@ -4,6 +4,7 @@ from io import BytesIO
 from collections import defaultdict
 from datetime import datetime, timedelta
 
+import aiohttp
 import discord
 import humanize
 from discord.ext import commands
@@ -128,7 +129,16 @@ class Tracker(commands.Cog):
         if before.name != after.name or before.discriminator != after.discriminator:
             await self.log_username(after)
         if before.avatar != after.avatar:
-            await self.log_avatar(after)
+            await asyncio.sleep(2)
+            for i in range(3):
+                try:
+                    await self.log_avatar(after)
+                except (discord.HTTPException, aiohttp.ClientPayloadError):
+                    if i == 2:
+                        raise
+                    await asyncio.sleep(30)
+                else:
+                    break
 
     async def log_nickname(self, member: discord.Member):
         query = '''INSERT INTO nick_changes(id, guild, name, changed_at)
