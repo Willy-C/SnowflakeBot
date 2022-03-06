@@ -154,10 +154,13 @@ class InfoCog(commands.Cog, name='Info'):
         seen = set()
         names = []
         curr_len = 0
+        total_count = len(records)
+        unique_count = 0
         for record in records:
-            if record['name'] in seen and False:
+            if record['name'] in seen:
                 continue
             else:
+                unique_count += 1
                 if len(record['name']) + curr_len > 1900:
                     paginator.add_line(", ".join(names))
                     names = []
@@ -167,11 +170,15 @@ class InfoCog(commands.Cog, name='Info'):
                 seen.add(record['name'])
 
         if names:
-            await ctx.send(len(names))
             paginator.add_line(", ".join(names))
 
         for page in paginator.pages:
             await ctx.send(page, allowed_mentions=discord.AllowedMentions.none())
+
+        if total_count == unique_count:
+            await ctx.send(f'Count: {unique_count}')
+        else:
+            await ctx.send(f'Count: {total_count} ({unique_count} unique)')
 
     @userinfo.error
     @names.error
