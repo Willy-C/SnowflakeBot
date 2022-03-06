@@ -69,6 +69,16 @@ class Context(commands.Context):
             return message.to_reference()
         return None
 
+    @property
+    def voice_channel(self) -> Optional[discord.VoiceChannel]:
+        """
+        Returns VoiceChannel of ctx.author if available
+        """
+        if isinstance(self.author, discord.Member):
+            if self.author.voice:
+                return self.author.voice.channel
+        return None
+
     async def confirm_prompt(self, msg, *, timeout=60, delete_after=True):
         """
         Asks author for confirmation
