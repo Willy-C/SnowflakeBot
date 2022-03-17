@@ -108,7 +108,26 @@ class Valorant(commands.Cog):
         auth._2fa_code = _2fa_code
         await msg.delete(delay=5)
 
-    @valorant_commands.command(name='shop', hidden=True, usage='')
+    @valorant_commands.command(name='remove', aliases=['delete'])
+    async def delete_account(self, ctx, username):
+        query = '''DELETE FROM valcreds WHERE id = $1 AND username = $2;'''
+        status = await self.bot.pool.execute(query, ctx.author.id, username)
+        if status == 'DELETE 0':
+            await ctx.tick(False)
+            return await ctx.reply('I am unable to delete that username')
+        else:
+            await ctx.tick()
+            return await ctx.reply('Successfully deleted your credentials')
+
+    @valorant_commands.command(name='list')
+    async def list_accounts(self, ctx):
+        query = '''SELECT riotid FROM valcreds where id = $1;'''
+        records = await self.bot.pool.fetch(query, ctx.author.id)
+        names = [record['riotid'] for record in records]
+        fmt = ', '.join(names)
+        await ctx.reply(f'You have {len(names)} account(s) saved: {fmt}', delete_after=5)
+
+    @valorant_commands.command(name='shop', usage='')
     async def check_shop(self, ctx, user: CaseInsensitiveMember = None):
         user = user or ctx.author
         if user.id not in self._authclients:
@@ -131,9 +150,6 @@ class Valorant(commands.Cog):
                     embeds.append(e)
 
                 await ctx.send(f'Available skins for `{riotid}`:', embeds=embeds)
-
-
-
 
 
 def setup(bot):
