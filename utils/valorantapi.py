@@ -5,7 +5,7 @@ import aiohttp
 import asyncio
 import logging
 import datetime
-from pathlib import Path
+import rapidfuzz
 
 from typing import Tuple, List, Optional
 from utils.errors import MultiFactorCodeRequired, InvalidCredentials, Invalid2FACode, NotAuthenticated, MissingCredentials
@@ -13,7 +13,6 @@ from utils.errors import MultiFactorCodeRequired, InvalidCredentials, Invalid2FA
 log = logging.getLogger(__name__)
 
 
-# noinspection SpellCheckingInspection
 class VALORANTAuth:
     USER_AGENT = 'RiotClient/43.0.1.4195386.4190634 rso-auth (Windows; 10;;Professional, x64)'
 
@@ -264,9 +263,7 @@ class VALORANTAuth:
         data = await resp.json()
         return self.parse_access_token(data)
 
-
     # API Requests
-
 
     async def get_username(self) -> str:
         if self.riotid:
@@ -290,32 +287,80 @@ class VALORANTAuth:
         item_ids = data['SkinsPanelLayout']['SingleItemOffers']
         return item_ids
 
-    async def get_skin_data(self):
-        URL = 'https://valorant-api.com/v1/weapons/skinlevels'
-        async with aiohttp.ClientSession() as session:
-            resp = await session.get(URL)
-            resp.raise_for_status()
-
-            data = await resp.json()
-            skin_data = {
-                s['uuid']: {'displayName': s['displayName'],
-                            'displayIcon': s['displayIcon']}
-                for s in data['data']
-                if s['displayIcon']}
-
-        with open('data/skin_data.json', 'w') as f:
-            json.dump(skin_data, f, indent=4)
-        return skin_data
-
-    async def get_current_skin_data(self, skins: List[str]) -> List[dict]:
-        try:
-            with open('data/skin_data.json', 'r') as f:
-                skin_data = json.load(f)
-        except FileNotFoundError:
-            skin_data = await self.get_skin_data()
-
-        return [skin_data[skin] for skin in skins]
+    # Other stuff
 
     async def check_store(self) -> List[dict]:
         item_ids = await self.get_store_items()
-        return await self.get_current_skin_data(item_ids)
+        return await get_current_skin_data(item_ids)
+
+
+async def get_skin_data():
+    URL = 'https://valorant-api.com/v1/weapons/skinlevels'
+    async with aiohttp.ClientSession() as session:
+        resp = await session.get(URL)
+        resp.raise_for_status()
+
+        data = await resp.json()
+        skin_data = {
+            s['uuid']: {'displayName': s['displayName'],
+                        'displayIcon': s['displayIcon']}
+            for s in data['data']
+            if s['displayIcon']}
+
+    with open('data/skin_data.json', 'w') as f:
+        json.dump(skin_data, f, indent=4)
+    return skin_data
+
+
+async def get_skin_names():
+    URL = 'https://valorant-api.com/v1/weapons/skins'
+    async with aiohttp.ClientSession() as session:
+        resp = await session.get(URL)
+        resp.raise_for_status()
+
+        data = await resp.json()
+
+    names = [skin['displayName'] for skin in data['data']]
+    with open('data/skin_names.json', 'w') as f:
+        json.dump(names, f, indent=4)
+    return names
+
+
+async def get_current_skin_data(skins: List[str]) -> List[dict]:
+    try:
+        with open('data/skin_data.json', 'r') as f:
+            skin_data = json.load(f)
+    except FileNotFoundError:
+        skin_data = await get_skin_data()
+        updated = True
+    else:
+        updated = False
+
+    try:
+        return [skin_data[skin] for skin in skins]
+    except KeyError:
+        if updated:
+            raise
+        else:
+            skin_data = await get_skin_data()
+            return [skin_data[skin] for skin in skins]
+
+
+async def update_skin_data():
+    await get_skin_data()
+    await get_skin_names()
+
+
+async def get_closest_skin(name: str):
+    try:
+        with open('data/skin_names.json', 'r') as f:
+            skin_names = json.load(f)
+    except FileNotFoundError:
+        skin_names = await get_skin_names()
+    if name in skin_names:
+        return skin_names
+
+    return rapidfuzz.process.extractOne(name,
+                                        skin_names,
+                                        scorer=rapidfuzz.string_metric.levenshtein,
+                                        score_cutoff=5)
