@@ -86,3 +86,27 @@ class NoVoiceChannel(commands.CommandError):
     def __init__(self, message=None, *args) -> None:
         message = message or 'No voice channel to connect to. Please join one or use `%connect/join [channel]` first.'
         super().__init__(message, *args)
+
+
+class BaseVALORANTException(Exception):
+    pass
+
+
+class MultiFactorCodeRequired(BaseVALORANTException):
+    pass
+
+
+class InvalidCredentials(BaseVALORANTException):
+    pass
+
+
+class Invalid2FACode(InvalidCredentials):
+    pass
+
+
+class NotAuthenticated(BaseVALORANTException):
+    pass
+
+
+class MissingCredentials(InvalidCredentials):
+    pass
