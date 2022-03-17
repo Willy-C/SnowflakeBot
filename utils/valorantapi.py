@@ -20,16 +20,16 @@ class VALORANTAuth:
     TOKEN_URL    = 'https://entitlements.auth.riotgames.com/api/token/v1'
     USERINFO_URL = 'https://auth.riotgames.com/userinfo'
 
-    def __init__(self, *, username=None, password=None, puuid=None, riotid=None) -> None:
+    def __init__(self, *, username=None, password=None, puuid=None, riotid=None, region='na') -> None:
         self.username: Optional[str] = username
         self.password: Optional[str] = password
-        self.region: Optional[str] = 'na'
+        self.region: Optional[str] = region
         self.riotid: Optional[str] = riotid
+        self.puuid: Optional[str] = puuid
 
         self.headers: dict[str, str] = {'User-Agent': self.USER_AGENT}
         self.entitlements_token: Optional[str] = None
         self.access_token: Optional[str] = None
-        self.puuid: Optional[str] = puuid
         self.id_token: Optional[str] = None
         self._2fa_code: Optional[str] = None
 
