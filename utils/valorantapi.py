@@ -105,7 +105,9 @@ class VALORANTAuth:
         if self.is_expired:
             if self._loaded_cookies:
                 try:
-                    await self.reauthenticate()
+                    self.access_token, self.id_token, expires_in = await self.reauthenticate()
+                    self.expires_at = datetime.datetime.utcnow() + datetime.timedelta(seconds=expires_in)
+                    self.headers = self.final_headers()
                 except InvalidCredentials:
                     await self.authenticate_from_password()
             else:
@@ -164,7 +166,6 @@ class VALORANTAuth:
 
         self.save_cookies()
         return self.puuid, self.headers
-
 
     def final_headers(self):
         if self.access_token is None or self.entitlements_token is None:
