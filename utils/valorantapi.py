@@ -84,18 +84,18 @@ class VALORANTAuth:
         if region not in VALID_REGIONS:
             raise ValueError(f'Invalid Region ({region}). Must be one of: {", ".join(VALID_REGIONS)}!')
 
-    @staticmethod
-    def parse_access_token(data) -> Tuple[str, str, int]:
+    def parse_access_token(self, data) -> Tuple[str, str, int]:
         pattern = r'access_token=((?:[a-zA-Z]|\d|\.|-|_)*).*id_token=((?:[a-zA-Z]|\d|\.|-|_)*).*expires_in=(\d*)'
         try:
             uri = data['response']['parameters']['uri']
         except KeyError:
             raise InvalidCredentials
         data = re.findall(pattern, uri)[0]
-        access_token = data[0]
-        id_token = data[1]
+        self.access_token = data[0]
+        self.id_token = data[1]
         expires_in = int(data[2])
-        return access_token, id_token, expires_in
+        self.expires_at = datetime.datetime.utcnow() + datetime.timedelta(seconds=expires_in)
+        return self.access_token, self.id_token, expires_in
 
 
     # Auth stuff
@@ -105,13 +105,14 @@ class VALORANTAuth:
         if self.is_expired:
             if self._loaded_cookies:
                 try:
-                    self.access_token, self.id_token, expires_in = await self.reauthenticate()
-                    self.expires_at = datetime.datetime.utcnow() + datetime.timedelta(seconds=expires_in)
-                    self.headers = self.final_headers()
+                    await self.reauthenticate()
                 except InvalidCredentials:
                     await self.authenticate_from_password()
             else:
-                await self.authenticate_from_password()
+                try:
+                    await self.authenticate_from_cookies()
+                except (MissingCredentials, FileNotFoundError):
+                    await self.authenticate_from_password()
 
     async def authenticate_from_password(self, username=None, password=None):
         self.username = username or self.username
@@ -122,16 +123,15 @@ class VALORANTAuth:
 
         await self.prepare_cookies()
 
-        self.access_token, self.id_token, expires_in = await self.get_access_token()
+        await self.get_access_token()
 
-        self.expires_at = datetime.datetime.utcnow() + datetime.timedelta(seconds=expires_in)
         self._loaded_cookies = True
 
-        self.entitlements_token = await self.get_entitlement_token()
+        await self.get_entitlement_token()
 
-        self.puuid = await self.get_puuid()
+        await self.get_puuid()
 
-        self.headers = self.final_headers()
+        self.update_headers()
 
         self.save_cookies()
         return self.puuid, self.headers
@@ -140,34 +140,31 @@ class VALORANTAuth:
         self.puuid = puuid or self.puuid
         self.load_cookies()
 
-        self.access_token, self.id_token, expires_in = await self.reauthenticate()
+        await self.reauthenticate()
 
-        self.expires_at = datetime.datetime.utcnow() + datetime.timedelta(seconds=expires_in)
+        await self.get_entitlement_token()
 
-        self.entitlements_token = await self.get_entitlement_token()
-
-        self.headers = self.final_headers()
+        self.update_headers()
 
         self.save_cookies()
         return self.puuid, self.headers
 
     async def authenticate_from_2fa(self, _2fa_code=None):
         data = await self.send_2fa_code(_2fa_code)
-        self.access_token, self.id_token, expires_in = self.parse_access_token(data)
+        self.parse_access_token(data)
 
-        self.expires_at = datetime.datetime.utcnow() + datetime.timedelta(seconds=expires_in)
         self._loaded_cookies = True
 
-        self.entitlements_token = await self.get_entitlement_token()
+        await self.get_entitlement_token()
 
-        self.puuid = await self.get_puuid()
+        await self.get_puuid()
 
-        self.headers = self.final_headers()
+        self.update_headers()
 
         self.save_cookies()
         return self.puuid, self.headers
 
-    def final_headers(self):
+    def update_headers(self):
         if self.access_token is None or self.entitlements_token is None:
             raise MissingCredentials
 
@@ -177,6 +174,7 @@ class VALORANTAuth:
             'Authorization': f'Bearer {self.access_token}',
             'X-Riot-Entitlements-JWT':  self.entitlements_token
         }
+        self.headers = headers
         return headers
 
     # Auth requests
@@ -202,7 +200,7 @@ class VALORANTAuth:
         data = await resp.json()
         if data['type'] == 'multifactor':
             if self._2fa_code is None:
-                raise MultiFactorCodeRequired
+                raise MultiFactorCodeRequired(auth_client=self)
             else:
                 data = await self.send_2fa_code()
 
@@ -239,9 +237,12 @@ class VALORANTAuth:
         resp = await self.session.post(self.TOKEN_URL, headers=headers, json={})
         data = await resp.json()
         entitlements_token = data['entitlements_token']
+        self.entitlements_token = entitlements_token
         return entitlements_token
 
     async def get_puuid(self) -> str:
+        if self.puuid is not None:
+            return self.puuid
         headers = {
             'Accept-Encoding': 'gzip, deflate, br',
             'Host': "auth.riotgames.com",
@@ -251,6 +252,7 @@ class VALORANTAuth:
         resp = await self.session.post(self.USERINFO_URL, headers=headers, json={})
         data = await resp.json()
         puuid = data['sub']
+        self.puuid = puuid
         return puuid
 
     async def reauthenticate(self) -> Tuple[str, str, int]:

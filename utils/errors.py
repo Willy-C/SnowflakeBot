@@ -89,11 +89,14 @@ class NoVoiceChannel(commands.CommandError):
 
 
 class BaseVALORANTException(Exception):
-    pass
+    def __init__(self, auth_client=None, *args) -> None:
+        self.auth_client = auth_client
+        super().__init__(*args)
 
 
 class MultiFactorCodeRequired(BaseVALORANTException):
-    pass
+    def __init__(self, auth_client=None, *args) -> None:
+        super().__init__(auth_client, *args)
 
 
 class InvalidCredentials(BaseVALORANTException):
