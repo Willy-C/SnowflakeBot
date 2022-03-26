@@ -100,7 +100,7 @@ class HighlightCog(commands.Cog, name='Highlights'):
 
     async def get_msg_context(self, message, member_id, word, is_mention=False):
         now = discord.utils.utcnow()
-        prev_msgs = await message.channel.history(after=(now-timedelta(minutes=5))).flatten()  # Grabs all messages from the last 5 minutes
+        prev_msgs = [msg async for msg in message.channel.history(after=(now - timedelta(minutes=5)))]  # Grabs all messages from the last 5 minutes
         msg_context = []
         recent_msgs = [msg for msg in prev_msgs[:-1] if (now - msg.created_at).seconds <= 45]  # List of messages from last 45 seconds
 
