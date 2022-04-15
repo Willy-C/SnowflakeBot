@@ -1,14 +1,15 @@
 import io
 import random
 import datetime
+import unicodedata
+from typing import Optional
+from asyncio import TimeoutError
 
 import discord
 import googletrans
-import unicodedata
 from PIL import Image
-from typing import Optional
-from asyncio import TimeoutError
 from discord.ext import commands
+from discord import app_commands
 
 from utils import converters
 from utils.global_utils import last_image, is_image, upload_hastebin, bright_color
@@ -22,10 +23,44 @@ def make_more_jpeg(content):
     return buffer
 
 
+translator = googletrans.Translator()
+
+
+async def do_translate(bot, text):
+    res = await bot.loop.run_in_executor(None, translator.translate, text)
+
+    embed = discord.Embed(title='Translated', colour=bright_color())
+    src = googletrans.LANGUAGES.get(res.src, '(auto-detected)').title()
+    dest = googletrans.LANGUAGES.get(res.dest, 'Unknown').title()
+    original = res.origin if len(
+        res.origin) < 1024 else f'[Text too long to send, uploaded instead]({await upload_hastebin(bot, res.origin)})'
+    translated = res.text if len(
+        res.text) < 1024 else f'[Text too long to send, uploaded instead]({await upload_hastebin(bot, res.text)})'
+    embed.add_field(name=f'From {src}', value=original, inline=False)
+    embed.add_field(name=f'To {dest}', value=translated, inline=False)
+    if len(res.origin) > 1024 or len(res.text) > 1024:
+        embed.description = 'Text too long to send, uploaded instead'
+
+    return embed
+
+
+@app_commands.context_menu(name='Translate')
+async def translate_contextmenu(interaction: discord.Interaction, message: discord.Message):
+    if not message.content:
+        await interaction.response.send_message('This message has no content!', ephemeral=True)
+        return
+    try:
+        embed = await do_translate(interaction.client, message.content)
+    except Exception as e:
+        await interaction.response.send_message(f'An error occurred: {e.__class__.__name__}: {e}', ephemeral=True)
+    else:
+        await interaction.response.send_message(embed=embed)
+
+
 class GeneralCog(commands.Cog, name='General'):
     def __init__(self, bot):
         self.bot = bot
-        self.translator = googletrans.Translator()
+        self.translator = translator
 
     @commands.command(name='avatar', aliases=['ava', 'pfp'])
     async def get_avatar(self, ctx, *, user: converters.CaseInsensitiveMember = None):
@@ -192,21 +227,12 @@ class GeneralCog(commands.Cog, name='General'):
                         break
                 if text is None:
                     return await ctx.send('Unable to find text to translate!')
-        loop = self.bot.loop
+
         try:
-            res = await loop.run_in_executor(None, self.translator.translate, text)
+            embed = await do_translate(self.bot, text)
         except Exception as e:
             return await ctx.send(f'An error occurred: {e.__class__.__name__}: {e}')
 
-        embed = discord.Embed(title='Translated', colour=bright_color())
-        src = googletrans.LANGUAGES.get(res.src, '(auto-detected)').title()
-        dest = googletrans.LANGUAGES.get(res.dest, 'Unknown').title()
-        original = res.origin if len(res.origin) < 1024 else f'[Text too long to send, uploaded instead]({await upload_hastebin(ctx, res.origin)})'
-        translated = res.text if len(res.text) < 1024 else f'[Text too long to send, uploaded instead]({await upload_hastebin(ctx, res.text)})'
-        embed.add_field(name=f'From {src}', value=original, inline=False)
-        embed.add_field(name=f'To {dest}', value=translated, inline=False)
-        if len(res.origin) > 1024 or len(res.text) > 1024:
-            embed.description = 'Text too long to send, uploaded instead'
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -271,3 +297,4 @@ def to_emoji(c):
 
 def setup(bot):
     bot.add_cog(GeneralCog(bot))
+    bot.tree.add_command(translate_contextmenu)
