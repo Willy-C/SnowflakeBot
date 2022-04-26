@@ -15,7 +15,7 @@ class MetaCog(commands.Cog, name='Meta'):
         self.bot = bot
 
     @commands.command(name='timeit')
-    async def _debug(self, ctx: commands.Context, *, command_string: str):
+    async def _timeit(self, ctx: commands.Context, *, command_string: str):
         """
         Run a command timing execution and catching exceptions.
         """
@@ -31,6 +31,9 @@ class MetaCog(commands.Cog, name='Meta'):
 
     @commands.command(brief='Checks latency to Discord.')
     async def ping(self, ctx):
+        cmd = self.bot.get_command('jsk ping')
+        if cmd is not None:
+            return await cmd(ctx)
         start = time.perf_counter()
         msg = await ctx.send('boop')
         end = time.perf_counter()
