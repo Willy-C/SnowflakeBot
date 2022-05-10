@@ -4,9 +4,9 @@ import traceback
 import discord
 from discord.ext import commands
 
+from utils.context import Context
 from utils.global_utils import upload_hastebin
 from utils.errors import BlacklistedUser, TimezoneNotFound, NoVoiceChannel
-from .equations import TexRenderError
 
 
 class CommandErrorHandler(commands.Cog):
@@ -21,7 +21,7 @@ class CommandErrorHandler(commands.Cog):
         self.owner = (await self.bot.application_info()).owner
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
+    async def on_command_error(self, ctx: Context, error: commands.CommandError):
         """The event triggered when an error is raised while invoking a command.
         ctx   : Context
         error : Exception"""
@@ -71,18 +71,6 @@ class CommandErrorHandler(commands.Cog):
 
         elif isinstance(error, commands.CheckFailure):
             return await ctx.send('Sorry, you cannot use this command')
-
-        elif isinstance(error, TexRenderError):
-            if error.logs is None:
-                return await ctx.send('Rendering failed. Check your code.')
-
-            err = re.search(r'^!.*?^!', error.logs + '\n!', re.MULTILINE + re.DOTALL)
-            err_msg = err[0].strip("!\n")
-
-            if len(err_msg) > 1000:
-                url = await upload_hastebin(ctx, err_msg)
-                return await ctx.send(f'Rendering failed. Please check your code. {url}')
-            return await ctx.send(f'Rendering failed.\n```{err_msg}```')
 
         if self.owner is None:
             return

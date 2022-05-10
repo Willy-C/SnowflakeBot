@@ -1,78 +1,22 @@
 import io
-import aiohttp
 from datetime import datetime
 
 import discord
 from discord.ext import commands
+
+from utils.context import Context
 from utils.global_utils import bright_color
 from config import WOLFRAM_ALPHA_APPID
 
-TEX_API = 'http://rtex.probablyaweb.site/api/v2'
 WOLFRAM_API = 'http://api.wolframalpha.com/v1/simple'
-TEMPLATE = r'''
-\documentclass{article}
-
-\usepackage[utf8]{inputenc}
-\usepackage[english]{babel}
-\usepackage{geometry}
-\usepackage{mathtools}
-\usepackage{amsthm}
-\usepackage{amssymb}
-\usepackage{amsfonts}
-\usepackage{chemfig}
-\usepackage{color}
-\usepackage{xcolor}
-\geometry{textwidth=8cm}
-
-\begin{document}
-\pagenumbering{gobble}
-\definecolor{darktheme}{HTML}{36393F}
-
-\color{white}
-\pagecolor{darktheme}
-
-USERINPUTHERE
-
-\end{document}
-'''
-
-
-class TexRenderError(commands.CommandError):
-    def __init__(self, logs):
-        self.logs = logs
 
 
 class MathCog(commands.Cog, name='Math'):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(aliases=['tex'])
-    async def latex(self, ctx, *, latex):
-        if latex.startswith('```') and latex.endswith('```'):
-            latex = '\n'.join(latex.split('\n')[1:-1])
-        to_render = TEMPLATE.replace('USERINPUTHERE', latex)
-        await self.render(ctx, to_render)
-
-    async def render(self, ctx, latex):
-        try:
-            payload = {'code': latex, 'format': 'png'}
-            async with self.bot.session.post(TEX_API, data=payload) as r:
-                r.raise_for_status()
-                jdata = await r.json()
-                if jdata['status'] != 'success':
-                    raise TexRenderError(jdata.get('log'))
-                file_url = TEX_API + '/' + jdata['filename']
-
-            async with self.bot.session.get(file_url) as fr:
-                fr.raise_for_status()
-                data = io.BytesIO(await fr.read())
-                await ctx.send(file=discord.File(data, 'latex.png'))
-
-        except aiohttp.ClientResponseError:
-            raise TexRenderError(None)
-
     @commands.command(name='wolframalpha', aliases=['wolfram', 'wa', 'math', 'solve'])
-    async def wolframalpha(self, ctx, *, query):
+    async def wolframalpha(self, ctx: Context, *, query: str):
         wolfram_payload = {
             'appid': WOLFRAM_ALPHA_APPID,
             'i': query,
@@ -83,11 +27,12 @@ class MathCog(commands.Cog, name='Math'):
             'fontsize': '22',
             'units': 'metric',
         }
-        await ctx.trigger_typing()
-        async with self.bot.session.get(WOLFRAM_API, params=wolfram_payload) as resp:
-            if resp.status == 501:
-                return await ctx.reply('Invalid query')
-            data = io.BytesIO(await resp.read())
+        async with ctx.typing():
+            async with self.bot.session.get(WOLFRAM_API, params=wolfram_payload) as resp:
+                # https://products.wolframalpha.com/simple-api/documentation
+                if resp.status in (400, 501):
+                    return await ctx.reply('Invalid query')
+                data = io.BytesIO(await resp.read())
 
         e = discord.Embed(color=bright_color(), timestamp=datetime.utcnow())
         e.set_image(url='attachment://response.png')
