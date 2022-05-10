@@ -106,9 +106,9 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+# Credentials
 config.py
+
+# Files we don't want to upload
 deprecated/
-cogs/logger.py
-cogs/avatars.py
-cogs/reddit.py
-cogs/command_logger.py
+cogs/private/
