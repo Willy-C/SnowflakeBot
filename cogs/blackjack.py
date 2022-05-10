@@ -1,7 +1,10 @@
 import random
-import data.blackjackgame as bj
+
 from discord.ext import commands
-from utils.converters import  MoneyConverter
+
+import data.blackjackgame as bj
+from utils.context import Context
+from utils.converters import MoneyConverter
 from utils.views import TWOMView
 from utils.currency import get_balance, increase_balance, decrease_balance
 
@@ -26,7 +29,7 @@ class Game(commands.Cog):
 
     @commands.max_concurrency(1, per=commands.BucketType.user)
     @commands.command(aliases=['bj'], usage='<bet> [decks:6]')
-    async def blackjack(self, ctx, bet: MoneyConverter = 0, *, flag: DecksFlag):
+    async def blackjack(self, ctx: Context, bet: MoneyConverter = 0, *, flag: DecksFlag):
         """Play Blackjack in chat
         You can pass a number to specify your bet
 
@@ -58,7 +61,11 @@ class Game(commands.Cog):
         await ctx.tick()
 
     @commands.command(name='twom')
-    async def twom_guessing_game(self, ctx, bet: MoneyConverter=0):
+    async def twom_guessing_game(self, ctx: Context, bet: MoneyConverter=0):
+        """Emulate an old number guess game in TWOM (The World of Magic)
+        Objective of the game is to guess if a randomly generated number is even or odd.
+        However, multiples of 5s is an automatic loss even with a correct guess.
+        """
         if bet != 0:
 
             balance = await get_balance(ctx, ctx.author)
