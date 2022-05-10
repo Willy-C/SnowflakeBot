@@ -5,6 +5,8 @@ from typing import Union
 
 import discord
 from discord.ext import commands
+
+from utils.context import Context
 from utils.global_utils import is_image
 
 
@@ -14,7 +16,7 @@ class NoGuildEmojis(commands.CommandError):
 
 
 def guild_has_emojis():
-    async def predicate(ctx):
+    async def predicate(ctx: Context):
         if ctx.guild.emojis:
             return True
         raise NoGuildEmojis
@@ -26,11 +28,11 @@ class EmojiCog(commands.Cog, name='Emojis'):
         self.bot = bot
 
     @commands.group(invoke_without_command=True, case_insensitive=True)
-    async def emoji(self, ctx):
+    async def emoji(self, ctx: Context):
         await ctx.send_help(ctx.command)
 
     @emoji.command(name='find', aliases=['get', 'search'])
-    async def get_emoji(self, ctx, *, name):
+    async def get_emoji(self, ctx: Context, *, name):
         """Find all emojis with the given name
         Also gives its ID and server
         """
@@ -52,7 +54,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
     @commands.bot_has_permissions(manage_emojis=True)
     @commands.has_permissions(manage_emojis=True)
     @commands.guild_only()
-    async def create_emoji(self, ctx, name, url):
+    async def create_emoji(self, ctx: Context, name, url):
         """Create new emoji from url
         The url must point to a png/jpeg/jpg/gif file
         Example:
@@ -88,7 +90,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
     @commands.bot_has_permissions(manage_emojis=True)
     @commands.has_permissions(manage_emojis=True)
     @commands.guild_only()
-    async def steal_emoji(self, ctx, emoji: discord.PartialEmoji, name=None):
+    async def steal_emoji(self, ctx: Context, emoji: discord.PartialEmoji, name=None):
         """Copy an emoji to the server
         A new name can be provided, otherwise the name is copied
         Example:
@@ -102,7 +104,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
 
     @emoji.group(name='list', invoke_without_command=True, case_insensitive=True, usage='')
     @guild_has_emojis()
-    async def guild_emojis(self, ctx, codepoint: bool = False):
+    async def guild_emojis(self, ctx: Context, codepoint: bool = False):
         """Returns all usable emojis in the guild sorted by name
         Pass in True as a parameter to get codepoints"""
         if ctx.guild is None:
@@ -123,7 +125,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
 
     @guild_emojis.command(name='big')
     @guild_has_emojis()
-    async def guild_emojis_big(self, ctx):
+    async def guild_emojis_big(self, ctx: Context):
         """Lists all guild emojis without name so they are bigger"""
         emojis = sorted([emoji for emoji in ctx.guild.emojis if emoji.require_colons], key=lambda e: e.name)
         formatted = [str(e) for e in emojis]
@@ -132,7 +134,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
 
     @emoji.command(aliases=['download'])
     @guild_has_emojis()
-    async def zip(self, ctx):
+    async def zip(self, ctx: Context):
         """Download all the emojis in the server into a zip file"""
         await ctx.message.add_reaction('<a:downloading:771280303498985482>')
         zip_buffer = io.BytesIO()
@@ -147,7 +149,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
         await ctx.message.remove_reaction('<a:downloading:771280303498985482>', ctx.me)
 
     @commands.command(name='bigemoji')
-    async def get_emoji_url(self, ctx, emoji: Union[discord.Emoji, discord.PartialEmoji, str]):
+    async def get_emoji_url(self, ctx: Context, emoji: Union[discord.Emoji, discord.PartialEmoji, str]):
         """Sends a big version of an emoji and it's URL of available"""
         if isinstance(emoji, (discord.Emoji, discord.PartialEmoji)):
             await ctx.send(str(emoji.url))
@@ -155,7 +157,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
             await ctx.send(emoji)
 
     @commands.command(name='allemojis', aliases=['allemotes'], hidden=True)
-    async def all_guild_emojis(self, ctx, codepoint: bool = False):
+    async def all_guild_emojis(self, ctx: Context, codepoint: bool = False):
         """
         Returns all usable emojis from every guild the bot can see
         Pass in True as a parameter to get codepoints"""
@@ -181,7 +183,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
             await ctx.send(page)
 
     @commands.command()
-    async def nitro(self, ctx, *, name):
+    async def nitro(self, ctx: Context, *, name):
         """Returns a random emoji with the given name
         Only works with emojis the bot can see/use"""
         name = name.lower()
@@ -193,7 +195,7 @@ class EmojiCog(commands.Cog, name='Emojis'):
         else:
             await ctx.message.add_reaction('<:redTick:602811779474522113>')
 
-    async def cog_command_error(self, ctx, error):
+    async def cog_command_error(self, ctx: Context, error: commands.CommandError):
         if isinstance(error, NoGuildEmojis):
             ctx.local_handled = True
             return await ctx.send(error.message)
