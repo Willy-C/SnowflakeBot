@@ -18,7 +18,7 @@ class Game(commands.Cog):
         self.bot = bot
         self.games = {}
 
-    async def cog_command_error(self, ctx, error):
+    async def cog_command_error(self, ctx: Context, error: commands.CommandError):
         if isinstance(error, commands.MaxConcurrencyReached):
             ctx.local_handled = True
             await ctx.send('You already have an ongoing game!')
