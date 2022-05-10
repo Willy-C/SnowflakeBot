@@ -1,8 +1,8 @@
 from typing import List, Tuple, Optional
 
-import discord
 import rapidfuzz
 from discord.ext import commands
+
 from utils.context import Context
 from utils.global_utils import copy_context
 
@@ -45,7 +45,7 @@ class Levenshtein(commands.Cog):
                                             score_cutoff=2)
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx: Context, error: Exception):
+    async def on_command_error(self, ctx: Context, error: commands.CommandError):
         if isinstance(error, commands.CommandNotFound):
             if len(ctx.invoked_with) < 3:
                 return
