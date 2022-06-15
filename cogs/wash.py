@@ -19,8 +19,8 @@ class WASHCog(commands.Cog):
         try:
             last_msg = await channel.fetch_message(channel.last_message_id)
         except discord.NotFound:
-            last_msg = await channel.history(limit=1).flatten()
-            self.last_msg = last_msg[0].created_at  # couldn't get last message with ID, use .history
+            last_msg = await channel.history(limit=1).__anext__()
+            self.last_msg = last_msg.created_at  # couldn't get last message with ID, use .history
         else:
             self.last_msg = last_msg.created_at
 
