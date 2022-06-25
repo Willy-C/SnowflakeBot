@@ -14,7 +14,8 @@ log = logging.getLogger(__name__)
 
 
 class VALORANTAuth:
-    USER_AGENT = 'RiotClient/43.0.1.4195386.4190634 rso-auth (Windows; 10;;Professional, x64)'
+    # USER_AGENT = 'RiotClient/43.0.1.4195386.4190634 rso-auth (Windows; 10;;Professional, x64)'
+    USER_AGENT = 'RiotClient/51.0.0.4429735.4381201 rso-auth (Windows;10;;Professional, x64)'
 
     AUTH_URL     = 'https://auth.riotgames.com/api/v1/authorization'
     TOKEN_URL    = 'https://entitlements.auth.riotgames.com/api/token/v1'
@@ -27,7 +28,10 @@ class VALORANTAuth:
         self.riotid: Optional[str] = riotid
         self.puuid: Optional[str] = puuid
 
-        self.headers: dict[str, str] = {'User-Agent': self.USER_AGENT}
+        self.headers: dict[str, str] = {
+            'User-Agent': self.USER_AGENT,
+            'Accept-Language ': 'en-US,en;q=0.9'
+        }
         self.entitlements_token: Optional[str] = None
         self.access_token: Optional[str] = None
         self.id_token: Optional[str] = None
@@ -49,13 +53,18 @@ class VALORANTAuth:
         await self._lock.acquire()
         if self.session is None:
             self.session = aiohttp.ClientSession()
-        await self.ensure_authenticated()
+        try:
+            await self.ensure_authenticated()
+        except Exception:
+            self._lock.release()
+            raise
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         self._lock.release()
 
     async def close(self) -> None:
+        log.info(f'auth puuid={self.puuid} | riotid={self.riotid} | closing')
         self.save_cookies()
         await self.session.close()
 
@@ -103,16 +112,26 @@ class VALORANTAuth:
 
     async def ensure_authenticated(self):
         if self.is_expired:
+            log.info(f'auth puuid={self.puuid} | riotid={self.riotid} |{self.session._cookie_jar.filter_cookies("https://auth.riotgames.com/api/v1/authorization")=}')
             if self._loaded_cookies:
                 try:
+                    log.info(f'auth puuid={self.puuid} | riotid={self.riotid}: reauthing with cookie')
                     await self.reauthenticate()
+                    self.update_headers()
+                    log.info(f'auth puuid={self.puuid} | riotid={self.riotid}: reauthing with cookie success')
                 except InvalidCredentials:
+                    log.info(f'auth puuid={self.puuid} | riotid={self.riotid}: reauthing with cookie failed, authing with password')
                     await self.authenticate_from_password()
+                    log.info(f'auth puuid={self.puuid} | riotid={self.riotid}: authing with password success')
             else:
                 try:
+                    log.info(f'auth puuid={self.puuid} | riotid={self.riotid}: authing from cookie file')
                     await self.authenticate_from_cookies()
-                except (MissingCredentials, FileNotFoundError):
+                    log.info(f'auth puuid={self.puuid} | riotid={self.riotid}: authing from cookie file success')
+                except (InvalidCredentials, FileNotFoundError):
+                    log.info(f'auth puuid={self.puuid} | riotid={self.riotid}: authing from cookie file failed, authing with password')
                     await self.authenticate_from_password()
+                    log.info(f'auth puuid={self.puuid} | riotid={self.riotid}: authing with password success')
 
     async def authenticate_from_password(self, username=None, password=None):
         self.username = username or self.username
@@ -139,6 +158,8 @@ class VALORANTAuth:
     async def authenticate_from_cookies(self, puuid=None):
         self.puuid = puuid or self.puuid
         self.load_cookies()
+
+        # log.info(f'auth puuid={self.puuid} | riotid={self.riotid} | after load: {self.session._cookie_jar.filter_cookies("https://auth.riotgames.com/api/v1/authorization")=}')
 
         await self.reauthenticate()
 
@@ -172,7 +193,8 @@ class VALORANTAuth:
             'Accept-Encoding': 'gzip, deflate, br',
             'User-Agent': self.USER_AGENT,
             'Authorization': f'Bearer {self.access_token}',
-            'X-Riot-Entitlements-JWT':  self.entitlements_token
+            'X-Riot-Entitlements-JWT':  self.entitlements_token,
+            'Accept-Language ': 'en-US,en;q=0.9'
         }
         self.headers = headers
         return headers
@@ -187,12 +209,14 @@ class VALORANTAuth:
             'response_type': 'token id_token',
         }
         await self.session.post(self.AUTH_URL, json=payload, headers=self.headers)
+        self.save_cookies()
 
     async def get_access_token(self) -> Tuple[str, str, int]:
         payload = {
             'type': 'auth',
             'username': self.username,
-            'password': self.password
+            'password': self.password,
+            'remember': True
         }
         resp = await self.session.put(self.AUTH_URL,
                                       json=payload,
@@ -203,7 +227,7 @@ class VALORANTAuth:
                 raise MultiFactorCodeRequired(auth_client=self)
             else:
                 data = await self.send_2fa_code()
-
+        log.info(f'auth puuid={self.puuid} | riotid={self.riotid} | get_access_token: {data=}')
         return self.parse_access_token(data)
 
     async def send_2fa_code(self, code: str = None):
@@ -217,6 +241,7 @@ class VALORANTAuth:
                                       json=payload,
                                       headers=self.headers)
         data = await resp.json()
+        log.info(f'auth puuid={self.puuid} | riotid={self.riotid} | send_2fa_code: {data=}')
         if data['type'] == 'response':
             try:
                 data['response']['parameters']['uri']
@@ -236,6 +261,7 @@ class VALORANTAuth:
 
         resp = await self.session.post(self.TOKEN_URL, headers=headers, json={})
         data = await resp.json()
+        log.info(f'auth puuid={self.puuid} | riotid={self.riotid} | get_entitlement_token: {data=}')
         entitlements_token = data['entitlements_token']
         self.entitlements_token = entitlements_token
         return entitlements_token
@@ -251,6 +277,7 @@ class VALORANTAuth:
         }
         resp = await self.session.post(self.USERINFO_URL, headers=headers, json={})
         data = await resp.json()
+        log.info(f'auth puuid={self.puuid} | riotid={self.riotid} | get_puuid: {data=}')
         puuid = data['sub']
         self.puuid = puuid
         return puuid
@@ -263,8 +290,15 @@ class VALORANTAuth:
             'response_type': 'token id_token',
         }
         resp = await self.session.post(self.AUTH_URL, json=payload, headers=self.headers)
-        data = await resp.json()
-        return self.parse_access_token(data)
+        try:
+            data = await resp.json()
+        except Exception:
+            raise RuntimeError(await resp.text())
+        log.info(f'auth puuid={self.puuid} | riotid={self.riotid} | reauthenticate: {data=}')
+
+        ret = self.parse_access_token(data)
+        self.save_cookies()
+        return ret
 
     # API Requests
 
@@ -283,12 +317,21 @@ class VALORANTAuth:
         self.riotid = riotid
         return riotid
 
-    async def get_store_items(self) -> List[str]:
+    async def get_store_items(self) -> List:
         resp = await self.session.get(f'https://pd.{self.region}.a.pvp.net/store/v2/storefront/{self.puuid}',
                                       headers=self.headers)
         data = await resp.json()
+        log.info(f'auth puuid={self.puuid} | riotid={self.riotid} | get_store_item: {data=}')
         item_ids = data['SkinsPanelLayout']['SingleItemOffers']
         return item_ids
+
+    async def get_nightmarket_items(self) -> List[dict]:
+        resp = await self.session.get(f'https://pd.{self.region}.a.pvp.net/store/v2/storefront/{self.puuid}',
+                                      headers=self.headers)
+        data = await resp.json()
+        log.info(f'auth puuid={self.puuid} | riotid={self.riotid} | get_nightmarket_items: {data=}')
+
+        return data.get('BonusStore', {}).get('BonusStoreOffers')
 
     # Other stuff
 
@@ -366,4 +409,5 @@ async def get_closest_skin(name: str):
     return rapidfuzz.process.extractOne(name,
                                         skin_names,
                                         scorer=rapidfuzz.string_metric.levenshtein,
-                                        score_cutoff=5)
+                                        weights=(1, 10, 10),
+                                        score_cutoff=10)
