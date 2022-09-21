@@ -58,7 +58,7 @@ class SnowflakeBot(commands.Bot):
         count = 1
 
         # Thanks Umbra and Maya!
-        for file in pathlib.Path('cogs').glob('[!_]*.py'):
+        for file in pathlib.Path('cogs').glob('**/[!_]*.py'):
             ext = ".".join(file.parts).removesuffix('.py')
             await self.load_extension(ext)
             count += 1
