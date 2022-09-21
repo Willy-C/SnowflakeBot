@@ -339,6 +339,15 @@ class VALORANTAuth:
         item_ids = await self.get_store_items()
         return await get_current_skin_data(item_ids)
 
+    async def check_night_market(self) -> Optional[List[dict]]:
+        item_data = await self.get_nightmarket_items()
+        if item_data:
+            try:
+                item_ids = [item["Offer"]["Rewards"][0]["ItemID"] for item in item_data]
+            except (KeyError, IndexError, TypeError):
+                return
+            return await get_current_skin_data(item_ids)
+
 
 async def get_skin_data():
     URL = 'https://valorant-api.com/v1/weapons/skinlevels'

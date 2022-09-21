@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import datetime
-from typing import List
+from typing import List, Optional
 from collections import defaultdict
 
 import discord
@@ -12,6 +12,7 @@ from utils.valorantapi import VALORANTAuth, get_closest_skin, update_skin_data
 from utils.converters import CaseInsensitiveMember
 from utils.views import LoginView, _2FAView
 from utils.errors import MultiFactorCodeRequired, InvalidCredentials
+from utils.global_utils import bright_color
 
 
 log = logging.getLogger(__name__)
@@ -20,10 +21,13 @@ log = logging.getLogger(__name__)
 class Valorant(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self._authclients: dict[int, dict[str, VALORANTAuth]] = defaultdict(dict)
+        self._authclients: dict[int, dict[str, VALORANTAuth]] = defaultdict(dict) # UserID: {PUUID: AuthClient}
         bot.loop.create_task(self.load_cog())
-        self._shop_cache:  dict[int, dict[str, List[dict]]] = defaultdict(dict)
+        self._shop_cache:  dict[int, dict[str, List[dict]]] = defaultdict(dict) # UserID: {PUUID: [skin dicts]}
         self.check_daily_shop.start()
+        self._updated = asyncio.Event()
+        self._updated.set()
+        self._last_update: Optional[datetime.datetime] = None
 
     async def cog_command_error(self, ctx, error) -> None:
         error = getattr(error, 'original', error)
@@ -168,6 +172,15 @@ class Valorant(commands.Cog):
         records = await self.bot.pool.fetch(query, user.id)
         riotids = {r['puuid']: r['riotid'] for r in records}
 
+        if not self._updated.is_set():
+            msg = await ctx.send('Currently checking daily shops. Please stand by...')
+            async with ctx.typing():
+                await self._updated.wait()
+                try:
+                    await msg.delete()
+                except discord.HTTPException:
+                    pass
+
         clients = self._authclients[user.id]
         cache = self._shop_cache[user.id]
         for puuid, client in clients.items():
@@ -252,6 +265,7 @@ class Valorant(commands.Cog):
 
     async def update_shop_cache(self):
         log.info('Caching shop items')
+        self._updated.clear()
         self._shop_cache.clear()
         for user_id, d in self._authclients.items():
             for puuid, client in d.items():
@@ -264,11 +278,19 @@ class Valorant(commands.Cog):
                         self._shop_cache[user_id][puuid] = skins
                         log.info(f'Cached skins for {user_id=} ({puuid=})')
                 except MultiFactorCodeRequired:
-                        log.warning(f'Unable to fetch skins for {user_id=} ({puuid=}): 2FA code requied')
+                    log.warning(f'Unable to fetch skins for {user_id=} ({puuid=}): 2FA code requied')
+                except InvalidCredentials:
+                    log.warning(f'Unable to fetch skins for {user_id=} ({puuid=}): Invalid Credentials!')
 
+        self._updated.set()
 
     @tasks.loop(time=datetime.time(hour=0, second=30))
     async def check_daily_shop(self):
+        prev = self._last_update
+        self._last_update = discord.utils.utcnow()
+        if prev is not None and (discord.utils.utcnow() - prev).total_seconds() < 3600:
+            return
+
         await self.update_shop_cache()
 
         query = '''SELECT * FROM valskinwatch;'''
@@ -297,6 +319,85 @@ class Valorant(commands.Cog):
             await debug_channel.send(out)
         else:
             log.info(f'Daily shop check - no matches!: {to_watch=}')
+
+        list_channel = self.bot.get_guild(709264610200649738).get_channel(996216829301239988)
+
+        dt = discord.utils.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        dt_md = discord.utils.format_dt(dt, "D")
+        divider = "="*30
+        await list_channel.send(f'{divider}\n'
+                                f'VALORANT Shops for {dt_md}\n'
+                                f'{divider}')
+
+
+        query = '''SELECT puuid, riotid FROM valcreds;'''
+        records = await self.bot.pool.fetch(query)
+        riotids = {r['puuid']: r['riotid'] for r in records}
+        msg_dict = {}
+
+        for user_id, d in self._shop_cache.items():
+            for puuid, skins in d.items():
+                riotid = riotids[puuid]
+                names = [s['displayName'] for s in skins]
+                # skin_names = "\n".join(names)
+
+                icons = [s['displayIcon'] for s in skins]
+                embeds = []
+                for name, icon in zip(names, icons):
+                    e = discord.Embed(title=name)
+                    e.set_image(url=icon)
+                    embeds.append(e)
+
+                m = await list_channel.send(f'Available skins for `{riotid}`:', embeds=embeds)
+                msg_dict[riotid] = m.jump_url
+
+        list_embed = discord.Embed(color=bright_color(), description=dt_md)
+        for rid, url in msg_dict.items():
+            list_embed.add_field(name=rid, value=f'[Jump]({url})')
+
+        await list_channel.send(embed=list_embed)
+
+    @valorant_commands.command(name='nightmarket', aliases=['nm'], usage='')
+    async def check_night_market(self, ctx, user: CaseInsensitiveMember = None):
+        """Check your current night market items"""
+        user = user or ctx.author
+        if user.id not in self._authclients:
+            return await ctx.reply('I am unable to find your account!\n'
+                                   'Please make sure you saved your login with `%val login`')
+
+        query = '''SELECT puuid, riotid FROM valcreds where id = $1;'''
+        records = await self.bot.pool.fetch(query, user.id)
+        riotids = {r['puuid']: r['riotid'] for r in records}
+
+        if not self._updated.is_set():
+            msg = await ctx.send('Currently checking daily shops. Please stand by...')
+            async with ctx.typing():
+                await self._updated.wait()
+                try:
+                    await msg.delete()
+                except discord.HTTPException:
+                    pass
+
+        clients = self._authclients[user.id]
+        for puuid, client in clients.items():
+            async with client as auth:
+                skins = await auth.check_night_market()
+                if not skins:
+                    await ctx.send('Unable to find night market skins.')
+                    return
+
+            riotid = riotids[puuid]
+            names = [s['displayName'] for s in skins]
+            # skin_names = "\n".join(names)
+
+            icons = [s['displayIcon'] for s in skins]
+            embeds = []
+            for name, icon in zip(names, icons):
+                e = discord.Embed(title=name)
+                e.set_image(url=icon)
+                embeds.append(e)
+
+            await ctx.send(f'Nightmarket skins for `{riotid}`:', embeds=embeds)
 
 
 def setup(bot):
