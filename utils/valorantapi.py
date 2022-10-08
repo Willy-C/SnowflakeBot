@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 class VALORANTAuth:
     # USER_AGENT = 'RiotClient/43.0.1.4195386.4190634 rso-auth (Windows; 10;;Professional, x64)'
-    USER_AGENT = 'RiotClient/51.0.0.4429735.4381201 rso-auth (Windows;10;;Professional, x64)'
+    USER_AGENT = 'RiotClient/58.0.0.4640299.4552318 rso-auth (Windows;10;;Professional, x64)'
 
     AUTH_URL     = 'https://auth.riotgames.com/api/v1/authorization'
     TOKEN_URL    = 'https://entitlements.auth.riotgames.com/api/token/v1'
