@@ -37,7 +37,7 @@ async def do_translate(bot: SnowflakeBot, text: str) -> discord.Embed:
     url = "https://api-free.deepl.com/v2/translate"
 
     form = aiohttp.FormData()
-    form.add_field('auth_key', value=bot.config.DEEPL_KEY)
+    form.add_field('auth_key', value=bot.config.DEEPL_API_KEY)
     form.add_field('text', value=text)
     form.add_field('target_lang', value='EN')
 
