@@ -80,7 +80,14 @@ class Context(commands.Context):
             if self.author.voice:
                 return self.author.voice.channel
 
-    async def confirm_prompt(self, msg, *, timeout=60, delete_after=True):
+    @property
+    def is_silent(self) -> bool:
+        """
+        Returns True if the command was invoked with a silent message
+        """
+        return self.message.flags.silent
+
+    async def confirm_prompt(self, msg, *, timeout=60, delete_after=True, **kwargs) -> bool | None:
         """
         Asks author for confirmation
         Returns True if confirmed, False if cancelled, None if timed out
