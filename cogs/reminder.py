@@ -256,5 +256,5 @@ class ReminderCog(commands.Cog, name='Reminders'):
             await ctx.message.remove_reaction('<a:typing:559157048919457801>', ctx.me)
 
 
-def setup(bot):
-    bot.add_cog(ReminderCog(bot))
+async def setup(bot):
+    await bot.add_cog(ReminderCog(bot))

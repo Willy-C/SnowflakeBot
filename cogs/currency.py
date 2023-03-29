@@ -72,7 +72,7 @@ class Currency(commands.Cog):
         await set_balance(ctx, user, amount)
         await ctx.tick()
 
-    @_currency.command(name='show')
+    @_currency.command(name='show', hidden=True)
     async def get_money(self, ctx: Context, user: CaseInsensitiveMember = None):
         user = user or ctx.author
         amount = await get_balance(ctx, user)
@@ -108,6 +108,7 @@ class Currency(commands.Cog):
     @_currency.command(name='send')
     @commands.max_concurrency(1, per=commands.BucketType.user, wait=True)
     async def send_money(self, ctx: Context, user: CaseInsensitiveMember, amount: MoneyConverter):
+        """Send money to someone else"""
         if user == ctx.author:
             await ctx.reply('You cannot send money to yourself')
             return
@@ -140,7 +141,13 @@ class Currency(commands.Cog):
     @commands.command(name='balance', aliases=['bal'])
     async def _get_user_balance(self, ctx: Context, user: CaseInsensitiveMember = None):
         """Get balance of user. Leave user blank for yourself"""
-        await self.get_money(ctx, user=user)
+        user = user or ctx.author
+        amount = await get_balance(ctx, user)
+        _user = 'You have' if user == ctx.author else f'{user.mention} has'
+        msg = f'{_user} ${amount:,.2f}'
+        if amount <= 0:
+            msg += '(Use `%money start` to get $2000)'
+        await ctx.reply(msg, allowed_mentions=discord.AllowedMentions.none())
 
     @commands.command(name='leaderboard', aliases=['lb'], usage='')
     async def show_leaderboard(self, ctx: Context, show_all=False):
@@ -171,12 +178,13 @@ class Currency(commands.Cog):
                           timestamp=datetime.datetime.utcnow())
         await ctx.send(embed=e)
 
-    @_currency.command(name='get', aliases=['claim'])
+    @_currency.command(name='claim', aliases=['get'])
     @commands.cooldown(1, 1800, commands.BucketType.user)
     async def claim_free_money(self, ctx: Context):
+        """Increase your balance by 5%"""
         balance = await get_balance(ctx, ctx.author)
         if balance <= 0:
-            await ctx.reply('You do not have enough money to use this')
+            await ctx.reply('You need a positive balance to use this.')
             self.claim_free_money.reset_cooldown(ctx)
             return
         bucket = self._claim_cd.get_bucket(ctx.message)
@@ -201,5 +209,5 @@ class Currency(commands.Cog):
     #     await increase_balance()
 
 
-def setup(bot):
-    bot.add_cog(Currency(bot))
+async def setup(bot):
+    await bot.add_cog(Currency(bot))

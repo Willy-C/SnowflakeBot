@@ -106,9 +106,9 @@ class CommandErrorHandler(commands.Cog):
             await self.owner.send(f'```py\n{tb}```')
 
 
-def setup(bot):
-    bot.add_cog(CommandErrorHandler(bot))
+async def setup(bot):
+    await bot.add_cog(CommandErrorHandler(bot))
 
 
-def teardown(bot):
+async def teardown(bot):
     bot.on_error = commands.Bot.on_error

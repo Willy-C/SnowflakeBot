@@ -76,5 +76,5 @@ class Voice(commands.Cog):
                     pass
 
 
-def setup(bot):
-    bot.add_cog(Voice(bot))
+async def setup(bot):
+    await bot.add_cog(Voice(bot))

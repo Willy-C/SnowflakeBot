@@ -145,5 +145,5 @@ class GuildCog(commands.Cog, name='Server'):
                     pass
 
 
-def setup(bot):
-    bot.add_cog(GuildCog(bot))
+async def setup(bot):
+    await bot.add_cog(GuildCog(bot))

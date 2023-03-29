@@ -1,3 +1,4 @@
+import logging
 import asyncio
 import traceback
 from io import BytesIO
@@ -5,6 +6,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 
 import aiohttp
+import asyncpg
 import discord
 import humanize
 from discord.ext import commands
@@ -12,6 +14,8 @@ from asyncpg import UniqueViolationError
 from utils.global_utils import make_naive
 from utils.converters import CaseInsensitiveVoiceChannel
 
+
+logger = logging.getLogger(__name__)
 
 class Tracker(commands.Cog):
     def __init__(self, bot):
@@ -91,13 +95,16 @@ class Tracker(commands.Cog):
             await self.bot.pool.execute(query, member.guild.id, member.id, join_time)
         except UniqueViolationError:
             pass
-        check = '''SELECT * FROM name_changes WHERE id = $1;'''
-        if await self.bot.pool.fetchrow(check, member.id) is None:
-            await self.log_username(member)
 
-        ava = '''SELECT id FROM avatar_changes WHERE id = $1'''
-        if await self.bot.pool.fetchrow(ava, member.id) is None:
+        try:
+            await self.log_username(member)
+        except UniqueViolationError:
+            pass
+
+        try:
             await self.log_avatar(member)
+        except UniqueViolationError:
+            pass
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
@@ -111,6 +118,8 @@ class Tracker(commands.Cog):
             join_time = make_naive(member.joined_at or discord.utils.utcnow())
             try:
                 await self.bot.pool.execute(query, member.guild.id, member.id, join_time)
+            except asyncpg.UniqueViolationError:
+                pass
             except Exception:
                 traceback.print_exc()
             if member.nick:
@@ -154,8 +163,17 @@ class Tracker(commands.Cog):
         if user.avatar:
             _hash = user.avatar.key
             _type = 'gif' if _hash.startswith('a_') else 'png'
-            file = discord.File(BytesIO(await user.avatar.with_static_format('png').read()),
-                                filename=f'{_hash}.{_type}')
+            try:
+                file = discord.File(BytesIO(await user.avatar.with_static_format('png').read()),
+                                    filename=f'{_hash}.{_type}')
+            except discord.HTTPException:
+                try:
+                    file = discord.File(BytesIO(await user.avatar.with_format('png').read()),
+                                        filename=f'{_hash}.png')
+                except discord.HTTPException:
+                    logger.warning(f'Failed to get avatar for {user} ({user.id}) | {user.avatar.url}')
+                    return
+
             wh = discord.utils.get(await self.bot.get_guild(557306479191916555).webhooks(),
                                    channel_id=703171905435467956)
             if wh is not None:
@@ -242,5 +260,5 @@ class Tracker(commands.Cog):
             await ctx.message.add_reaction('<:redTick:602811779474522113>')
 
 
-def setup(bot):
-    bot.add_cog(Tracker(bot))
+async def setup(bot):
+    await bot.add_cog(Tracker(bot))

@@ -201,5 +201,5 @@ class EmojiCog(commands.Cog, name='Emojis'):
             return await ctx.send(error.message)
 
 
-def setup(bot):
-    bot.add_cog(EmojiCog(bot))
+async def setup(bot):
+    await bot.add_cog(EmojiCog(bot))

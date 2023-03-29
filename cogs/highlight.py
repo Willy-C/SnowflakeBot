@@ -348,7 +348,7 @@ class HighlightCog(commands.Cog, name='Highlights'):
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
         await ctx.send(embed=e, delete_after=delete_after)
 
-    @highlight.command()
+    # @highlight.command()
     async def mention(self, ctx):
         """Toggle highlight for mentions"""
         if ctx.guild is not None:
@@ -491,5 +491,5 @@ class HighlightCog(commands.Cog, name='Highlights'):
         await ctx.message.add_reaction('\U00002705')  # React with checkmark
 
 
-def setup(bot):
-    bot.add_cog(HighlightCog(bot))
+async def setup(bot):
+    await bot.add_cog(HighlightCog(bot))

@@ -400,5 +400,5 @@ class Valorant(commands.Cog):
             await ctx.send(f'Nightmarket skins for `{riotid}`:', embeds=embeds)
 
 
-def setup(bot):
-    bot.add_cog(Valorant(bot))
+async def setup(bot):
+    await bot.add_cog(Valorant(bot))

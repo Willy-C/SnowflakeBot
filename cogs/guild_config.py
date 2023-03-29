@@ -200,5 +200,5 @@ class GuildConfig(commands.Cog, name='Settings'):
             await ctx.send(f'Invite tracker will now output to: {mention}')
 
 
-def setup(bot):
-    bot.add_cog(GuildConfig(bot))
+async def setup(bot):
+    await bot.add_cog(GuildConfig(bot))

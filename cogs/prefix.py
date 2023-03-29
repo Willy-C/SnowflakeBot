@@ -123,5 +123,5 @@ class PrefixCog(commands.Cog, name='Prefix'):
             await message.channel.send(f'My prefix {here} is: {formatted}')
 
 
-def setup(bot):
-    bot.add_cog(PrefixCog(bot))
+async def setup(bot):
+    await bot.add_cog(PrefixCog(bot))

@@ -31,7 +31,7 @@ class OwnerCog(commands.Cog, name='Owner'):
         Accepts dot path. e.g: cogs.owner"""
 
         try:
-            self.bot.load_extension(cog)
+            await self.bot.load_extension(cog)
         except Exception as e:
             await ctx.send(f'<:redTick:602811779474522113> {type(e).__name__} - {e}')
         else:
@@ -43,7 +43,7 @@ class OwnerCog(commands.Cog, name='Owner'):
         Accepts dot path. e.g: cogs.owner"""
 
         try:
-            self.bot.unload_extension(cog)
+            await self.bot.unload_extension(cog)
         except Exception as e:
             await ctx.send(f'<:redTick:602811779474522113> {type(e).__name__} - {e}')
         else:
@@ -55,9 +55,9 @@ class OwnerCog(commands.Cog, name='Owner'):
         Accepts dot path e.g: cogs.owner"""
         try:
             try:
-                self.bot.reload_extension(cog)
+                await self.bot.reload_extension(cog)
             except commands.ExtensionNotLoaded:
-                self.bot.load_extension(cog)
+                await self.bot.load_extension(cog)
         except Exception as e:
             await ctx.send(f'<:redTick:602811779474522113> {type(e).__name__} - {e}')
         else:
@@ -328,5 +328,5 @@ class OwnerCog(commands.Cog, name='Owner'):
         return True
 
 
-def setup(bot):
-    bot.add_cog(OwnerCog(bot))
+async def setup(bot):
+    await bot.add_cog(OwnerCog(bot))

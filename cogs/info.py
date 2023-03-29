@@ -70,7 +70,7 @@ class InfoCog(commands.Cog, name='Info'):
 
         e.add_field(name='ID', value=guild.id)
         e.add_field(name='Owner', value=guild.owner)
-        e.add_field(name='Region', value=guild.region)
+        # e.add_field(name='Region', value=guild.region)
         e.add_field(name='Members', value=guild.member_count)
         e.add_field(name='Channels', value=f'{text_channels} Text | {voice_channels} Voice')
         e.add_field(name='Created', value=self.fmt_dt(guild.created_at))
@@ -187,7 +187,7 @@ class InfoCog(commands.Cog, name='Info'):
             ctx.local_handled = True
             return await ctx.send('Unable to find that person')
 
-    @commands.command()
+    @commands.command(hidden=True)
     async def msginfo(self, ctx, message: MessageConverter):
         """Get raw JSON of a message
         Can pass ID, channel-ID or jump url"""
@@ -236,5 +236,5 @@ class InfoCog(commands.Cog, name='Info'):
         await ctx.send(embed=e)
 
 
-def setup(bot):
-    bot.add_cog(InfoCog(bot))
+async def setup(bot):
+    await bot.add_cog(InfoCog(bot))

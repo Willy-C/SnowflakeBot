@@ -1,18 +1,28 @@
+from __future__ import annotations
+
 import io
 import random
 import datetime
 import unicodedata
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from asyncio import TimeoutError
 
+import aiohttp
 import discord
-import googletrans
 from PIL import Image
 from discord.ext import commands
 from discord import app_commands
 
 from utils import converters
 from utils.global_utils import last_image, is_image, upload_hastebin, bright_color
+
+if TYPE_CHECKING:
+    from main import SnowflakeBot
+    from utils.context import Context
+
+
+WOLFRAM_API = 'http://api.wolframalpha.com/v1/simple'
+DEEPAI_API = 'https://api.deepai.org/api'
 
 
 def make_more_jpeg(content):
@@ -23,23 +33,24 @@ def make_more_jpeg(content):
     return buffer
 
 
-translator = googletrans.Translator()
+async def do_translate(bot: SnowflakeBot, text: str) -> discord.Embed:
+    url = "https://api-free.deepl.com/v2/translate"
+
+    form = aiohttp.FormData()
+    form.add_field('auth_key', value=bot.config.DEEPL_KEY)
+    form.add_field('text', value=text)
+    form.add_field('target_lang', value='EN')
+
+    response = await bot.session.post(url, data=form)
+    data = await response.json()
+
+    lang = data['translations'][0]['detected_source_language']
+    translated = data['translations'][0]['text']
 
 
-async def do_translate(bot, text):
-    res = await bot.loop.run_in_executor(None, translator.translate, text)
-
-    embed = discord.Embed(title='Translated', colour=bright_color())
-    src = googletrans.LANGUAGES.get(res.src, '(auto-detected)').title()
-    dest = googletrans.LANGUAGES.get(res.dest, 'Unknown').title()
-    original = res.origin if len(
-        res.origin) < 1024 else f'[Text too long to send, uploaded instead]({await upload_hastebin(bot, res.origin)})'
-    translated = res.text if len(
-        res.text) < 1024 else f'[Text too long to send, uploaded instead]({await upload_hastebin(bot, res.text)})'
-    embed.add_field(name=f'From {src}', value=original, inline=False)
-    embed.add_field(name=f'To {dest}', value=translated, inline=False)
-    if len(res.origin) > 1024 or len(res.text) > 1024:
-        embed.description = 'Text too long to send, uploaded instead'
+    embed = discord.Embed(title="Translation:", colour=bright_color())
+    embed.add_field(name=f'Source:', value=text, inline=False)
+    embed.add_field(name=f'Translated from {lang}:', value=translated, inline=False)
 
     return embed
 
@@ -60,10 +71,9 @@ async def translate_contextmenu(interaction: discord.Interaction, message: disco
 class GeneralCog(commands.Cog, name='General'):
     def __init__(self, bot):
         self.bot = bot
-        self.translator = translator
 
     @commands.command(name='avatar', aliases=['ava', 'pfp'])
-    async def get_avatar(self, ctx, *, user: converters.CaseInsensitiveMember = None):
+    async def get_avatar(self, ctx: Context, *, user: converters.CaseInsensitiveMember = None):
         """Retrieves the avatar of a user.
         Defaults to author if no user is provided."""
         user = user or ctx.author
@@ -87,7 +97,7 @@ class GeneralCog(commands.Cog, name='General'):
 
     @commands.command()
     @commands.bot_has_guild_permissions(manage_webhooks=True)
-    async def quote(self, ctx, user: converters.CaseInsensitiveMember, *, message):
+    async def quote(self, ctx: Context, user: converters.CaseInsensitiveMember, *, message: str):
         """Send a message as someone else
         Requires manage webhooks permission"""
         webhook = discord.utils.get(await ctx.channel.webhooks(),
@@ -106,7 +116,7 @@ class GeneralCog(commands.Cog, name='General'):
             pass
 
     @commands.command(name='poll')
-    async def create_poll(self, ctx, *questions_and_choices: str):
+    async def create_poll(self, ctx: Context, *questions_and_choices: str):
         """Makes a poll.
         Ex. %poll "question here" "answer 1" answer2 "answer 3"...
         " " Quotations only necessary if there are spaces.
@@ -139,7 +149,7 @@ class GeneralCog(commands.Cog, name='General'):
             await poll.add_reaction(emoji)
 
     @commands.command()
-    async def charinfo(self, ctx, *, characters: str):
+    async def charinfo(self, ctx: Context, *, characters: str):
         """Gives you information about character(s).
         Only up to 25 characters at a time.
         """
@@ -155,7 +165,7 @@ class GeneralCog(commands.Cog, name='General'):
         await ctx.send(msg)
 
     @commands.command(hidden=True)
-    async def eyes(self, ctx, msg: Optional[discord.Message]):
+    async def eyes(self, ctx: Context, msg: Optional[discord.Message]):
         """Send old eyes emoji (twemoji v2.2)
         or give a message ID to add reaction instead"""
         if msg:
@@ -214,7 +224,7 @@ class GeneralCog(commands.Cog, name='General'):
         await ctx.send(url)
 
     @commands.command()
-    async def translate(self, ctx, *, text: commands.clean_content=None):
+    async def translate(self, ctx: Context, *, text: commands.clean_content=None):
         """Translates a message to English using Google translate.
         If no message is given, I will try and find the last message with text or use the replied message if available"""
         if text is None:
@@ -289,12 +299,72 @@ class GeneralCog(commands.Cog, name='General'):
             except discord.HTTPException:
                 pass
 
+    @commands.command(name='wolframalpha', aliases=['wolfram', 'wa', 'math', 'solve'])
+    async def wolframalpha(self, ctx: Context, *, query: str):
+        """Query WolframAlpha"""
+        wolfram_payload = {
+            'appid': self.bot.config.WOLFRAM_APP_ID,
+            'i': query,
+            'layout': 'labelbar',
+            'background': 'black',
+            'foreground': 'white',
+            'width': '800',
+            'fontsize': '22',
+            'units': 'metric',
+        }
+
+        async with ctx.typing():
+            async with self.bot.session.get(WOLFRAM_API, params=wolfram_payload) as resp:
+                # https://products.wolframalpha.com/simple-api/documentation
+                if resp.status in (400, 501):
+                    return await ctx.reply('Invalid query')
+                data = io.BytesIO(await resp.read())
+
+        e = discord.Embed(color=bright_color(), timestamp=discord.utils.utcnow())
+        e.set_image(url='attachment://response.png')
+        e.set_footer(text=f'Query: {query[:30] + "..." if len(query)>30 else query}')
+        await ctx.reply(embed=e, file=discord.File(data, filename='response.png'), mention_author=False)
+        await ctx.tick()
+
+    @commands.command(hidden=True)
+    async def upscale(self, ctx, url=None):
+        """Upscale an image using waifu2x"""
+        url = url or await last_image(ctx)
+        if url is None:
+            return await ctx.send('Unable to find an image')
+        if not await is_image(ctx, url):
+            return await ctx.send('That is not a valid image url')
+        data = {
+            'image': url
+        }
+        HEADERS = {'api-key': self.bot.config.DEEPAI_API_KEY}
+        async with self.bot.session.post(DEEPAI_API+'/waifu2x', data=data, headers=HEADERS) as resp:
+            jdata = await resp.json()
+            img_url = jdata.get('output_url')
+        if img_url is None:
+            return await ctx.send('Failed')
+        e = discord.Embed(colour=bright_color())
+        e.set_image(url=img_url)
+        e.set_author(name='Upscale', url=img_url)
+        await ctx.send(embed=e)
+
+    @commands.command(hidden=True)
+    async def lastimage(self, ctx):
+        """Get the last image in the channel"""
+        url = await last_image(ctx)
+        if url is None:
+            return await ctx.send('Unable to find an image')
+        e = discord.Embed(colour=bright_color())
+        e.set_image(url=url)
+        await ctx.send(embed=e)
+
+
 
 def to_emoji(c):
     base = 0x1f1e6
     return chr(base + c)
 
 
-def setup(bot):
-    bot.add_cog(GeneralCog(bot))
+async def setup(bot):
+    await bot.add_cog(GeneralCog(bot))
     bot.tree.add_command(translate_contextmenu)

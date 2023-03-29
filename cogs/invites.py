@@ -67,5 +67,5 @@ class InviteTracker(commands.Cog, name='Invites'):
         return {k: dict(v) if isinstance(v, defaultdict) else v for (k, v) in self.cached_invites.items()}
 
 
-def setup(bot):
-    bot.add_cog(InviteTracker(bot))
+async def setup(bot):
+    await bot.add_cog(InviteTracker(bot))

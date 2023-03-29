@@ -105,7 +105,7 @@ class BlackJackView(discord.ui.View):
             return False
 
     @discord.ui.button(label='Hit', style=discord.ButtonStyle.green)
-    async def hit(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def hit(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.double.disabled = True
         self.surrender.disabled = True
         self.choice = PlayerChoice.HIT
@@ -120,7 +120,7 @@ class BlackJackView(discord.ui.View):
             self.stop()
 
     @discord.ui.button(label='Stand', style=discord.ButtonStyle.red)
-    async def stand(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def stand(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         self.choice = PlayerChoice.STAND
         self.game.save_choice(self.choice)
@@ -128,7 +128,7 @@ class BlackJackView(discord.ui.View):
         self.stop()
 
     @discord.ui.button(label='Double', style=discord.ButtonStyle.blurple)
-    async def double(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def double(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not self.game.is_betting:
             await interaction.response.send_message(f'You are not betting!',
                                                     ephemeral=True)
@@ -151,7 +151,7 @@ class BlackJackView(discord.ui.View):
         self.stop()
 
     @discord.ui.button(label='Surrender')
-    async def surrender(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def surrender(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not self.game.is_betting:
             await interaction.response.send_message(f'You are not betting!',
                                                     ephemeral=True)
@@ -163,7 +163,7 @@ class BlackJackView(discord.ui.View):
 
 
     @discord.ui.button(label='Help', style=discord.ButtonStyle.grey, row=1)
-    async def help(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def help(self, interaction: discord.Interaction, button: discord.ui.Button):
         help_message = '''
         __**Blackjack**__
         The main goal is to have your hand's value be closer to 21 than the dealer's, without going over 21.
@@ -211,7 +211,7 @@ class PlayAgainView(discord.ui.View):
             return False
 
     @discord.ui.button(label='Play Again')
-    async def play_again(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def play_again(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.message:
             await interaction.response.edit_message(embed=self.embed, view=None)
         else:

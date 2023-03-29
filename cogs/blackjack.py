@@ -1,16 +1,28 @@
+from __future__ import annotations
+
 import random
+from typing import TYPE_CHECKING
 
 from discord.ext import commands
 
 import data.blackjackgame as bj
-from utils.context import Context
 from utils.converters import MoneyConverter
 from utils.views import TWOMView
 from utils.currency import get_balance, increase_balance, decrease_balance
 
+if TYPE_CHECKING:
+    from utils.context import Context
+
 
 class DecksFlag(commands.FlagConverter):
     decks: int = 6
+
+
+def antispam_cooldown(ctx: Context) -> commands.Cooldown | None:
+    if ctx.author == ctx.bot.owner:
+        return None
+    if ctx.channel.id == 709264610200649741:
+        return commands.Cooldown(1, 1800)
 
 
 class Game(commands.Cog):
@@ -27,8 +39,13 @@ class Game(commands.Cog):
             await ctx.send('That is not a valid number')
             ctx.local_handled = True
 
+        elif isinstance(error, commands.CommandOnCooldown):
+            ctx.local_handled = True
+            await ctx.reply('<#885008948107833365>', delete_after=10)
+
     @commands.max_concurrency(1, per=commands.BucketType.user)
     @commands.command(aliases=['bj'], usage='<bet> [decks:6]')
+    @commands.dynamic_cooldown(antispam_cooldown, commands.BucketType.user)
     async def blackjack(self, ctx: Context, bet: MoneyConverter = 0, *, flag: DecksFlag):
         """Play Blackjack in chat
         You can pass a number to specify your bet
@@ -100,5 +117,5 @@ class Game(commands.Cog):
                 await increase_balance(ctx, ctx.author, amount)
 
 
-def setup(bot):
-    bot.add_cog(Game(bot))
+async def setup(bot):
+    await bot.add_cog(Game(bot))

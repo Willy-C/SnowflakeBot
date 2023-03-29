@@ -672,7 +672,7 @@ class ModCog(commands.Cog, name='Mod'):
         else:
             color = 0x55dd55
             title = 'New Member Join'
-            descr = discord.Embed.Empty
+            descr = None
 
         if member.guild.get_channel(config.get('join_ch')) is not None:
             join_channel = member.guild.get_channel(config.get('join_ch'))
@@ -747,6 +747,5 @@ class ModCog(commands.Cog, name='Mod'):
         await self.bot.pool.execute(query, before.guild.id, before.id)
 
 
-
-def setup(bot):
-    bot.add_cog(ModCog(bot))
+async def setup(bot):
+    await bot.add_cog(ModCog(bot))

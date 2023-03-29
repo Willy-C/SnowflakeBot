@@ -122,5 +122,5 @@ class MetaCog(commands.Cog, name='Meta'):
         await ctx.send(final_url)
 
 
-def setup(bot):
-    bot.add_cog(MetaCog(bot))
+async def setup(bot):
+    await bot.add_cog(MetaCog(bot))

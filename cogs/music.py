@@ -38,7 +38,7 @@ class Player(wavelink.Player):
         self.view = view
         self.text_channel: discord.TextChannel = ctx.channel
         self.looping: bool = False
-        self.volume = 25
+        self._volume = 25
         self._queue: asyncio.Queue = asyncio.Queue()
         # self._looping_queue: asyncio.Queue = asyncio.Queue()
         self._played: collections.deque = collections.deque(maxlen=10)
@@ -70,7 +70,7 @@ class Player(wavelink.Player):
 
     async def _player_loop(self):
         await self.ctx.bot.wait_until_ready()
-        await self.set_volume(self.volume)
+        await self.set_volume(self._volume)
 
         while True:
             self.next_event.clear()
@@ -113,7 +113,7 @@ class Player(wavelink.Player):
 
             embed.add_field(name='Video URL', value=f'[Click Here!]({track.uri})')
             embed.add_field(name='Queue Length', value=str(len(self.entries)))
-            embed.add_field(name='Volume', value=f'**`{self.volume}%`**')
+            embed.add_field(name='Volume', value=f'**`{self._volume}%`**')
             embed.add_field(name='Looping', value='ON' if self.looping else 'OFF')
 
             if self.size > 0:
@@ -626,5 +626,5 @@ class Music(commands.Cog):
         await ctx.reply(embed=e, allowed_mentions=discord.AllowedMentions.none())
 
 
-def setup(bot):
-    bot.add_cog(Music(bot))
+async def setup(bot):
+    await bot.add_cog(Music(bot))
