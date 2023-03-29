@@ -1,14 +1,19 @@
-from typing import List, Tuple, Optional
+from __future__ import annotations
+
+from typing import List, Tuple, Optional, TYPE_CHECKING
 
 import rapidfuzz
 from discord.ext import commands
 
-from utils.context import Context
 from utils.global_utils import copy_context
+
+if TYPE_CHECKING:
+    from utils.context import Context
+    from main import SnowflakeBot
 
 
 class Levenshtein(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: SnowflakeBot):
         self.bot = bot
 
     async def get_all_runnable_commands(self, ctx: Context, include_aliases=False) -> List[str]:
@@ -41,7 +46,7 @@ class Levenshtein(commands.Cog):
 
         return rapidfuzz.process.extractOne(ctx.invoked_with,
                                             runnable_commands,
-                                            scorer=rapidfuzz.string_metric.levenshtein,
+                                            scorer=rapidfuzz.distance.Levenshtein.distance,
                                             score_cutoff=2)
 
     @commands.Cog.listener()
@@ -64,7 +69,7 @@ class Levenshtein(commands.Cog):
             await self.bot.invoke(corrected_ctx)
 
 
-def setup(bot):
-    bot.add_cog(Levenshtein(bot))
+async def setup(bot: SnowflakeBot):
+    await bot.add_cog(Levenshtein(bot))
 
 
