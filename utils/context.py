@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import io
-import traceback
-import contextlib
-from typing import Optional
+import secrets
+from typing import Optional, TYPE_CHECKING
 
 import discord
 from discord.ext import commands
+
+if TYPE_CHECKING:
+    from aiohttp import ClientSession
+    from main import SnowflakeBot
 
 
 class ConfirmView(discord.ui.View):
@@ -34,50 +37,48 @@ class ConfirmView(discord.ui.View):
             await self.message.delete()
 
     @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
-    async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.choice = True
         await interaction.response.defer()
         if self.delete_after:
-            await interaction.delete_original_message()
+            await interaction.delete_original_response()
         self.stop()
 
     @discord.ui.button(label='Cancel', style=discord.ButtonStyle.red)
-    async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.choice = False
         await interaction.response.defer()
         if self.delete_after:
-            await interaction.delete_original_message()
+            await interaction.delete_original_response()
         self.stop()
 
 
 class Context(commands.Context):
+    bot: SnowflakeBot
 
     @property
-    def session(self):
+    def session(self) -> ClientSession:
         return self.bot.session
 
     @discord.utils.cached_property
-    def replied_message(self):
+    def replied_message(self) -> discord.Message | None:
         ref = self.message.reference
         if ref and isinstance(ref.resolved, discord.Message):
             return ref.resolved
-        return None
 
     @discord.utils.cached_property
-    def replied_reference(self):
+    def replied_reference(self) -> discord.MessageReference | None:
         if message := self.replied_message:
             return message.to_reference()
-        return None
 
     @property
-    def voice_channel(self) -> Optional[discord.VoiceChannel]:
+    def voice_channel(self) -> discord.VoiceChannel | None:
         """
         Returns VoiceChannel of ctx.author if available
         """
         if isinstance(self.author, discord.Member):
             if self.author.voice:
                 return self.author.voice.channel
-        return None
 
     async def confirm_prompt(self, msg, *, timeout=60, delete_after=True):
         """
@@ -85,58 +86,66 @@ class Context(commands.Context):
         Returns True if confirmed, False if cancelled, None if timed out
         """
         view = ConfirmView(context=self, timeout=timeout, author=self.author, delete_after=delete_after)
-        view.message = await self.send(msg, view=view)
+        view.message = await self.send(msg, view=view, **kwargs)
         await view.wait()
         return view.choice
 
-    async def tick(self, value=True, reaction=True):
-        emojis = {True:  '<:greenTick:602811779835494410>',
+    async def tick(self, value=True, reaction=True) -> str | None:
+        emojis = {True: '<:greenTick:602811779835494410>',
                   False: '<:redTick:602811779474522113>',
-                  None:  '<:greyTick:602811779810328596>'}
+                  None: '<:greyTick:602811779810328596>'}
         emoji = emojis.get(value, '<:redTick:602811779474522113>')
         if reaction:
-            with contextlib.suppress(discord.HTTPException):
+            try:
                 await self.message.add_reaction(emoji)
+            except discord.HTTPException:
+                pass
         else:
             return emoji
 
-    async def silent_delete(self, message=None):
+    async def silent_delete(self, message: discord.Message =None) -> None:
         message = message or self.message
-        with contextlib.suppress(discord.HTTPException):
+        try:
             await message.delete()
-
-    async def _upload_content(self, content, url='https://mystb.in'):
-        async with self.bot.session.post(f'{url}/documents', data=content.encode('utf-8')) as post:
-            return f'{url}/{(await post.json())["key"]}'
-
-    async def upload_hastebin(self, content, url='https://mystb.in'):
-        """
-        Uploads content to hastebin and return the url
-        """
-        try:
-            return await self._upload_content(content, url)
-        except Exception:
-            traceback.print_exc()
-
-    async def safe_send(self, content, filename='message_too_long.txt', upload_file=False, **kwargs):
-        """
-        Sends to ctx.channel if possible, send text file if too long
-        pass upload_file=True to force output to be a file even if content < 2000 characters
-        """
-        if len(content) <= 2000 and not upload_file:
-            return await self.send(content, **kwargs)
-        else:
-            fp = io.BytesIO(content.encode())
-            files = [discord.File(fp, filename=filename)]
-            files.extend(kwargs.pop('file', []))
-            files.extend(kwargs.pop('files', []))
-            return await self.send(files=files, **kwargs)
-
-    async def reply(self, content: Optional[str] = None, **kwargs):
-        try:
-            return await super().reply(content, **kwargs)
         except discord.HTTPException:
-            try:
-                return await self.send(content, **kwargs)
-            except discord.HTTPException:
-                return
+            pass
+
+    async def send(
+            self,
+            content: Optional[str] = None,
+            *,
+            mystbin: bool = False,
+            filetype: str = 'txt',
+            **kwargs,
+    ) -> discord.Message:
+        """Send but if the content is too long, it will be uploaded to mystbin or a file."""
+        content = str(content) if content is not None else None
+
+        if content and len(content) >= 2000:
+            if mystbin:
+                password = secrets.token_urlsafe(8)
+                paste = await self.bot.mb_client.create_paste(
+                    filename=f'output.{filetype}',
+                    content=content,
+                    password=password,
+                )
+
+                return await super().send(f'Output too long, uploaded to {paste.url} instead.\n'
+                                          f'Password: `{password}`', **kwargs)
+            else:
+                fp = io.BytesIO(content.encode())
+                files = [discord.File(fp, filename=f'output.{filetype}')]
+
+                files.extend(kwargs.pop('file', []))
+                files.extend(kwargs.pop('files', []))
+
+                return await super().send(files=files, **kwargs)
+
+        return await super().send(content, **kwargs)
+
+    async def reply(self, content: Optional[str] = None, **kwargs) -> discord.Message:
+        """Reply but send regular message if no reply is possible"""
+        if self.interaction is None:
+            return await self.send(content, reference=self.message.to_reference(fail_if_not_exists=False), **kwargs)
+        else:
+            return await self.send(content, **kwargs)
