@@ -12,6 +12,7 @@ PUBLIC_GENERAL_CHANNEL = 876381841471471656
 VOICE_TEXT_CHANNEL = 868639752105132032
 BOT_CHANNEL = 709277913471647824
 PINS_CHANNEL = 824496525144096768
+GAS_ROLE = 1046676933527744634
 
 SPECIAL_ROLES = [803011517028237332,  # MOVIE ROLE
                  803009777830854677,  # League Role
@@ -129,7 +130,7 @@ class Gatekeep(commands.Cog):
                            username=original.author.display_name,
                            avatar_url=original.author.display_avatar)
 
-    @commands.Cog.listener('on_message')
+    # @commands.Cog.listener('on_message')
     async def echo_pings(self, message: discord.Message):
         if message.channel.id != PRIVATE_GENERAL_CHANNEL:
             return
@@ -210,6 +211,20 @@ class Gatekeep(commands.Cog):
         await ctx.reply(msg, allowed_mentions=discord.AllowedMentions.none())
         await ctx.tick()
 
+    @commands.command(hidden=True)
+    async def gas(self, ctx):
+        r = ctx.guild.get_role(GAS_ROLE)
+        if not r:
+            await ctx.send('Unable to find role!')
+            return
 
-def setup(bot):
-    bot.add_cog(Gatekeep(bot))
+        if ctx.author.get_role(GAS_ROLE):
+            await ctx.author.remove_roles(r)
+            await ctx.reply('Removed Gas role', mention_author=False)
+        else:
+            await ctx.author.add_roles(r)
+            await ctx.reply('Added Gas role', mention_author=False)
+
+
+async def setup(bot):
+    await bot.add_cog(Gatekeep(bot))
