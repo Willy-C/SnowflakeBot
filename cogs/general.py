@@ -47,7 +47,6 @@ async def do_translate(bot: SnowflakeBot, text: str) -> discord.Embed:
     lang = data['translations'][0]['detected_source_language']
     translated = data['translations'][0]['text']
 
-
     embed = discord.Embed(title="Translation:", colour=bright_color())
     embed.add_field(name=f'Source:', value=text, inline=False)
     embed.add_field(name=f'Translated from {lang}:', value=translated, inline=False)
