@@ -302,7 +302,7 @@ class GeneralCog(commands.Cog, name='General'):
     async def wolframalpha(self, ctx: Context, *, query: str):
         """Query WolframAlpha"""
         wolfram_payload = {
-            'appid': self.bot.config.WOLFRAM_APP_ID,
+            'appid': self.bot.config.WOLFRAM_ALPHA_APPID,
             'i': query,
             'layout': 'labelbar',
             'background': 'black',
