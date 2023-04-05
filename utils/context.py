@@ -110,10 +110,10 @@ class Context(commands.Context):
         else:
             return emoji
 
-    async def silent_delete(self, message: discord.Message =None) -> None:
+    async def silent_delete(self, message: Optional[discord.Message] = None, *, delay: Optional[float] = None) -> None:
         message = message or self.message
         try:
-            await message.delete()
+            await message.delete(delay=delay)
         except discord.HTTPException:
             pass
 
