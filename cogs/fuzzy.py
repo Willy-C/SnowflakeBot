@@ -11,6 +11,9 @@ if TYPE_CHECKING:
     from utils.context import Context
     from main import SnowflakeBot
 
+# Ignore if these commands are used
+BLACKLISTED_COMMANDS = ('play', )
+
 
 class Levenshtein(commands.Cog):
     def __init__(self, bot: SnowflakeBot):
@@ -52,7 +55,7 @@ class Levenshtein(commands.Cog):
     @commands.Cog.listener()
     async def on_command_error(self, ctx: Context, error: commands.CommandError):
         if isinstance(error, commands.CommandNotFound):
-            if len(ctx.invoked_with) < 3:
+            if len(ctx.invoked_with) < 3 or ctx.invoked_with in BLACKLISTED_COMMANDS:
                 return
             correction = await self.correct_command_name(ctx)
             if not correction:
