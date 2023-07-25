@@ -245,15 +245,26 @@ class ReminderCog(commands.Cog, name='Reminders'):
         try:
             await self.bot.wait_for('presence_update', check=check, timeout=129600)
         except asyncio.TimeoutError:
-            await ctx.message.add_reaction('<:redTick:602811779474522113>')
+            try:
+                await ctx.message.add_reaction('<:redTick:602811779474522113>')
+            except discord.NotFound:
+                return
         else:
+            try:
+                await ctx.message.add_reaction('<:greenTick:602811779835494410>')
+            except discord.NotFound:
+                # We will just return and cancel the reminder if original message was deleted
+                return
+
             view = discord.ui.View()
             view.add_item(discord.ui.Button(label='Go to original message', url=ctx.message.jump_url))
             await ctx.send(f'{ctx.author.mention} desktop reminder from {human_timedelta(start)}: {reminder}',
                            view=view)
-            await ctx.message.add_reaction('<:greenTick:602811779835494410>')
         finally:
-            await ctx.message.remove_reaction('<a:typing:559157048919457801>', ctx.me)
+            try:
+                await ctx.message.remove_reaction('<a:typing:559157048919457801>', ctx.me)
+            except discord.HTTPException:
+                pass
 
 
 async def setup(bot):
