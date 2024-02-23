@@ -98,9 +98,16 @@ class Context(commands.Context):
         return view.choice
 
     async def tick(self, value=True, reaction=True) -> str | None:
-        emojis = {True: '<:greenTick:602811779835494410>',
-                  False: '<:redTick:602811779474522113>',
-                  None: '<:greyTick:602811779810328596>'}
+        """
+        React to the message with green, red or grey tick depending on the value
+        If reaction is False, return the emoji instead of reacting
+        """
+        emojis = {
+            True: '<:greenTick:602811779835494410>',
+            False: '<:redTick:602811779474522113>',
+            None: '<:greyTick:602811779810328596>'
+        }
+
         emoji = emojis.get(value, '<:redTick:602811779474522113>')
         if reaction:
             try:
@@ -111,6 +118,9 @@ class Context(commands.Context):
             return emoji
 
     async def silent_delete(self, message: Optional[discord.Message] = None, *, delay: Optional[float] = None) -> None:
+        """
+        Delete a message, but ignores discord.HTTPException
+        """
         message = message or self.message
         try:
             await message.delete(delay=delay)
@@ -123,12 +133,13 @@ class Context(commands.Context):
             *,
             mystbin: bool = False,
             filetype: str = 'txt',
+            force_upload: bool = False,
             **kwargs,
     ) -> discord.Message:
         """Send but if the content is too long, it will be uploaded to mystbin or a file."""
         content = str(content) if content is not None else None
 
-        if content and len(content) >= 2000:
+        if content and (len(content) >= 2000 or force_upload):
             if mystbin:
                 password = secrets.token_urlsafe(8)
                 paste = await self.bot.mb_client.create_paste(
@@ -151,7 +162,7 @@ class Context(commands.Context):
         return await super().send(content, **kwargs)
 
     async def reply(self, content: Optional[str] = None, **kwargs) -> discord.Message:
-        """Reply but send regular message if no reply is possible"""
+        """Reply but send regular message if message was deleted or discord couldn't fetch it"""
         if self.interaction is None:
             return await self.send(content, reference=self.message.to_reference(fail_if_not_exists=False), **kwargs)
         else:
