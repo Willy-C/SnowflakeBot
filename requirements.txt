@@ -14,3 +14,4 @@ humanize
 psutil
 yt-dlp
 git+https://github.com/PythonistaGuild/mystbin.py
+lru-dict
