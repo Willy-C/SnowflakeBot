@@ -1,24 +1,27 @@
-import re
 import traceback
+from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import commands
 
-from utils.context import Context
 from utils.global_utils import upload_hastebin
 from utils.errors import BlacklistedUser, TimezoneNotFound, NoVoiceChannel
 
+if TYPE_CHECKING:
+    from main import SnowflakeBot
+    from utils.context import Context
+
 
 class CommandErrorHandler(commands.Cog):
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
-        self.owner = None
-        bot.on_error = self.on_error
-        bot.loop.create_task(self.set_owner())
 
-    async def set_owner(self):
-        await self.bot.wait_until_ready()
-        self.owner = (await self.bot.application_info()).owner
+    def __init__(self, bot: SnowflakeBot):
+        self.bot: SnowflakeBot = bot
+        bot.on_error = self.on_error
+        self._old_tree_error = bot.tree.on_error
+        bot.tree.on_error = self.on_app_command_error
+
+    async def cog_unload(self) -> None:
+        self.bot.tree.on_error = self._old_tree_error
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: Context, error: commands.CommandError):
@@ -72,7 +75,7 @@ class CommandErrorHandler(commands.Cog):
         elif isinstance(error, commands.CheckFailure):
             return await ctx.send('Sorry, you cannot use this command')
 
-        if self.owner is None:
+        if self.bot.owner is None:
             return
 
         # Unhandled error, so just return the traceback
@@ -87,23 +90,44 @@ class CommandErrorHandler(commands.Cog):
                           color=discord.Color.red())
         e.set_author(name=ctx.author, icon_url=ctx.author.display_avatar.url)
 
-        await self.owner.send(embed=e)
+        await self.bot.owner.send(embed=e)
         fmt = "".join(tb)
         if len(fmt) >= 1980:
             url = await upload_hastebin(ctx, fmt)
-            await self.owner.send(f'Traceback too long. {url}')
+            await self.bot.owner.send(f'Traceback too long. {url}')
         else:
-            await self.owner.send(f'```py\n{fmt}```')
+            await self.bot.owner.send(f'```py\n{fmt}```')
 
     async def on_error(self, event, *args, **kwargs):
         await self.bot.wait_until_ready()
-        await self.owner.send(f'An error occurred in event `{event}`')
+        await self.bot.owner.send(f'An error occurred in event `{event}`')
         tb = "".join(traceback.format_exc())
         if len(tb) >= 1980:
             url = await upload_hastebin(self.bot, tb)
-            await self.owner.send(f'Traceback too long. {url}')
+            await self.bot.owner.send(f'Traceback too long. {url}')
         else:
-            await self.owner.send(f'```py\n{tb}```')
+            await self.bot.owner.send(f'```py\n{tb}```')
+
+    async def on_app_command_error(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError, /) -> None:
+        e = discord.Embed(title="App Command Error", colour=0xA32952)
+        e.add_field(name="Command", value=(interaction.command and interaction.command.name) or "No command found.")
+        e.add_field(name="Author", value=interaction.user, inline=False)
+        channel = interaction.channel
+        guild = interaction.guild
+        location_fmt = f"Channel: {channel.name} ({channel.id})"  # type: ignore
+        if guild:
+            location_fmt += f"\nGuild: {guild.name} ({guild.id})"
+        e.add_field(name="Location", value=location_fmt, inline=True)
+
+        await self.bot.owner.send(embed=e)
+
+        tb = traceback.format_exception(type(error), error, error.__traceback__)
+        fmt = "".join(tb)
+        if len(fmt) >= 1980:
+            url = await upload_hastebin(self.bot, fmt)
+            await self.bot.owner.send(f'Traceback too long. {url}')
+        else:
+            await self.bot.owner.send(f'```py\n{fmt}```')
 
 
 async def setup(bot):
