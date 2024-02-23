@@ -1,5 +1,6 @@
 import json
 import datetime
+from itertools import groupby
 from typing import Union
 
 import discord
@@ -20,6 +21,10 @@ class InfoCog(commands.Cog, name='Info'):
             return 'N/A'
         return f'{format_dt(dt, "f")} ({human_timedelta(dt)})'
 
+
+    def remove_consec_dupes(self, iterable):
+        return [k for k, _ in groupby(iterable)]
+
     async def get_join_date(self, member: discord.Member):
         query = '''SELECT time
                    FROM first_join
@@ -30,24 +35,52 @@ class InfoCog(commands.Cog, name='Info'):
             return member.joined_at
         return record['time']
 
-    async def get_usernames(self, user: discord.User):
-        query = '''SELECT name, discrim
-                   FROM name_changes
-                   WHERE id = $1
-                   AND changed_at < (CURRENT_DATE + $2::interval) ORDER BY changed_at;'''
-        records = await self.bot.pool.fetch(query, user.id, datetime.timedelta(days=90))
-        fullnames = {f"{record['name']}#{record['discrim']}" for record in records}
-        return ', '.join(fullnames)
+    async def get_usernames(self, user: discord.User, full=False):
+        if full:
+            query = '''SELECT name, discrim
+                       FROM name_changes
+                       WHERE id = $1;'''
+            records = await self.bot.pool.fetch(query, user.id)
+        else:
+            query = '''SELECT name, discrim
+                       FROM name_changes
+                       WHERE id = $1
+                       AND changed_at < (CURRENT_DATE + $2::interval) ORDER BY changed_at;'''
+            records = await self.bot.pool.fetch(query, user.id, datetime.timedelta(days=90))
+        fullnames = [f"{record['name']}#{record['discrim']}" if record['discrim'] is not None else record['name'] for record in records]
+        return ', '.join(self.remove_consec_dupes(fullnames))
 
-    async def get_nicknames(self, member: discord.Member):
-        query = '''SELECT name
-                   FROM nick_changes
-                   WHERE id = $1
-                   AND guild = $2
-                   AND changed_at < (CURRENT_DATE + $3::interval) ORDER BY changed_at;'''
-        records = await self.bot.pool.fetch(query, member.id, member.guild.id, datetime.timedelta(days=90))
-        names = {record['name'] for record in records}
-        return ', '.join(names)
+    async def get_global_names(self, user: discord.User, full=False):
+        if full:
+            query = '''SELECT name
+                       FROM global_name_changes
+                       WHERE id = $1;'''
+            records = await self.bot.pool.fetch(query, user.id)
+        else:
+            query = '''SELECT name
+                       FROM global_name_changes
+                       WHERE id = $1
+                       AND changed_at < (CURRENT_DATE + $2::interval) ORDER BY changed_at;'''
+            records = await self.bot.pool.fetch(query, user.id, datetime.timedelta(days=90))
+        names = [record['name'] for record in records]
+        return ', '.join(self.remove_consec_dupes(names))
+
+    async def get_nicknames(self, member: discord.Member, full=False):
+        if full:
+            query = '''SELECT name
+                       FROM nick_changes
+                       WHERE id = $1
+                       AND guild = $2;'''
+            records = await self.bot.pool.fetch(query, member.id, member.guild.id)
+        else:
+            query = '''SELECT name
+                       FROM nick_changes
+                       WHERE id = $1
+                       AND guild = $2
+                       AND changed_at < (CURRENT_DATE + $3::interval) ORDER BY changed_at;'''
+            records = await self.bot.pool.fetch(query, member.id, member.guild.id, datetime.timedelta(days=90))
+        names = [record['name'] for record in records]
+        return ', '.join(self.remove_consec_dupes(names))
 
     @commands.command(name='serverinfo', aliases=['guildinfo'])
     @commands.guild_only()
@@ -103,7 +136,8 @@ class InfoCog(commands.Cog, name='Info'):
             nicks = await self.get_nicknames(user)
             if nicks:
                 e.add_field(name='Previous Nicknames', value=nicks)
-        e.add_field(name='Previous names', value=(await self.get_usernames(user) or str(user)))
+        e.add_field(name='Previous usernames', value=(await self.get_usernames(user) or str(user)))
+        e.add_field(name='Previous global usernames', value=(await self.get_global_names(user) or 'None'))
 
         await ctx.send(embed=e)
 
@@ -125,16 +159,21 @@ class InfoCog(commands.Cog, name='Info'):
         await ctx.send(embed=e)
 
     @commands.command()
-    async def names(self, ctx, member: Union[CaseInsensitiveMember, CachedUserID] = None):
+    async def usernames(self, ctx, member: Union[CaseInsensitiveMember, CachedUserID] = None):
         member = member or ctx.author
-        query = '''SELECT name, discrim
-                   FROM name_changes
-                   WHERE id = $1
-                   ORDER BY changed_at'''
-        records = await self.bot.pool.fetch(query, member.id)
-        names = {f"{record['name']}#{record['discrim']}" for record in records}
-        await ctx.send(f'Names of {member}:\n'
-                       f'{", ".join(names)}')
+        names = await self.get_usernames(member, full=True)
+        if not names:
+            return await ctx.send(f'Unable to find names for {member.mention}', allowed_mentions=discord.AllowedMentions.none())
+
+        await ctx.send(f'Names of {member.mention}:\n{names}', allowed_mentions=discord.AllowedMentions.none())
+
+    @commands.command()
+    async def globalnames(self, ctx, member: Union[CaseInsensitiveMember, CachedUserID] = None):
+        member = member or ctx.author
+        names = await self.get_global_names(member, full=True)
+        if not names:
+            return await ctx.send(f'Unable to find global names for {member.mention}', allowed_mentions=discord.AllowedMentions.none())
+        await ctx.send(f'Global names of {member.mention}:\n{names}', allowed_mentions=discord.AllowedMentions.none())
 
     @commands.command()
     @commands.guild_only()
@@ -147,7 +186,7 @@ class InfoCog(commands.Cog, name='Info'):
                    ORDER BY changed_at;'''
         records = await self.bot.pool.fetch(query, member.id, ctx.guild.id)
         if not records:
-            return await ctx.send(f'Unable to find nicknames for {member} in this server')
+            return await ctx.send(f'Unable to find nicknames for {member.mention} in this server', allowed_mentions=discord.AllowedMentions.none())
         paginator = commands.Paginator(suffix='', prefix='')
         paginator.add_line(f'Nicknames of {member.mention} on `{ctx.guild}`:')
 
@@ -181,7 +220,7 @@ class InfoCog(commands.Cog, name='Info'):
             await ctx.send(f'Count: {total_count} ({unique_count} unique)')
 
     @userinfo.error
-    @names.error
+    @usernames.error
     async def userinfo_error(self, ctx, error):
         if isinstance(error, commands.errors.BadUnionArgument):
             ctx.local_handled = True

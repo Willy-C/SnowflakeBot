@@ -30,7 +30,8 @@ class Tracker(commands.Cog):
                                       1: 'grey',
                                       2: 'green',
                                       3: 'orange',
-                                      4: 'red'}
+                                      4: 'red',
+                                      5: 'pink'}
 
     async def add_join_dates(self):
         await self.bot.wait_until_ready()
@@ -62,7 +63,7 @@ class Tracker(commands.Cog):
             if not user.avatar:
                 _hash = self._default_avatar_names.get(int(user.display_avatar.key))
                 if _hash is None:
-                    print(f'Unknown default avatar: {user.avatar.key} | {user.avatar}')
+                    print(f'Unknown default avatar: {user.display_avatar.key} | {user.display_avatar}')
                     continue
 
             else:
@@ -75,6 +76,32 @@ class Tracker(commands.Cog):
 
     async def add_names(self):
         await self.bot.wait_until_ready()
+        name_data = '''SELECT id, name, discrim FROM name_changes;'''
+        name_records = await self.bot.pool.fetch(name_data)
+        name_data = {(record['id'], record['name'], record['discrim']) for record in name_records}
+        new_name = 0
+
+        global_name_data = '''SELECT id, name FROM global_name_changes;'''
+        global_name_records = await self.bot.pool.fetch(global_name_data)
+        global_name_data = {(record['id'], record['name']) for record in global_name_records}
+
+        new_global_name = 0
+        for user in self.bot.users:
+            if user.discriminator != '0':
+                if (user.id, user.name, user.discriminator) not in name_data:
+                    await self.log_username(user)
+                    new_name += 1
+            else:
+                if (user.id, user.name, None) not in name_data:
+                    await self.log_username(user)
+                    new_name += 1
+            if (user.id, user.global_name) not in global_name_data:
+                await self.log_global_name(user)
+                new_global_name += 1
+
+        print(f'Added {new_name} users\' names')
+        print(f'Added {new_global_name} users\' global names')
+
         query = '''SELECT DISTINCT id FROM name_changes'''
         records = await self.bot.pool.fetch(query)
         data = {record['id'] for record in records}
@@ -96,15 +123,16 @@ class Tracker(commands.Cog):
         except UniqueViolationError:
             pass
 
-        try:
+        username_check = '''SELECT * FROM name_changes WHERE id = $1 LIMIT 1;'''
+        record = await self.bot.pool.fetchrow(username_check, member.id)
+        if record is None:
             await self.log_username(member)
-        except UniqueViolationError:
-            pass
+            await self.log_global_name(member)
 
-        try:
+        avatar_check = '''SELECT * FROM avatar_changes WHERE id = $1 LIMIT 1;'''
+        record = await self.bot.pool.fetchrow(avatar_check, member.id)
+        if record is None:
             await self.log_avatar(member)
-        except UniqueViolationError:
-            pass
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
@@ -122,8 +150,6 @@ class Tracker(commands.Cog):
                 pass
             except Exception:
                 traceback.print_exc()
-            if member.nick:
-                await self.log_nickname(member)
             if member.id not in ava_ids:
                 await self.log_avatar(member)
                 await asyncio.sleep(2)
@@ -137,6 +163,8 @@ class Tracker(commands.Cog):
     async def on_user_update(self, before: discord.User, after: discord.User):
         if before.name != after.name or before.discriminator != after.discriminator:
             await self.log_username(after)
+        if before.global_name != after.global_name:
+            await self.log_global_name(after)
         if before.avatar != after.avatar:
             await asyncio.sleep(2)
             for i in range(3):
@@ -155,9 +183,21 @@ class Tracker(commands.Cog):
         await self.bot.pool.execute(query, member.id, member.guild.id, member.nick, datetime.utcnow())
 
     async def log_username(self, user: discord.User):
-        query = '''INSERT INTO name_changes(id, name, discrim, changed_at)
-                   VALUES($1, $2, $3, $4);'''
-        await self.bot.pool.execute(query, user.id, user.name, user.discriminator, datetime.utcnow())
+        if user.discriminator == '0':
+            query = '''INSERT INTO name_changes(id, name, changed_at)
+                     VALUES($1, $2, $3);'''
+            await self.bot.pool.execute(query, user.id, user.name, datetime.utcnow())
+        else:
+            query = '''INSERT INTO name_changes(id, name, discrim, changed_at)
+                       VALUES($1, $2, $3, $4);'''
+            await self.bot.pool.execute(query, user.id, user.name, user.discriminator, datetime.utcnow())
+
+
+    async def log_global_name(self, user: discord.User):
+        query = '''INSERT INTO global_name_changes(id, name, changed_at)
+                VALUES($1, $2, $3);'''
+        await self.bot.pool.execute(query, user.id, user.global_name, datetime.utcnow())
+
 
     async def log_avatar(self, user: discord.User):
         if user.avatar:
