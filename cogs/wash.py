@@ -41,12 +41,14 @@ class WASHCog(commands.Cog):
         self.last_msg = message.created_at
 
     async def send_alert(self, message: discord.Message) -> None:
-        if message.mentions or message.flags.silent:
+        if message.mentions:
             return
-        await message.channel.send(f'<@&{NOTIFY_ROLE}> A conversation just started!',
-                                   delete_after=30,
-                                   allowed_mentions=discord.AllowedMentions(roles=True)
-                                   )
+        await message.channel.send(
+            f'<@&{NOTIFY_ROLE}> A conversation just started!',
+            delete_after=30,
+            allowed_mentions=discord.AllowedMentions(roles=True),
+            silent=message.flags.silent
+        )
 
     # If a new conversation started, then ping
     # new conversation = new message where the previous message is over `self._timeout` seconds old
