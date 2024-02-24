@@ -1,131 +1,264 @@
+from __future__ import annotations
+
+import asyncio
 import datetime
-from typing import Union
+import zoneinfo
+from typing import TYPE_CHECKING, NamedTuple, Optional
 
 import discord
-from pytz import utc
+from discord import app_commands
 from discord.ext import commands
+from lxml import etree
 
-from utils.global_utils import get_user_timezone
-from utils.converters import CaseInsensitiveMember, Timezone, CaseInsensitiveChannel, CaseInsensitiveUser
-from utils.time import format_dt
+from utils.cache import cache
+from utils.fuzzy import finder
 
 
-class TimezoneCog(commands.Cog, name='Timezones'):
-    def __init__(self, bot):
-        self.bot = bot
+if TYPE_CHECKING:
+    from main import SnowflakeBot
+    from utils.context import Context
 
-    @commands.group(name='timezone', aliases=['tz'], invoke_without_command=True, case_insensitive=True, usage='<command>')
-    async def tz_group(self, ctx, *, arg: Union[CaseInsensitiveMember, Timezone] = 0):
-        """Timezone settings
-        Setting your timezone allows for reminders to use your timezone
 
-        Ex: `%remind local do homework at 4pm tomorrow`
-        Will trigger at 4pm in your timezone if set, otherwise it will trigger at 4pm UTC
+class CLDRDataEntry(NamedTuple):
+    description: str
+    aliases: list[str]
+    deprecated: bool
+    preferred: Optional[str]
+
+
+class TimeZone(NamedTuple):
+    label: str
+    key: str
+
+    @classmethod
+    async def convert(cls, ctx: Context, argument: str) -> TimeZone:
+        # assert isinstance(ctx.cog, Timezone)
+
+        # Prioritise aliases because they handle short codes slightly better
+        if argument in ctx.cog._timezone_aliases:
+            return cls(key=argument, label=ctx.cog._timezone_aliases[argument])
+
+        if argument in ctx.cog.valid_timezones:
+            return cls(key=argument, label=argument)
+
+        timezones = ctx.cog.find_timezones(argument)
+
+        try:
+            return await ctx.disambiguate(timezones, lambda t: t[0], ephemeral=True)
+        except ValueError:
+            raise commands.BadArgument(f"Could not find timezone for {argument!r}")
+
+    def to_choice(self) -> app_commands.Choice[str]:
+        return app_commands.Choice(name=self.label, value=self.key)
+
+    def to_zone(self) -> zoneinfo.ZoneInfo:
+        return zoneinfo.ZoneInfo(self.key)
+
+
+class Timezone(commands.Cog):
+
+    DEFAULT_POPULAR_TIMEZONE_IDS = (
+        # America
+        "usnyc",  # America/New_York
+        "uslax",  # America/Los_Angeles
+        "uschi",  # America/Chicago
+        "usden",  # America/Denver
+        # India
+        "inccu",  # Asia/Kolkata
+        # Europe
+        "trist",  # Europe/Istanbul
+        "rumow",  # Europe/Moscow
+        "gblon",  # Europe/London
+        "frpar",  # Europe/Paris
+        "esmad",  # Europe/Madrid
+        "deber",  # Europe/Berlin
+        "grath",  # Europe/Athens
+        "uaiev",  # Europe/Kyev
+        "itrom",  # Europe/Rome
+        "nlams",  # Europe/Amsterdam
+        "plwaw",  # Europe/Warsaw
+        # Canada
+        "cator",  # America/Toronto
+        # Australia
+        "aubne",  # Australia/Brisbane
+        "ausyd",  # Australia/Sydney
+        # Brazil
+        "brsao",  # America/Sao_Paulo
+        # Japan
+        "jptyo",  # Asia/Tokyo
+        # China
+        "cnsha",  # Asia/Shanghai
+    )
+
+    def __init__(self, bot: SnowflakeBot):
+        self.bot: SnowflakeBot = bot
+        self.valid_timezones = zoneinfo.available_timezones()
+        self._timezone_aliases: dict[str, str] = {
+            'Eastern Time': 'America/New_York',
+            'Central Time': 'America/Chicago',
+            'Mountain Time': 'America/Denver',
+            'Pacific Time': 'America/Los_Angeles',
+            # (Unfortunately) special case American timezone abbreviations
+            'EST': 'America/New_York',
+            'CST': 'America/Chicago',
+            'MST': 'America/Denver',
+            'PST': 'America/Los_Angeles',
+            'EDT': 'America/New_York',
+            'CDT': 'America/Chicago',
+            'MDT': 'America/Denver',
+            'PDT': 'America/Los_Angeles',
+        }
+        self._default_timezones: list[app_commands.Choice[str]] = []
+
+    async def cog_load(self) -> None:
+        await self.parse_bcp47_timezones()
+
+    async def parse_bcp47_timezones(self) -> None:
+        async with self.bot.session.get(
+            'https://raw.githubusercontent.com/unicode-org/cldr/main/common/bcp47/timezone.xml'
+        ) as resp:
+            if resp.status != 200:
+                return
+
+            parser = etree.XMLParser(ns_clean=True, recover=True, encoding='utf-8')
+            tree = etree.fromstring(await resp.read(), parser=parser)
+
+            # Build a temporary dictionary to resolve "preferred" mappings
+            entries: dict[str, CLDRDataEntry] = {
+                node.attrib['name']: CLDRDataEntry(
+                    description=node.attrib['description'],
+                    aliases=node.get('alias', 'Etc/Unknown').split(' '),
+                    deprecated=node.get('deprecated', 'false') == 'true',
+                    preferred=node.get('preferred'),
+                )
+                for node in tree.iter('type')
+                # Filter the Etc/ entries (except UTC)
+                if not node.attrib['name'].startswith(('utcw', 'utce', 'unk'))
+                and not node.attrib['description'].startswith('POSIX')
+            }
+
+            for entry in entries.values():
+                # These use the first entry in the alias list as the "canonical" name to use when mapping the
+                # timezone to the IANA database.
+                # The CLDR database is not particularly correct when it comes to these, but neither is the IANA database.
+                # It turns out the notion of a "canonical" name is a bit of a mess. This works fine for users where
+                # this is only used for display purposes, but it's not ideal.
+                if entry.preferred is not None:
+                    preferred = entries.get(entry.preferred)
+                    if preferred is not None:
+                        self._timezone_aliases[entry.description] = preferred.aliases[0]
+                else:
+                    self._timezone_aliases[entry.description] = entry.aliases[0]
+
+            for key in self.DEFAULT_POPULAR_TIMEZONE_IDS:
+                entry = entries.get(key)
+                if entry is not None:
+                    self._default_timezones.append(app_commands.Choice(name=entry.description, value=entry.aliases[0]))
+
+    @cache(maxsize=10)
+    async def get_timezone(self, user_id: int) -> Optional[str]:
+        """Get the timezone for a user, if it exists."""
+        query = '''SELECT tz FROM timezones WHERE id = $1;'''
+        record = await self.bot.pool.fetchrow(query, user_id)
+        return record['tz'] if record else None
+
+    async def get_tzinfo(self, user_id: int) -> datetime.tzinfo:
+        tz = await self.get_timezone(user_id)
+        if tz is None:
+            return datetime.UTC
+
+        try:
+            return zoneinfo.ZoneInfo(tz)
+        except zoneinfo.ZoneInfoNotFoundError:
+            return datetime.UTC
+
+    def find_timezones(self, query: str) -> list[TimeZone]:
+        # A bit hacky, but if '/' is in the query then it's looking for a raw identifier
+        # otherwise it's looking for a CLDR alias
+        if '/' in query:
+            return [TimeZone(key=a, label=a) for a in finder(query, self.valid_timezones)]
+
+        keys = finder(query, self._timezone_aliases.keys())
+        return [TimeZone(label=k, key=self._timezone_aliases[k]) for k in keys]
+
+    @commands.hybrid_group(invoke_without_command=True, case_insensitive=True, aliases=['tz', 'time'])
+    async def timezone(self, ctx: Context):
+        """Get or set your timezone"""
+        await ctx.send_help(ctx.command)
+
+    @timezone.command(name='get')
+    @app_commands.describe(user='The user to get the timezone for. Defaults to yourself.')
+    async def timezone_get(self, ctx: Context, *, user: discord.User = commands.Author):
+        """Get a user's timezone."""
+        tz = await self.get_timezone(user.id)
+        if tz is None:
+            await ctx.send(f'No timezone found for {user.mention}', allowed_mentions=discord.AllowedMentions.none())
+            return
+
+        time = discord.utils.utcnow().astimezone(zoneinfo.ZoneInfo(tz)).strftime('%Y-%m-%d %H:%M (%I:%M %p)')
+        if user.id == ctx.author.id:
+            msg = await ctx.send(f'Your timezone is set to: {tz}. Your current time is {time}')
+            await asyncio.sleep(5)
+            try:
+                await msg.edit(content=f'Your current time is {time}')
+            except discord.HTTPException:
+                pass
+        else:
+            await ctx.send(f'The current time for {user.mention} is {time}',
+                           allowed_mentions=discord.AllowedMentions.none())
+
+    @timezone.command(name='set')
+    @app_commands.describe(timezone='The timezone to set to.')
+    async def timezone_set(self, ctx: Context, timezone: TimeZone):
+        """Set your timezone.
+
+        This is used to convert times to your local time when using other commands such as reminders.
+        Note: Other users will be able to see your timezone
         """
-        # Should never be able to input 0, using 0 here instead of None because Timezone can return None
-        if isinstance(arg, discord.Member) or arg == 0:
-            await ctx.invoke(self.get_timezone, user=(arg or ctx.author))
-        elif arg is None:
-            await ctx.invoke(self.list_timezones)
-        else:
-            await ctx.invoke(self.set_timezone, arg)
-
-    @tz_group.command(name='get')
-    async def get_timezone(self, ctx, *, user: CaseInsensitiveMember = None):
-        """Retrieve your timezone setting
-        Pass in a user to retrieve someone else's timezone"""
-        user = user or ctx.author
-        timezone = await get_user_timezone(ctx, user)
-        if timezone is not None:
-            now = utc.localize(datetime.datetime.utcnow())
-            who = "Your" if user == ctx.author else f"{user}'s"
-            await ctx.send(f'{who} timezone is set to: {timezone.zone} - Current time: {now.astimezone(timezone).strftime("%Y-%m-%d %H:%M")}  ')
-        else:
-            if user == ctx.author:
-                await ctx.send('Unable to find your timezone. Are you sure you set one? See `%help timezone`')
-            else:
-                await ctx.send('Unable to find timezone for this user.')
-
-    @tz_group.command(name='set')
-    async def set_timezone(self, ctx, timezone: Timezone):
-        """Set your timezone
-        See `%timezone list` for all valid timezone names"""
-        query = '''INSERT INTO timezones("user", tz)
+        query = '''INSERT INTO timezones(id, tz)
                    VALUES($1, $2)
-                   ON CONFLICT ("user") DO UPDATE
+                   ON CONFLICT (id) DO UPDATE
                    SET tz=$2;'''
-        await self.bot.pool.execute(query, ctx.author.id, timezone.zone)
-        now = utc.localize(datetime.datetime.utcnow())
-        await ctx.send(f'Your timezone is now set to: {timezone.zone} - Current time: {now.astimezone(timezone).strftime("%Y-%m-%d %H:%M")}')
+        await self.bot.pool.execute(query, ctx.author.id, timezone.key)
 
-    @tz_group.command(name='list')
-    async def list_timezones(self, ctx):
-        """View all available timezones to choose from"""
-        common = ['US/Eastern', 'US/Pacific', 'US/Central', 'US/Mountain']
-        url = 'https://gist.githubusercontent.com/Willy-C/a511d95f1d28c1562332e487924f0d66/raw/5e6dfb0f1db4852eeaf1eb35ae4b1be92ca919e2/pytz_all_timezones.txt'
-        e = discord.Embed(title='Timezones',
-                          description=f'A full list of timezones can be found [here]({url})\n\n'
-                                      f'Some common timezones include:\n '
-                                      f'```{" | ".join(common)}```\n\n'
-                                      f'Timezones are not case-sensitive',
-                          colour=discord.Colour.blue())
-        await ctx.send(embed=e)
+        self.get_timezone.invalidate(self, ctx.author.id)
 
-    @tz_group.command(name='delete', aliases=['remove'])
-    async def delete_timezone(self, ctx):
-        """Delete your stored timezone information"""
+        await ctx.send(f'Your timezone is now set to: {timezone.label} (IANA ID: {timezone.key})', ephemeral=True)
+
+    @timezone.command('info')
+    @app_commands.describe(timezone='The timezone to get info about.')
+    async def timezone_info(self, ctx: Context, *, timezone: TimeZone):
+        """Get info about a timezone"""
+        embed = discord.Embed(title=timezone.key, colour=discord.Colour.blue())
+        dt = discord.utils.utcnow().astimezone(zoneinfo.ZoneInfo(timezone.key))
+        time = dt.strftime('%Y-%m-%d %H:%M (%I:%M %p)')
+        embed.add_field(name='Current time', value=time)
+
+        offset = dt.utcoffset()
+        if offset is not None:
+            minutes, _ = divmod(int(offset.total_seconds()), 60)
+            hours, minutes = divmod(minutes, 60)
+            embed.add_field(name='UTC Offset', value=f'{hours:+03d}:{minutes:02d}')
+
+        await ctx.send(embed=embed)
+
+    @timezone.command('remove')
+    async def timezone_remove(self, ctx: Context):
+        """Remove your timezone"""
         query = '''DELETE FROM timezones
-                   WHERE "user" = $1'''
-        result = await self.bot.pool.execute(query, ctx.author.id)
+                   WHERE id = $1;'''
+        await self.bot.pool.execute(query, ctx.author.id)
+        self.get_timezone.invalidate(self, ctx.author.id)
+        await ctx.send('Your timezone has been removed', ephemeral=True)
 
-        if result == 'DELETE 0':
-            return await ctx.send('Unable to delete your timezone info. Are you sure you set one?')
-        else:
-            await ctx.send('Successfully deleted your timezone info.')
+    @timezone_set.autocomplete('timezone')
+    @timezone_info.autocomplete('timezone')
+    async def timezone_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        if not current:
+            return self._default_timezones
+        matches = self.find_timezones(current)
+        return [tz.to_choice() for tz in matches[:25]]
 
-    @tz_group.command(name='info')
-    async def timezone_info(self, ctx, timezone: Timezone):
-        """Get the current time of a timezone"""
-        now = utc.localize(datetime.datetime.utcnow())
-        await ctx.send(f'Current time in {timezone.zone}: {now.astimezone(timezone).strftime("%Y-%m-%d %H:%M")}')
 
-    @tz_group.error
-    async def set_tz_error(self, ctx, error):
-        if isinstance(error, (commands.BadUnionArgument, commands.BadArgument)):
-            ctx.local_handled = True
-            await ctx.send('Unable to find that person/timezone')
-
-    @commands.command(name='time')
-    async def get_datetime_md(self, ctx, obj: Union[CaseInsensitiveUser, CaseInsensitiveChannel, discord.Message, discord.PartialEmoji, discord.Object] = None):
-        """Get the timestamp for objection's creation time
-        This can accept mentions or IDs
-        Defaults to current time if no object is given
-        """
-        def build_timestamps(dt):
-            styles = ['t', 'T', 'd', 'D', 'f', 'F', 'R']
-            return [format_dt(dt, style) for style in styles]
-
-        if obj is None:
-            now = datetime.datetime.utcnow()
-            timestamps = build_timestamps(now)
-            await ctx.reply('\n'.join(f'{ts} (`{ts}`)' for ts in timestamps),
-                            mention_author=False)
-        else:
-            if isinstance(obj, discord.PartialEmoji):
-                title = f'Creation time for {obj}'
-            else:
-                title = f'Creation time for {getattr(obj, "mention", obj.id)}'
-            timestamps = build_timestamps(discord.utils.snowflake_time(obj.id))
-            times = '\n'.join(f'{ts} (`{ts}`)' for ts in timestamps)
-            await ctx.reply(f'{title}\n{times}',
-                            allowed_mentions=discord.AllowedMentions.none(),
-                            mention_author=False)
-
-    @get_datetime_md.error
-    async def get_dt_md_error(self, ctx, error):
-        if isinstance(error, commands.BadUnionArgument):
-            ctx.local_handled = True
-            await ctx.send('That is not a valid ID or object')
-
-def setup(bot):
-    bot.add_cog(TimezoneCog(bot))
+async def setup(bot: SnowflakeBot):
+    await bot.add_cog(Timezone(bot))
