@@ -184,6 +184,9 @@ class TimeTransformer(app_commands.Transformer):
         try:
             short = ShortTime(value, now=now, tzinfo=tzinfo)
         except commands.BadArgument:
+            if tzinfo is datetime.UTC:
+                await interaction.response.send_message('The time you entered requires a timezone to be set.\nPlease use `/timezone set` to set your timezone.', ephemeral=True)
+                raise TimezoneRequired
             try:
                 human = FutureTime(value, now=now, tzinfo=tzinfo)
             except commands.BadArgument as e:
@@ -265,6 +268,9 @@ class UserFriendlyTime(commands.Converter):
                 remaining = argument[match.end():].strip()
                 await result.ensure_constraints(ctx, self, now, remaining)
                 return result
+
+        if tzinfo is datetime.UTC:
+            raise TimezoneRequired
 
         # apparently nlp does not like "from now"
         # it likes "from x" in other cases though so let me handle the 'now' case

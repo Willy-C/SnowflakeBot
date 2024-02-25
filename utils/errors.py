@@ -113,3 +113,8 @@ class NotAuthenticated(BaseVALORANTException):
 
 class MissingCredentials(InvalidCredentials):
     pass
+
+
+class TimezoneRequired(commands.BadArgument):
+    def __init__(self, message=None):
+        super().__init__(message or 'The time you entered requires a timezone to be set.\nPlease use `/timezone set` to set your timezone.')
