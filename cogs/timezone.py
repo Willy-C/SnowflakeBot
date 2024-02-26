@@ -58,13 +58,17 @@ class TimeZone(NamedTuple):
 class Timezone(commands.Cog):
 
     DEFAULT_POPULAR_TIMEZONE_IDS = (
+        # Canada
+        "cator",  # America/Toronto
+        "cavan",  # America/Vancouver
+        "cawnp",  # America/Winnipeg
+
         # America
         "usnyc",  # America/New_York
         "uslax",  # America/Los_Angeles
         "uschi",  # America/Chicago
         "usden",  # America/Denver
-        # India
-        "inccu",  # Asia/Kolkata
+
         # Europe
         "trist",  # Europe/Istanbul
         "rumow",  # Europe/Moscow
@@ -77,17 +81,21 @@ class Timezone(commands.Cog):
         "itrom",  # Europe/Rome
         "nlams",  # Europe/Amsterdam
         "plwaw",  # Europe/Warsaw
-        # Canada
-        "cator",  # America/Toronto
+
+        # Japan
+        "jptyo",  # Asia/Tokyo
+        # South Korea
+        'krsel',  # Asia/Seoul
+        # China
+        "cnsha",  # Asia/Shanghai
+
         # Australia
         "aubne",  # Australia/Brisbane
         "ausyd",  # Australia/Sydney
+        # India
+        "inccu",  # Asia/Kolkata
         # Brazil
         "brsao",  # America/Sao_Paulo
-        # Japan
-        "jptyo",  # Asia/Tokyo
-        # China
-        "cnsha",  # Asia/Shanghai
     )
 
     def __init__(self, bot: SnowflakeBot):
@@ -213,6 +221,8 @@ class Timezone(commands.Cog):
         """Set your timezone.
 
         This is used to convert times to your local time when using other commands such as reminders.
+        Use the slash command version of this command or [this website](https://zones.arilyn.cc/) to find your timezone.
+
         Note: Other users will be able to see your timezone
         """
         query = '''INSERT INTO timezones(id, tz)
