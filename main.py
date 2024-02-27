@@ -7,7 +7,7 @@ import pathlib
 import asyncio
 import logging
 from logging.handlers import RotatingFileHandler
-from typing import Union, List
+from typing import Union, List, Optional
 from datetime import datetime
 
 import mystbin
@@ -22,11 +22,10 @@ from config import BOT_TOKEN, DBURI
 
 try:
     import uvloop
-except ImportError:
-    print('uvloop not installed')
-else:
     uvloop.install()
     print('Using uvloop')
+except ImportError:
+    print('uvloop not installed')
 
 log = logging.getLogger(__name__)
 
@@ -161,6 +160,12 @@ class SnowflakeBot(commands.Bot):
 
     async def get_context(self, origin: Union[discord.Message, discord.Interaction], /, *, cls=Context) -> Context:
         return await super().get_context(origin, cls=cls)
+
+    async def get_or_fetch_user(self, member_id: int) -> Optional[discord.User]:
+        try:
+            return self.get_user(member_id) or (await self.fetch_user(member_id))
+        except discord.HTTPException:
+            return None
 
     async def close(self) -> None:
         await self.session.close()
