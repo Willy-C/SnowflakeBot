@@ -21,7 +21,6 @@ class InfoCog(commands.Cog, name='Info'):
             return 'N/A'
         return f'{format_dt(dt, "f")} ({human_timedelta(dt)})'
 
-
     def remove_consec_dupes(self, iterable):
         return [k for k, _ in groupby(iterable)]
 
@@ -119,8 +118,10 @@ class InfoCog(commands.Cog, name='Info'):
         else:
             color = user.color
         e = discord.Embed(title='User Info', color=color)
-        e.set_author(icon_url=user.display_avatar.url, name=user)
-
+        e.set_author(icon_url=user.display_avatar.url, name=user.display_name)
+        e.add_field(name='Username', value=user)
+        if user.display_name:
+            e.add_field(name='Display Name', value=user.global_name)
         e.add_field(name='ID', value=user.id)
         if isinstance(user, discord.Member) and user.nick:
             e.add_field(name='Nick', value=user.nick)
@@ -130,8 +131,11 @@ class InfoCog(commands.Cog, name='Info'):
             e.add_field(name='First Joined**', value=self.fmt_dt(await self.get_join_date(user)))
             e.add_field(name='Last Joined', value=self.fmt_dt(user.joined_at))
             roles = ['@everyone']
-            roles.extend(r.mention for r in user.roles[1:])
-            e.add_field(name='Roles', value=', '.join(roles))
+            roles.extend(r.mention for r in user.roles[1:20])
+            roles_formatted = f"{len(roles)}: {', '.join(roles)}"
+            if len(roles) > 20:
+                roles_formatted += f'and {len(user.roles) - 20} more...'
+            e.add_field(name='Roles', value=roles_formatted)
             e.set_footer(text='**I can only get the earliest join date since I was added to the server')
             nicks = await self.get_nicknames(user)
             if nicks:
