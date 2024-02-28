@@ -188,56 +188,10 @@ class Highlights(commands.Cog):
 
         return '\n'.join(context)
 
-    async def send_highlight_notif(self, message: discord.Message, user_id: int, word: Optional[str], prev: list[discord.Message], after: list[discord.Message]) -> None:
-        """Send a notification when a highlight is triggered"""
-        now = message.created_at
-        recent_messages = [msg for msg in prev[:-1] if (now - msg.created_at).seconds <= 40]
-        ref = None
-
-        # If this is a reply highlight, check their reply settings
-        # 0 = off, 1 = on always, 2 = only when not pinged
-        if word is None and message.reference:
-            setting = self.replies[user_id]
-            if setting == 0:
-                log.info('User %s has highlight resets set to 0 but was in cache', user_id)
-                await self.delete_replies(user_id)
-                return
-            elif setting == 2:
-                if any(u.id == user_id for u in message.mentions):
-                    return
-            if isinstance(message.reference.resolved, discord.Message):
-                ref = message.reference.resolved.jump_url
-
-        if any(msg.author.id == user_id for msg in recent_messages):
-            return
-
-        if (message.channel.id, user_id, word) in self.recent_triggers:
-            return
-        self.recent_triggers[(message.channel.id, user_id, word)] = True
-
-        context = self.build_full_context(prev, after, word)
-        if word:
-            title = f'You were mentioned in {message.guild} | #{message.channel}'
-            footer = f'Highlight trigger: {word}'
-            colour = 0x00B0F4
-        else:
-            title = f'You were replied to in {message.guild} | #{message.channel}'
-            footer = 'Replied at'
-            colour = 0xFAA61A
-
-        e = discord.Embed(
-            title=title,
-            description=f'{context}\n[Jump to message]({message.jump_url})',
-            colour=colour,
-            timestamp=now
-        )
-        e.set_footer(text=footer)
-
-        if ref:
-            e.description += f' | [Replying to]({ref})'
+    async def _send_highlight_dm(self, user_id: int, embed: discord.Embed, message: discord.Message, word: str) -> None:
         try:
             user = self.bot.get_user(user_id) or (await self.bot.fetch_user(user_id))
-            await user.send(embed=e)
+            await user.send(embed=embed)
         except discord.NotFound:
             log.info('User %s not found, deleting highlights and replies permanently', user_id)
             await self.delete_highlights(user_id, message.guild.id)
@@ -251,6 +205,68 @@ class Highlights(commands.Cog):
                 # await self.delete_highlights(user_id, message.guild.id)
                 # await self.delete_replies(user_id)
                 return
+        else:
+            log.info('Sent highlight notification to %s in %s for %s', user_id, message.channel.id, word)
+
+    async def send_highlight_notif(self, message: discord.Message, user_id: int, word: str, prev: list[discord.Message], after: list[discord.Message]) -> None:
+        now = message.created_at
+        recent_messages = [msg for msg in prev[:-1] if (now - msg.created_at).seconds <= 40]
+
+        if any(msg.author.id == user_id for msg in recent_messages):
+            return
+
+        if (message.channel.id, user_id, word.lower()) in self.recent_triggers:
+            return
+        self.recent_triggers[(message.channel.id, user_id, word.lower())] = True
+
+        context = self.build_full_context(prev, after, word)
+
+        embed = discord.Embed(
+            title=f'You were mentioned in {message.guild} | #{message.channel}',
+            description=f'{context}\n[Jump to message]({message.jump_url})',
+            colour=0x00B0F4,
+            timestamp=now
+        )
+        embed.set_footer(text=f'Highlight trigger: {word}')
+
+        await self._send_highlight_dm(user_id, embed, message, word)
+
+    async def send_reply_notification(self, message: discord.Message, user_id: int, word: None, prev: list[discord.Message], after: list[discord.Message]) -> None:
+        now = message.created_at
+        recent_messages = [msg for msg in prev[:-1] if (now - msg.created_at).seconds <= 40]
+        # If this is a reply highlight, check their reply settings
+        # 0 = off, 1 = on always, 2 = only when not pinged
+        setting = self.replies[user_id]
+        if setting == 0:
+            log.info('User %s has highlight replies set to 0 but was in cache', user_id)
+            await self.delete_replies(user_id)
+            return
+        elif setting == 2:
+            if any(u.id == user_id for u in message.mentions):
+                return
+
+        if any(msg.author.id == user_id for msg in recent_messages):
+            return
+
+        if (message.channel.id, user_id, word) in self.recent_triggers:
+            return
+        self.recent_triggers[(message.channel.id, user_id, word)] = True
+
+        context = self.build_full_context(prev, after, word)
+
+        embed = discord.Embed(
+            title=f'You were replied to in {message.guild} | #{message.channel}',
+            description=f'{context}\n[Jump to message]({message.jump_url})',
+            colour=0xFAA61A,
+            timestamp=now
+        )
+        embed.set_footer(text='Replied at')
+
+        if isinstance(message.reference.resolved, discord.Message):
+            ref = message.reference.resolved.jump_url
+            embed.description += f' | [Replying to]({ref})'
+
+        await self._send_highlight_dm(user_id, embed, message, 'reply')
 
     async def wait_for_activity(self, message: discord.Message, user_ids: set[int], timeout: int = 20) -> set[int]:
         """Wait for activity from a list of user_ids"""
@@ -301,7 +317,10 @@ class Highlights(commands.Cog):
         for user_id, word in filtered.items():
             if user_id in active_users:
                 continue
-            self.bot.loop.create_task(self.send_highlight_notif(message, user_id, word, prev, after))
+            if word:
+                self.bot.loop.create_task(self.send_highlight_notif(message, user_id, word, prev, after))
+            else:
+                self.bot.loop.create_task(self.send_reply_notification(message, user_id, word, prev, after))
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
