@@ -1,495 +1,708 @@
+from __future__ import annotations
+
 import re
-import random
+import logging
+import asyncio
 from typing import Union
 from asyncio import TimeoutError
+from collections import defaultdict
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Optional, Literal
 
+import asyncpg
 import discord
+from discord import app_commands
 from discord.ext import commands
-from asyncpg import UniqueViolationError
+
+from utils.fuzzy import finder
+from utils.cache import ExpiringCache
+
+if TYPE_CHECKING:
+    from main import SnowflakeBot
+    from utils.context import Context
 
 
-class HighlightCog(commands.Cog, name='Highlights'):
+log = logging.getLogger(__name__)
 
-    def __init__(self, bot):
-        self.bot = bot
-        self.highlights = {}
+
+REPLIES_SETTINGS_TEXT = {
+    0: 'Off',
+    1: 'On: Always',
+    2: 'On: Only when not pinged'
+}
+
+
+class Highlights(commands.Cog):
+    highlights: dict[int, dict[int, re.Pattern]]  # guild_id: {user_id: re.Pattern}
+    ignores: dict[int, defaultdict[str, list[int]]]  # user_id: {user/channel: [target_ids]}
+    replies: dict[int, int]  # user_id: setting (0 = off, 1 = on always, 2 = no pings only)
+
+    def __init__(self, bot: SnowflakeBot):
+        self.bot: SnowflakeBot = bot
+        self.highlights = defaultdict(dict)
+        self.ignores = defaultdict(lambda: defaultdict(list))
+        self.replies = {}
+        self.recent_triggers = ExpiringCache(seconds=60)
         self.bot.loop.create_task(self.populate_cache())
-        self.bot.loop.create_task(self.get_data())
 
-    async def get_data(self):
-        mention_query = '''SELECT * FROM mentions'''
-        records = await self.bot.pool.fetch(mention_query)
-        self.mentions = [record['user'] for record in records]
+    def create_user_regex(self, words) -> re.Pattern:
+        return re.compile(r'\b(' + '|'.join(map(re.escape, words)) + r')s?\b', re.IGNORECASE)
 
-        ignore_query = '''SELECT * FROM hlignores;'''
-        records = await self.bot.pool.fetch(ignore_query)
-        collect_ignores = {}
+    async def make_guild_cache(self, records: list[asyncpg.Record]) -> dict[int, re.Pattern]:
+        collect_words = defaultdict(list)
         for record in records:
-            uid = record['user']
-            ignores = collect_ignores.setdefault(uid, {})
-            type = record['type']
-            ignores.setdefault(type+'s', []).append(record['id'])
-        self.ignores = collect_ignores
+            collect_words[record['id']].append(record['word'])
 
+        return {user_id: self.create_user_regex(words) for user_id, words in collect_words.items()}
 
-    @staticmethod
-    def create_regex(words):
-        return re.compile(r'\b(?:' + '|'.join(map(re.escape, words)) + r')s?\b', re.IGNORECASE)
-
-    async def update_regex(self, ctx, guild_id=None):
-        query = '''SELECT word
-                   FROM highlights
-                   WHERE guild = $1
-                   AND "user" = $2;'''
-        gid = guild_id or ctx.guild.id
-        records = await self.bot.pool.fetch(query, gid, ctx.author.id,)
-        words = [record['word'] for record in records]
-        guild_hl = self.highlights.setdefault(gid, {})
-        guild_hl[ctx.author.id] = self.create_regex(words)
-
-    def create_guild_regex(self, records):
-        guild_regex = {}
-        collect_words = {}
-        for record in records:
-            uid = record.get('user')
-            if uid in collect_words:
-                collect_words[uid].append(record.get('word'))
-            else:
-                collect_words[uid] = [record.get('word')]
-
-        for user, words in collect_words.items():
-            guild_regex[user] = self.create_regex(words)
-        return guild_regex
-
-    async def populate_cache(self):
-        await self.bot.wait_until_ready()
+    async def fetch_all_highlights(self) -> None:
+        query = '''SELECT id, word FROM highlights WHERE guild=$1;'''
         for guild in self.bot.guilds:
-            query = '''SELECT "user", word
-                       FROM highlights
-                       WHERE guild = $1;'''
             records = await self.bot.pool.fetch(query, guild.id)
             if not records:
                 continue
-            self.highlights[guild.id] = self.create_guild_regex(records)
+            self.highlights[guild.id] = await self.make_guild_cache(records)
 
-    def ignore_check(self, msg, id):
-        if msg.author.id == id:
-            return False
-        ignores = self.ignores.get(id)
+    async def fetch_ignores(self) -> None:
+        query = '''SELECT * FROM hl_ignores;'''
+        records = await self.bot.pool.fetch(query)
+        for r in records:
+            self.ignores[r['id']][r['type']].append(r['target'])
+
+    async def fetch_dm_mentions(self) -> None:
+        query = '''SELECT * FROM hl_replies;'''
+        records = await self.bot.pool.fetch(query)
+        for record in records:
+            self.replies[record['id']] = record['state']
+
+    async def populate_cache(self) -> None:
+        await self.fetch_all_highlights()
+        await self.fetch_ignores()
+        await self.fetch_dm_mentions()
+
+    async def delete_highlights(self, user_id: int, guild_id: int) -> None:
+        query = '''DELETE FROM highlights WHERE id=$1 AND guild=$2;'''
+        await self.bot.pool.execute(query, user_id, guild_id)
+        self.highlights[guild_id].pop(user_id, None)
+        if not self.highlights[guild_id]:
+            self.highlights.pop(guild_id, None)
+
+    async def delete_replies(self, user_id: int) -> None:
+        query = '''DELETE FROM hl_replies WHERE id=$1;'''
+        await self.bot.pool.execute(query, user_id)
+        self.replies.pop(user_id, None)
+
+    async def update_user_highlights(self, user_id: int, guild_id: int):
+        query = '''SELECT word FROM highlights WHERE guild=$1 AND id=$2;'''
+        records = await self.bot.pool.fetch(query, guild_id, user_id)
+        if not records:
+            self.highlights[guild_id].pop(user_id, None)
+            if not self.highlights[guild_id]:
+                self.highlights.pop(guild_id, None)
+            return
+        self.highlights[guild_id][user_id] = self.create_user_regex([r['word'] for r in records])
+
+    async def update_user_ignores(self, user_id: int):
+        query = '''SELECT type, target FROM hl_ignores WHERE id=$1;'''
+        records = await self.bot.pool.fetch(query, user_id)
+        if not records:
+            self.ignores.pop(user_id, None)
+            return
+        for r in records:
+            self.ignores[user_id][r['type']].append(r['target'])
+
+    def should_ignore(self, user_id: int, message: discord.Message) -> bool:
+        """Check if message should be ignored, returns True if it should be ignored"""
+        if message.author.id == user_id:
+            return True
+
+        ignores = self.ignores.get(user_id)
         if ignores:
-            if msg.author.id in ignores.get('users', []):
-                return False
-            if msg.channel.id in ignores.get('channels', []):
-                return False
-        return True
-
-    def is_active(self, recent_msgs, member_id, word):
-        if any([msg.author.id == member_id for msg in recent_msgs]):  # user recently spoke
-            return True
-
-        ignore = self.ignores.get(member_id)
-        if ignore:
-            users_to_ignore = ignore.get('users', [])
-        else:
-            users_to_ignore = []
-        trigger = re.compile(r'\b' + word + r's?\b', re.IGNORECASE)
-        if any([trigger.search(msg.content) and msg.author.id not in users_to_ignore for msg in recent_msgs]):  # Recently highlighted
-            return True
+            if message.author.id in ignores.get('user', []):
+                return True
+            elif message.channel.id in ignores.get('channel', []):
+                return True
         return False
 
-    async def get_msg_context(self, message, member_id, word, is_mention=False):
-        now = discord.utils.utcnow()
-        prev_msgs = [msg async for msg in message.channel.history(after=(now - timedelta(minutes=5)))]  # Grabs all messages from the last 5 minutes
-        msg_context = []
-        recent_msgs = [msg for msg in prev_msgs[:-1] if (now - msg.created_at).seconds <= 45]  # List of messages from last 45 seconds
+    async def get_msg_context(self, message: discord.Message, minutes: int = 5, limit: int = 50) -> tuple[list[discord.Message], list[discord.Message]]:
+        """Get the context of a message, returns a tuple of previous and recent messages"""
+        now = message.created_at
 
-        if not is_mention:
-            if self.is_active(recent_msgs, member_id, word):
-                return
-        else:
-            if any([user.id == member_id for msg in recent_msgs for user in msg.mentions]):
-                return
+        # get all messages within the last few minutes, default 5
+        prev = [msg async for msg in message.channel.history(limit=limit, after=now - timedelta(minutes=minutes))]
 
-        for msg in prev_msgs[-4:-1]:
-            msg_context.append(f'`[-{str(abs(now-msg.created_at)).split(".")[0][3:]}]` {discord.utils.escape_markdown(str(msg.author))}: {msg.content}')
-
-        if not is_mention:
-            bolded = re.sub(f'({word})', r'**\1**', message.content, flags=re.IGNORECASE)
-            msg_context.append(f'**`[-----]`** {discord.utils.escape_markdown(str(message.author))}: {bolded}')
-        else:
-            msg_context.append(f'**`[-----]`** {discord.utils.escape_markdown(str(message.author))}: {message.content}')
+        # get all messages within last 40 seconds, we will filter from our previous list to save an API call
+        # recent_messages = [msg for msg in prev_messages[:-1] if (now - msg.created_at).seconds <= recent]
 
         after = []
-        def check(msg):
+
+        def check(msg: discord.Message):
             if msg.channel == message.channel:
-                msg_context.append(f'`[+{str(abs(now - msg.created_at)).split(".")[0][3:]}]` {msg.author}: {msg.content}')
                 after.append(msg)
-            return len(after) == 2
+            return len(after) == 3
 
         try:
-            await self.bot.wait_for('message', check=check, timeout=10)
+            await self.bot.wait_for('message', check=check, timeout=20)
         except TimeoutError:
             pass
 
-        if any([msg.author.id == member_id for msg in after]):
-            return
-        return '\n'.join(msg_context)
+        return prev, after
 
-    async def dm_highlight(self, message, member_id: int, word: str):
-        member = message.guild.get_member(member_id)
-        if member is None:
-            del self.highlights[message.guild.id][member_id]
-            return
-        if not message.channel.permissions_for(member).read_messages and member_id != self.bot.owner_id:
-            return
-        context = await self.get_msg_context(message, member_id, word)
-        if context is None:
-            return
+    def format_message(self, message: discord.Message, bold: bool = False, word: str = None) -> str:
+        """Formats a message for the highlight. Bolds the trigger message and word"""
+        created = discord.utils.format_dt(message.created_at, "T")
 
-        e = discord.Embed(title=f'You were mentioned in {message.guild} | #{message.channel}',
-                          description=f'{context}\n'
-                                      f'[Jump to message]({message.jump_url})',
-                          color=discord.Color(0x00B0F4),
-                          timestamp=datetime.utcnow())
-        e.set_footer(text=f'Highlight word: {word}')
-        try:
-            await member.send(embed=e)
-        except discord.Forbidden as err:
-            if 'Cannot send messages to this user' in err.text:
-                await self.bot.get_user(self.bot.owner_id).send(f'Missing permissions to DM {member}\n```{err}```')
-
-    async def dm_mention(self, message, member_id):
-        member = message.guild.get_member(member_id)
-        if (member is None or not message.channel.permissions_for(member).read_messages) and id != self.bot.owner_id:
-            return
-        context = await self.get_msg_context(message, member_id, None, is_mention=True)
-        if context is None:
-            return
-        e = discord.Embed(title=f'You were mentioned in {message.guild} | #{message.channel}',
-                          description=f'{context}\n'
-                                      f'[Jump to message]({message.jump_url})',
-                          color=discord.Color(0xFAA61A),
-                          timestamp=datetime.utcnow())
-
-        target = self.bot.get_user(member_id)
-        try:
-            await target.send(embed=e)
-        except (discord.Forbidden, AttributeError) as err:
-            if 'Cannot send messages to this user' in err.text:
-                await self.bot.get_user(self.bot.owner_id).send(f'Failed to DM {target}|{member_id}\n```{err}```')
+        author = message.author
+        if author.global_name and author.global_name != author.name:
+            fmt_author = discord.utils.escape_markdown(f'{author.global_name} (@{author})')
         else:
+            fmt_author = discord.utils.escape_markdown(str(author))
+
+        if not message.content:
+            if len(message.attachments) == 1:
+                content = message.attachments[0].url
+            elif len(message.attachments) > 1:
+                content = f'{len(message.attachments)} attachments'
+            else:
+                content = 'No content'
+        else:
+            content = message.content
+
+        if bold:
+            if word:
+                content = re.sub(f'({word})', r'**\1**', content, flags=re.IGNORECASE)
+            return f'**[{created}]** {fmt_author}: {content}'
+
+        return f'[{created}] {fmt_author}: {content}'
+
+    def build_full_context(self, prev: list[discord.Message], after: list[discord.Message], word: Optional[str]) -> str:
+        context = []
+
+        for msg in prev[-4:-1]:
+            context.append(self.format_message(msg))
+
+        context.append(self.format_message(prev[-1], bold=True, word=word))
+
+        for msg in after:
+            context.append(self.format_message(msg))
+
+        return '\n'.join(context)
+
+    async def send_highlight_notif(self, message: discord.Message, user_id: int, word: Optional[str], prev: list[discord.Message], after: list[discord.Message]) -> None:
+        """Send a notification when a highlight is triggered"""
+        now = message.created_at
+        recent_messages = [msg for msg in prev[:-1] if (now - msg.created_at).seconds <= 40]
+        ref = None
+
+        # If this is a reply highlight, check their reply settings
+        # 0 = off, 1 = on always, 2 = only when not pinged
+        if word is None and message.reference:
+            setting = self.replies[user_id]
+            if setting == 0:
+                log.info('User %s has highlight resets set to 0 but was in cache', user_id)
+                await self.delete_replies(user_id)
+                return
+            elif setting == 2:
+                if any(u.id == user_id for u in message.mentions):
+                    return
+            if isinstance(message.reference.resolved, discord.Message):
+                ref = message.reference.resolved.jump_url
+
+        if any(msg.author.id == user_id for msg in recent_messages):
+            return
+
+        if (message.channel.id, user_id, word) in self.recent_triggers:
+            return
+        self.recent_triggers[(message.channel.id, user_id, word)] = True
+
+        context = self.build_full_context(prev, after, word)
+        if word:
+            title = f'You were mentioned in {message.guild} | #{message.channel}'
+            footer = f'Highlight trigger: {word}'
+            colour = 0x00B0F4
+        else:
+            title = f'You were replied to in {message.guild} | #{message.channel}'
+            footer = 'Replied at'
+            colour = 0xFAA61A
+
+        e = discord.Embed(
+            title=title,
+            description=f'{context}\n[Jump to message]({message.jump_url})',
+            colour=colour,
+            timestamp=now
+        )
+        e.set_footer(text=footer)
+
+        if ref:
+            e.description += f' | [Replying to]({ref})'
+        try:
+            user = self.bot.get_user(user_id) or (await self.bot.fetch_user(user_id))
+            await user.send(embed=e)
+        except discord.NotFound:
+            log.info('User %s not found, deleting highlights and replies permanently', user_id)
+            await self.delete_highlights(user_id, message.guild.id)
+            await self.delete_replies(user_id)
+            return
+        except discord.Forbidden as e:
+            if "Cannot send messages to this user" in e.text:
+                log.info('User %s has DMs disabled, deleting highlights and replies from cache', user_id)
+                self.highlights[message.guild.id].pop(user_id, None)
+                self.replies.pop(user_id, None)
+                # await self.delete_highlights(user_id, message.guild.id)
+                # await self.delete_replies(user_id)
+                return
+
+    async def wait_for_activity(self, message: discord.Message, user_ids: set[int], timeout: int = 20) -> set[int]:
+        """Wait for activity from a list of user_ids"""
+        active = set()
+
+        # We will leverage the check functions to just add the user into the active set
+        # and return False to keep the wait_for running for the full timeout
+        def message_check(m: discord.Message):
+            if m.author.id in user_ids and m.channel == message.channel:
+                active.add(m.author.id)
+            return False
+
+        def typing_check(c: discord.abc.Messageable, u: discord.User, w: datetime):
+            if u.id in user_ids and c == message.channel:
+                active.add(u.id)
+            return False
+
+        def reaction_check(r: discord.Reaction, u: discord.Member):
+            if u.id in user_ids and r.message.channel == message.channel:
+                active.add(u.id)
+            return False
+
+        tasks_names = [
+            ('message', message_check),
+            ('typing', typing_check),
+            ('reaction_add', reaction_check)
+        ]
+        tasks = [asyncio.create_task(self.bot.wait_for(name, check=check)) for name, check in tasks_names]
+        done, pending = await asyncio.wait(tasks, timeout=timeout)
+        # these tasks never complete since all our checks return False
+        for task in tasks:
             try:
-                reactions = ['<a:angeryping:667541695755190282>',
-                             '<a:hammerping:656983551429967896>',
-                             '<:eyes:644633489727291402>',
-                             '<:dabJuicy:667892769053736981>',
-                             '<:angryJuicy:669305873562206211>',
-                             '<a:bap:667465646384218122>']
-                await message.add_reaction(random.choice(reactions))
-            except discord.HTTPException:
+                # task.add_done_callback(lambda f: f.exception())
+                task.cancel()
+            except Exception:
                 pass
 
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author.bot or message.guild is None or message.webhook_id is not None:
+        return active
+
+    async def handle_highlights(self, message: discord.Message, highlights: dict[int, Optional[str]]) -> None:
+        """Handle highlights"""
+        filtered = {user_id: word for user_id, word in highlights.items() if not self.should_ignore(user_id, message)}
+        if not filtered:
             return
+        active_task = self.bot.loop.create_task(self.wait_for_activity(message, set(filtered.keys()), timeout=20))
+        prev, after = await self.get_msg_context(message, minutes=5)
+        active_users = await active_task
+        for user_id, word in filtered.items():
+            if user_id in active_users:
+                continue
+            self.bot.loop.create_task(self.send_highlight_notif(message, user_id, word, prev, after))
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if message.guild is None or message.author.bot or message.webhook_id is not None:
+            return
+
+        to_send = {}
         if message.guild.id in self.highlights:
-            for mid, regex in self.highlights[message.guild.id].items():
-                if not self.ignore_check(message, mid):
-                    continue
+            for member_id, regex in self.highlights[message.guild.id].items():
                 match = regex.search(message.content)
                 if match:
-                    self.bot.loop.create_task(self.dm_highlight(message, mid, match.group()))
+                    to_send[member_id] = match.group(0)
 
-        for user in message.mentions:
-            if user.id in self.mentions and user != message.author:
-                if self.ignore_check(message, user.id):
-                    self.bot.loop.create_task(self.dm_mention(message, user.id))
+        if message.type is discord.MessageType.reply:
+            if message.reference and isinstance(message.reference.resolved, discord.Message):
+                replied_author = message.reference.resolved.author.id
+                if replied_author in self.replies and replied_author not in to_send:
+                    to_send[replied_author] = None
 
-    @commands.group(aliases=['hl'], case_insensitive=True)
-    async def highlight(self, ctx):
+        if to_send:
+            await self.handle_highlights(message, to_send)
+
+    @commands.hybrid_group(aliases=['hl'])
+    @commands.guild_only()
+    async def highlight(self, ctx: Context):
         """Highlight is an attempt to emulate Skype's word highlighting feature.
-        Useful for allowing you to only get notifications when specific words are used.
+
+        This allows you to only get notifications when specific words or phrases are used.
         This works by sending a DM to you with the message context when your word is used.
-        Additionally, I can send you a DM when I see you get pinged.
+        Additionally, I can send you a DM when someone replies to your message with the built-in reply feature.
         """
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help(ctx.command)
+        await ctx.send_help(ctx.command)
 
-    @highlight.command()
-    async def add(self, ctx, keyword, guild_id: int = None):
-        """Add a highlight keyword for the current server"""
-        guild = self.bot.get_guild(guild_id) or ctx.guild
-        if guild is None:
-            return await ctx.send('Please use this command in a server or specify a server ID!')
-        if ctx.guild is not None:
-            delete_after = 10
-        else:
-            delete_after = None
-        key = keyword.lower()
-        if len(key) < 3:
-            await ctx.message.add_reaction('<:redTick:602811779474522113>')
-            return await ctx.send('Keywords must be at least 3 characters!')
+    @highlight.command(name='add')
+    @app_commands.describe(trigger='The trigger to add, not case-sensitive')
+    async def highlight_add(self, ctx: Context, *, trigger: commands.Range[str, 2]):
+        """Add a highlight word or phrase
+        Triggers are not case-sensitive"""
+        trigger = trigger.lower()
+        query = '''INSERT INTO highlights(id, guild, word) VALUES($1, $2, $3);'''
         try:
-            add_query = '''INSERT INTO highlights(guild, "user", word)
-                           VALUES ($1, $2, $3);'''
-            await self.bot.pool.execute(add_query, guild.id, ctx.author.id, keyword)
-        except UniqueViolationError:
-            await ctx.message.add_reaction('<:redTick:602811779474522113>')
-            return await ctx.send('You already have this word added!', delete_after=delete_after)
+            await self.bot.pool.execute(query, ctx.author.id, ctx.guild.id, trigger)
+        except asyncpg.UniqueViolationError:
+            await ctx.send('You already have this trigger added!', ephemeral=True)
+            await ctx.tick(False)
         else:
-            await self.update_regex(ctx, guild.id)
-            await ctx.message.add_reaction('\U00002705')  # React with checkmark
-            await ctx.send(f'Successfully added highlight key: `{key}` for `{guild}`', delete_after=delete_after)
+            if not ctx.interaction:
+                await ctx.tick(True)
+                await ctx.send(f'Successfully added trigger `{trigger}`', delete_after=7)
+            else:
+                await ctx.send(f'Successfully added trigger `{trigger}`', ephemeral=True)
+            await self.update_user_highlights(ctx.author.id, ctx.guild.id)
 
-    @highlight.command()
-    async def remove(self, ctx, keyword, guild_id: int = None):
-        """Remove a highlight keyword for the current server"""
-        guild = self.bot.get_guild(guild_id) or ctx.guild
-        if guild is None:
-            return await ctx.send('Please use this command in a server or specify a server ID!')
-        if ctx.guild is not None:
-            delete_after = 10
-        else:
-            delete_after = None
-
-        key = keyword.lower()
-        remove_query = '''DELETE FROM highlights
-                          WHERE guild = $1
-                          AND "user" = $2
-                          AND word = $3'''
-        result = await self.bot.pool.execute(remove_query, guild.id, ctx.author.id, keyword)
+    @highlight.command(name='remove')
+    @app_commands.describe(trigger='The trigger to remove, not case-sensitive')
+    async def highlight_remove(self, ctx: Context, *, trigger: str):
+        """Remove a highlight word or phrase
+        Triggers are not case-sensitive"""
+        trigger = trigger.lower()
+        query = '''DELETE FROM highlights WHERE id=$1 AND guild=$2 AND word=$3;'''
+        result = await self.bot.pool.execute(query, ctx.author.id, ctx.guild.id, trigger)
         if result == 'DELETE 0':
-            await ctx.message.add_reaction('<:redTick:602811779474522113>')
-            return await ctx.send('Sorry, you do not seem to have this word added', delete_after=delete_after)
-
+            await ctx.send('You do not have this trigger added!', ephemeral=True)
+            await ctx.tick(False)
         else:
-            await self.update_regex(ctx, guild.id)
-            query = '''SELECT DISTINCT "user" 
-                       FROM highlights
-                       WHERE guild = $1;'''
-            records = await self.bot.pool.fetch(query, guild.id)
+            if not ctx.interaction:
+                await ctx.tick(True)
+                await ctx.send(f'Successfully removed trigger `{trigger}`', delete_after=7)
+            else:
+                await ctx.send(f'Successfully removed trigger `{trigger}`', ephemeral=True)
+            await self.update_user_highlights(ctx.author.id, ctx.guild.id)
 
-            guild_records = [record['user'] for record in records]
-            if ctx.author.id not in guild_records:
-                del self.highlights[guild.id][ctx.author.id]
-                if not self.highlights[guild.id]:
-                    del self.highlights[guild.id]
-        await ctx.message.add_reaction('\U00002705')  # React with checkmark
-        await ctx.send(f'Successfully removed  highlight key: `{key}` for `{guild}`', delete_after=delete_after)
+    @highlight_remove.autocomplete('trigger')
+    async def highlight_remove_auto_complete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        query = '''SELECT word FROM highlights WHERE id=$1 AND guild=$2;'''
+        records = await self.bot.pool.fetch(query, interaction.user.id, interaction.guild_id)
+        words = [r['word'] for r in records]
+        return [app_commands.Choice(name=word, value=word) for word in finder(current, words)[:25]]
+
+    @highlight.command(name='list')
+    async def highlight_list(self, ctx: Context):
+        """List your highlights"""
+        query = '''SELECT word FROM highlights WHERE id=$1 AND guild=$2;'''
+        records = await self.bot.pool.fetch(query, ctx.author.id, ctx.guild.id)
+        if not records:
+            triggers = 'You do not have any highlight triggers set up!'
+        else:
+            triggers = '\n'.join(r['word'] for r in records)
+
+        e = discord.Embed(title=f'Highlights for {ctx.guild}',
+                          description=triggers,
+                          colour=ctx.author.colour if ctx.author.colour.value != 0 else discord.Colour.blurple())
+
+        e.add_field(name='Replies', value=REPLIES_SETTINGS_TEXT[self.replies.get(ctx.author.id, 0)], inline=False)
+        e.set_author(name=ctx.author, icon_url=ctx.author.avatar.url)
+        if not ctx.interaction:
+            await ctx.tick(True)
+            await ctx.send(embed=e, delete_after=15)
+        else:
+            await ctx.send(embed=e, ephemeral=True)
+
+    @highlight.command(name='replies', with_app_command=False, aliases=['reply'])
+    async def highlight_replies(self, ctx: Context, *, setting: Union[int, str]):
+        """Set highlight for replies
+
+        This will notify you when someone replies to your message
+        0 = off, 1 = on always, 2 = only when not pinged
+        """
+        if isinstance(setting, str):
+            setting = setting.lower()
+        valid_setting = ['off', 'on', 'no pings', 0, 1, 2]
+
+        if setting not in valid_setting:
+            # display settings in pairs with their number
+            display_settings = "\n".join(f"{v} = {k}" for k, v in REPLIES_SETTINGS_TEXT.items())
+            return await ctx.send(f'Invalid setting, please use one of:\n{display_settings}')
+
+        if isinstance(setting, str):
+            setting = valid_setting.index(setting)
+
+        query = '''INSERT INTO hl_replies(id, state) VALUES($1, $2);'''
+        await self.bot.pool.execute(query, ctx.author.id, setting)
+        self.replies[ctx.author.id] = setting
+        await ctx.tick(True)
+        await ctx.send(f'Successfully set your highlight replies to: `{REPLIES_SETTINGS_TEXT[setting]}`', delete_after=7)
+
+    @highlight.app_command.command(name='reply')
+    @app_commands.describe(setting='The setting for your highlight replies')
+    @app_commands.choices(setting=[
+        app_commands.Choice(name='Off', value=0),
+        app_commands.Choice(name='On Always (All replies)', value=1),
+        app_commands.Choice(name='No pings only (Only replies that did not ping you)', value=2),
+    ])
+    async def highlight_replies_slash(self, interaction: discord.Interaction, setting: app_commands.Choice[int]):
+        """Set highlight for replies"""
+        query = '''INSERT INTO hl_replies(id, state) VALUES($1, $2) ON CONFLICT (id) DO UPDATE SET state=$2;'''
+        await self.bot.pool.execute(query, interaction.user.id, setting.value)
+        self.replies[interaction.user.id] = setting.value
+        await interaction.response.send_message(f'Successfully set your highlight replies to: `{setting.name}`', ephemeral=True)
 
     @highlight.command(name='import')
-    @commands.guild_only()
-    async def _import(self, ctx, *, guild: Union[int, str]):
-        """Import your highlight words from another server."""
-        g = self.bot.get_guild(guild)
-        if g is None:
-            g = discord.utils.get(self.bot.guilds, name=str(guild))
-        if g is not None:
-            query = '''SELECT word
-                       FROM highlights
-                       WHERE guild = $1
-                       AND "user" = $2;'''
-            records = await self.bot.pool.fetch(query, g.id, ctx.author.id)
-            words = [(ctx.guild.id, ctx.author.id, record["word"]) for record in records]
-            insert = '''INSERT INTO highlights(guild, "user", word)
-                        VALUES ($1, $2, $3);'''
-            await self.bot.pool.executemany(insert, words)
-            await self.update_regex(ctx)
-            await ctx.message.add_reaction('\U00002705')  # React with checkmark
-            await ctx.send(f'Imported your highlights from `{g}`', delete_after=10)
-        else:
-            await ctx.send('Unable to find server with that name or ID', delete_after=10)
-            await ctx.message.add_reaction('<:redTick:602811779474522113>')
+    async def highlight_import(self, ctx: Context, *, server: str):
+        """Import your highlights from another server"""
+        await ctx.defer(ephemeral=True)
 
-    @highlight.command()
-    async def list(self, ctx):
-        """List your highlight words for the current guild
-        If used in DM, all words from all guilds will be given"""
-        delete_after = 15
-        if ctx.guild is None:
-            query = '''SELECT guild, word
-                       FROM highlights
-                       WHERE "user" = $1
-                       ORDER BY word'''
-            records = await self.bot.pool.fetch(query, ctx.author.id)
-            all_hl = []
-            collect_words = {}
-            for record in records:
-                gid = record['guild']
-                if gid in collect_words:
-                    collect_words[gid].append(record['word'])
+        guild = None
+        if server.isdigit():
+            guild = self.bot.get_guild(int(server))
+        guild = guild or discord.utils.get(ctx.author.mutual_guilds, name=server)
+
+        if not guild:
+            await ctx.send('Could not find the server with that ID or name', ephemeral=True)
+            return
+
+        query = '''SELECT word FROM highlights WHERE id=$1 AND guild=$2;'''
+        records = await self.bot.pool.fetch(query, ctx.author.id, guild.id)
+        if not records:
+            await ctx.send('You do not have any highlights set up in that server!', ephemeral=True)
+            await ctx.tick(False)
+            return
+
+        cont = await ctx.confirm_prompt(f'Are you sure you want to import {len(records)} highlights from {guild.name}?', ephemeral=True)
+        if not cont:
+            await ctx.send('Cancelled', ephemeral=True)
+            await ctx.tick(False)
+            return
+
+        query = '''INSERT INTO highlights(id, guild, word) VALUES($1, $2, $3) ON CONFLICT DO NOTHING;'''
+        for record in records:
+            await self.bot.pool.execute(query, ctx.author.id, ctx.guild.id, record['word'])
+        await self.update_user_highlights(ctx.author.id, ctx.guild.id)
+
+        if not ctx.interaction:
+            await ctx.tick(True)
+            await ctx.send(f'Successfully imported {len(records)} highlights from {guild.name}', delete_after=7)
+        else:
+            await ctx.send(f'Successfully imported {len(records)} highlights from {guild.name}', ephemeral=True)
+
+    @highlight_import.autocomplete('server')
+    async def highlight_import_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        query = '''SELECT DISTINCT guild FROM highlights WHERE id=$1;'''
+        records = await self.bot.pool.fetch(query, interaction.user.id)
+        guild_ids = {r['guild'] for r in records}
+        mutual_guilds = {g.name: str(g.id) for g in interaction.user.mutual_guilds if g.id != interaction.guild_id and g.id in guild_ids}
+        keys = finder(current, mutual_guilds.keys())
+        return [app_commands.Choice(name=k, value=mutual_guilds[k]) for k in keys[:25]]
+
+    async def add_block(self, user_id: int, target_type: Literal['user', 'channel'], target_id: int):
+        query = '''INSERT INTO hl_ignores(id, type, target) VALUES($1, $2, $3);'''
+        await self.bot.pool.execute(query, user_id, target_type, target_id)
+        self.ignores[user_id][target_type].append(target_id)
+
+    async def remove_block(self, user_id: int, target_type: Literal['user', 'channel'], target_id: int):
+        query = '''DELETE FROM hl_ignores WHERE id=$1 AND type=$2 AND target=$3;'''
+        result = await self.bot.pool.execute(query, user_id, target_type, target_id)
+        self.ignores[user_id][target_type].remove(target_id)
+        if not self.ignores[user_id][target_type]:
+            self.ignores[user_id].pop(target_type)
+            if not self.ignores[user_id]:
+                self.ignores.pop(user_id)
+        return result
+
+    @highlight.command(name='ignore', aliases=['block'], with_app_command=False)
+    async def highlight_block(self, ctx: Context, *, target: Union[discord.User, discord.abc.GuildChannel, str]):
+        """Block a user or channel from triggering your highlights"""
+        if isinstance(target, str):
+            # Both converters failed
+            await ctx.tick(False)
+            return await ctx.send('Invalid user or channel')
+
+        if isinstance(target, discord.User):
+            target_type = 'user'
+            if target == ctx.author:
+                await ctx.send('You cannot block yourself')
+                await ctx.tick(False)
+                return
+        else:
+            if not isinstance(target, discord.abc.Messageable):
+                await ctx.send('That channel cannot receive messages')
+                await ctx.tick(False)
+                return
+            target_type = 'channel'
+
+        try:
+            await self.add_block(ctx.author.id, target_type, target.id)
+        except asyncpg.UniqueViolationError:
+            await ctx.tick(False)
+            await ctx.send(f'{target.mention} is already blocked from your highlights', delete_after=7, allowed_mentions=discord.AllowedMentions.none())
+        else:
+            await ctx.tick(True)
+            await ctx.send(f'Ignoring highlights from {target.mention}', delete_after=7, allowed_mentions=discord.AllowedMentions.none())
+
+    @highlight.app_command.command(name='block')
+    async def highlight_block_slash(self, interaction: discord.Interaction, member: Optional[discord.Member], channel: Optional[discord.abc.GuildChannel]):
+        """Block a user or channel from triggering your highlights"""
+        if not member and not channel:
+            return await interaction.response.send_message('You must provide a user or channel to block', ephemeral=True)
+        if member and channel:
+            return await interaction.response.send_message('Please provide a member or channel, not both', ephemeral=True)
+
+        target = member or channel
+        if isinstance(target, discord.Member):
+            if target == interaction.user:
+                return await interaction.response.send_message('You cannot block yourself', ephemeral=True)
+            target_type = 'user'
+        else:
+            if not isinstance(target, discord.abc.Messageable):
+                return await interaction.response.send_message('That channel cannot receive messages', ephemeral=True)
+            target_type = 'channel'
+
+        try:
+            await self.add_block(interaction.user.id, target_type, target.id)
+        except asyncpg.UniqueViolationError:
+            return await interaction.response.send_message(f'{target.mention} is already blocked from your highlights', ephemeral=True)
+        else:
+            await interaction.response.send_message(f'Ignoring highlights from {target.mention}', ephemeral=True)
+
+    @highlight.command(name='unignore', with_app_command=False, aliases=['unblock'])
+    async def highlight_unblock(self, ctx: Context, *, target: Union[discord.User, discord.abc.GuildChannel, str]):
+        """Unblock a previously blocked user or channel"""
+        if isinstance(target, str):
+            # Both converters failed
+            await ctx.tick(False)
+            return await ctx.send('Invalid user or channel')
+
+        if isinstance(target, discord.User):
+            target_type = 'user'
+            if target == ctx.author:
+                await ctx.send('You cannot block yourself')
+                await ctx.tick(False)
+                return
+        else:
+            if not isinstance(target, discord.abc.Messageable):
+                await ctx.send('That channel cannot receive messages')
+                await ctx.tick(False)
+                return
+            target_type = 'channel'
+
+        result = await self.remove_block(ctx.author.id, target_type, target.id)
+        if result == 'DELETE 0':
+            await ctx.tick(False)
+            await ctx.send(f'{target.mention} is not blocked from your highlights', delete_after=7, allowed_mentions=discord.AllowedMentions.none())
+        else:
+            await ctx.tick(True)
+            await ctx.send(f'Unblocked highlights from {target.mention}', delete_after=7, allowed_mentions=discord.AllowedMentions.none())
+
+    @highlight.app_command.command(name='unblock')
+    async def highlight_unblock_slash(self, interaction: discord.Interaction, target: str):
+        """Unblock a previously blocked user or channel"""
+        target = int(target)
+        target = (await interaction.client.get_or_fetch_user(target)) or interaction.guild.get_channel_or_thread(target)
+        if not target:
+            return await interaction.response.send_message('Invalid user or channel', ephemeral=True)
+
+        if isinstance(target, discord.User):
+            target_type = 'user'
+            if target == interaction.user:
+                return await interaction.response.send_message('You cannot block yourself', ephemeral=True)
+        else:
+            if not isinstance(target, discord.abc.Messageable):
+                return await interaction.response.send_message('That channel cannot receive messages', ephemeral=True)
+            target_type = 'channel'
+
+        result = await self.remove_block(interaction.user.id, target_type, target.id)
+        if result == 'DELETE 0':
+            return await interaction.response.send_message(f'{target.mention} is not blocked from your highlights', ephemeral=True)
+        else:
+            await interaction.response.send_message(f'Unblocked highlights from {target.mention}', ephemeral=True)
+
+    @highlight_unblock_slash.autocomplete('target')
+    async def highlight_unblock_member_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        if current.startswith('#'):
+            current = current.removeprefix('#')
+            query = '''SELECT target, type FROM hl_ignores WHERE id=$1 AND type='channel';'''
+        elif current.startswith('@'):
+            current = current.removeprefix('@')
+            query = '''SELECT target, type FROM hl_ignores WHERE id=$1 AND type='user';'''
+        else:
+            query = '''SELECT target, type FROM hl_ignores WHERE id=$1;'''
+        records = await self.bot.pool.fetch(query, interaction.user.id)
+
+        filtered = {}
+        for r in records:
+            if r['type'] == 'user':
+                member = interaction.guild.get_member(r['target'])
+                if member:
+                    filtered[f'User: {member.name} (ID: {member.id})'] = r['target']
                 else:
-                    collect_words[gid] = [record.get('word')]
-            for guild, words in collect_words.items():
-                all_hl.append(f'**__{self.bot.get_guild(guild)}__**')
-                all_hl.extend(words)
-            words = '\n'.join(all_hl)
-            delete_after = None
-
-        else:
-            query = '''SELECT word
-                       FROM highlights
-                       WHERE guild = $1
-                       AND "user" = $2
-                       ORDER BY word'''
-            records = await self.bot.pool.fetch(query, ctx.guild.id, ctx.author.id)
-            if records:
-                words = '\n'.join([record['word'] for record in records])
+                    filtered[f'User: Not Found (ID: {r["target"]})'] = r['target']
             else:
-                words = 'You do not have any highlight words here'
-        e = discord.Embed(color=discord.Color.dark_orange(),
-                          title=f'Highlights for {(ctx.guild or ctx.author)}',
-                          description=words)
-        e.add_field(name='Mentions', value="ON" if ctx.author.id in self.mentions else "OFF")
+                channel = interaction.guild.get_channel_or_thread(r['target'])
+                if channel:
+                    filtered[f'Channel: {channel.name} (ID: {channel.id})'] = r['target']
+        keys = finder(current, filtered.keys())
+        return [app_commands.Choice(name=k[:99], value=str(filtered[k])) for k in keys[:25]]
+
+    @highlight.command(name='blocked')
+    async def highlight_block_list(self, ctx: Context):
+        """List your blocked users and channels"""
+        query = '''SELECT type, target FROM hl_ignores WHERE id=$1;'''
+        records = await self.bot.pool.fetch(query, ctx.author.id)
+        if not records:
+            return await ctx.send('You do not have any blocked users or channels', ephemeral=True)
+
+        blocked_users = []
+        blocked_channels = []
+        for r in records:
+            if r['type'] == 'user':
+                blocked_users.append(f'<@{r["target"]}>')
+            elif r['type'] == 'channel':
+                blocked_channels.append(f'<#{r["target"]}>')
+
+        e = discord.Embed(title='Highlight Ignores',
+                          colour=discord.Colour.dark_blue())
+        if blocked_users:
+            e.add_field(name='Blocked Users', value='\n'.join(blocked_users) or 'None', inline=False)
+        if blocked_channels:
+            e.add_field(name='Blocked Channels', value='\n'.join(blocked_channels) or 'None', inline=False)
         e.set_author(name=ctx.author, icon_url=ctx.author.display_avatar.url)
 
-        await ctx.message.add_reaction('\U00002705')  # React with checkmark
-        await ctx.send(embed=e, delete_after=delete_after)
-
-    # @highlight.command()
-    async def mention(self, ctx):
-        """Toggle highlight for mentions"""
-        if ctx.guild is not None:
-            delete_after = 10
+        if not ctx.interaction:
+            await ctx.tick(True)
+            await ctx.send(embed=e, delete_after=15)
         else:
-            delete_after = None
+            await ctx.send(embed=e, ephemeral=True)
 
-        query = '''DELETE FROM mentions
-                    WHERE "user" = $1'''
+    @highlight.group(name='clear')
+    async def highlight_clear_group(self, ctx: Context):
+        """Clear your highlight triggers or blocks"""
+        await ctx.send_help(ctx.command)
 
-        deleted = await self.bot.pool.execute(query, ctx.author.id)
-        if deleted == 'DELETE 0':
-            toggle = '''INSERT INTO mentions VALUES($1)'''
-            await ctx.send('You will now get a DM when I see you mentioned', delete_after=delete_after)
-            await ctx.message.add_reaction('\U00002795')  # React with plus sign
-            await self.bot.pool.execute(toggle, ctx.author.id)
+    @highlight_clear_group.command(name='triggers')
+    async def highlight_clear_triggers(self, ctx: Context):
+        """Clear all your highlight triggers"""
+        cont = await ctx.confirm_prompt('Are you sure you want to clear all your highlight triggers here? This cannot be undone.', ephemeral=True)
+        if not cont:
+            return await ctx.send('Cancelled', ephemeral=True)
+
+        await self.delete_highlights(ctx.author.id, ctx.guild.id)
+        if not ctx.interaction:
+            await ctx.tick(True)
+            await ctx.send('Successfully cleared all your highlight triggers', delete_after=7)
         else:
-            await ctx.send('You will no longer get a DM when I see you mentioned', delete_after=delete_after)
-            await ctx.message.add_reaction('\U00002796')  # React with minus sign
+            await ctx.send(f'{await ctx.tick(reaction=False)} Successfully cleared all your highlight triggers', ephemeral=True)
 
-    @highlight.command()
-    async def clear(self, ctx, guild_id: int = None):
-        """Clear all highlight words for the current guild
-        Can pass in a guild id to specify a guild to clear from
-        If used in DM with no guild specified, clears all words from all guilds
-        Note: This will also disable highlight for mentions/pings"""
-        if ctx.guild is None and guild_id is None:
-            if not await ctx.confirm_prompt('Clear all highlight words from **every** server?'):
-                return
+    @highlight_clear_group.command(name='blocks')
+    async def highlight_clear_blocks(self, ctx: Context):
+        """Clear all your highlight blocks"""
+        cont = await ctx.confirm_prompt('Are you sure you want to clear all your highlight blocks here? This cannot be undone.', ephemeral=True)
+        if not cont:
+            return await ctx.send('Cancelled', ephemeral=True)
 
-            query = '''DELETE FROM highlights
-                       WHERE "user" = $1'''
-            await self.bot.pool.execute(query, ctx.author.id)
-
-            to_del = []
-            for guild in self.highlights:
-                if ctx.author.id in self.highlights[guild]:
-                    del self.highlights[guild][ctx.author.id]
-                    if not self.highlights[guild]:
-                        to_del.append(guild)
-
-            for gid in to_del:
-                del self.highlights[gid]
-            await ctx.send(f'Cleared all of your highlight words')
-
+        query = '''DELETE FROM hl_ignores WHERE id=$1;'''
+        await self.bot.pool.execute(query, ctx.author.id)
+        self.ignores.pop(ctx.author.id, None)
+        if not ctx.interaction:
+            await ctx.tick(True)
+            await ctx.send('Successfully cleared all your highlight blocks', delete_after=7)
         else:
-            guild = self.bot.get_guild(guild_id) or ctx.guild
-            if not await ctx.confirm_prompt(f'Clear all highlight words for `{guild}`?'):
-                return
-            query = '''DELETE FROM highlights
-                       WHERE guild = $1
-                       AND "user" = $2;'''
-            await self.bot.pool.execute(query, guild.id, ctx.author.id)
-
-            del self.highlights[ctx.guild.id][ctx.author.id]
-            if not self.highlights[ctx.guild.id]:
-                del self.highlights[ctx.guild.id]
-            await ctx.send(f'Cleared all of your highlight words for `{ctx.guild}`', delete_after=7)
-
-        if ctx.author.id in self.mentions:
-            self.mentions.remove(ctx.author.id)
-        await ctx.message.add_reaction('\U00002705')
-
-    @highlight.command(name='ignore')
-    async def toggle_ignore(self, ctx, target: Union[discord.User, discord.TextChannel, str]):
-        """Toggle ignores for highlight
-        Can enter a User, TextChannel via mention, ID or name"""
-        if ctx.guild is not None:
-            delete_after = 7
-        else:
-            delete_after = None
-        ignores = self.ignores.setdefault(ctx.author.id, {})
-        adding = False
-        if isinstance(target, discord.User):
-            users = ignores.setdefault('users', [])
-            if target.id not in users:
-                users.append(target.id)
-                await ctx.send(f'Ignoring highlights from `{target}`', delete_after=delete_after)
-                adding = 'user'
-                await ctx.message.add_reaction('\U00002795')  # React with plus sign
-            else:
-                users.remove(target.id)
-                await ctx.send(f'No longer ignoring highlights from `{target}`', delete_after=delete_after)
-                if not ignores['users']:
-                    del ignores['users']
-                await ctx.message.add_reaction('\U00002796')  # React with minus sign
-            await ctx.message.add_reaction('\U00002705')  # React with checkmark
-
-        elif isinstance(target, discord.TextChannel):
-            channels = ignores.setdefault('channels', [])
-            if target.id not in channels:
-                channels.append(target.id)
-                await ctx.send(f'Ignoring highlights from `{target}`', delete_after=delete_after)
-                adding = 'channel'
-                await ctx.message.add_reaction('\U00002795')  # React with plus sign
-            else:
-                channels.remove(target.id)
-                await ctx.send(f'No longer ignoring highlights from `{target}`!', delete_after=delete_after)
-                if not ignores['channels']:
-                    del ignores['channels']
-                await ctx.message.add_reaction('\U00002796')  # React with minus sign
-            await ctx.message.add_reaction('\U00002705')  # React with checkmark
-        else:
-            adding = None
-            await ctx.message.add_reaction('<:redTick:602811779474522113>')
-            await ctx.send('Unable to find target to ignore, please enter a users or a text channel', delete_after=delete_after)
-        if not ignores:
-            del self.ignores[ctx.author.id]
-
-        if adding:
-            query = '''INSERT INTO hlignores("user", id, type)
-                       VALUES ($1, $2, $3);'''
-            await self.bot.pool.execute(query, ctx.author.id, target.id, adding)
-        elif adding is not None:
-            delete_query = '''DELETE FROM hlignores
-                              WHERE "user" = $1 
-                              AND id = $2;'''
-            await self.bot.pool.execute(delete_query, ctx.author.id, target.id)
-
-    @highlight.command(name='ignores', aliases=['listignores'])
-    async def list_ignores(self, ctx):
-        """List your current ignores"""
-        if ctx.guild is not None:
-            delete_after = 15
-        else:
-            delete_after = None
-        ignores = self.ignores.get(ctx.author.id)
-        if ignores:
-            e = discord.Embed(color=discord.Color.dark_blue(),
-                              title='Highlight ignores')
-            if 'channels' in ignores:
-                channels = '\n'.join([str(self.bot.get_channel(cid)) for cid in ignores['channels']])
-                e.add_field(name='Channels', value=channels)
-            if 'users' in ignores:
-                users = '\n'.join([str(self.bot.get_user(uid)) for uid in ignores['users'] if self.bot.get_user(uid)])
-                e.add_field(name='Users', value=users)
-            await ctx.send(embed=e, delete_after=delete_after)
-        else:
-            await ctx.send('You do not have ignores set!', delete_after=delete_after)
-        await ctx.message.add_reaction('\U00002705')  # React with checkmark
+            await ctx.send(f'{await ctx.tick(reaction=False)} Successfully cleared all your highlight blocks', ephemeral=True)
 
 
-async def setup(bot):
-    await bot.add_cog(HighlightCog(bot))
+async def setup(bot: SnowflakeBot):
+    await bot.add_cog(Highlights(bot))
