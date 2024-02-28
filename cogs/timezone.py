@@ -45,7 +45,7 @@ class TimeZone(NamedTuple):
 
         try:
             return await ctx.disambiguate(timezones, lambda t: t[0], ephemeral=True)
-        except ValueError:
+        except (ValueError, AttributeError):
             raise commands.BadArgument(f"Could not find timezone for {argument!r}")
 
     def to_choice(self) -> app_commands.Choice[str]:
@@ -189,7 +189,7 @@ class Timezone(commands.Cog):
         keys = finder(query, self._timezone_aliases.keys())
         return [TimeZone(label=k, key=self._timezone_aliases[k]) for k in keys]
 
-    @commands.hybrid_group(invoke_without_command=True, case_insensitive=True, aliases=['tz', 'time'])
+    @commands.hybrid_group(case_insensitive=True, aliases=['tz', 'time'])
     async def timezone(self, ctx: Context):
         """Get or set your timezone"""
         await ctx.send_help(ctx.command)
