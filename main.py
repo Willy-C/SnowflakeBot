@@ -8,7 +8,6 @@ import asyncio
 import logging
 from logging.handlers import RotatingFileHandler
 from typing import Union, List, Optional
-from datetime import datetime
 
 import mystbin
 import aiohttp
@@ -27,7 +26,7 @@ try:
 except ImportError:
     print('uvloop not installed')
 
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 
 class RemoveNoise(logging.Filter):
@@ -121,7 +120,7 @@ class SnowflakeBot(commands.Bot):
                          allowed_mentions=discord.AllowedMentions(everyone=False, roles=False),
                          intents=discord.Intents.all())
 
-        self.starttime = datetime.utcnow()
+        self.starttime = discord.utils.utcnow()
 
     async def setup_hook(self) -> None:
         self.prefixes = await self.fetch_prefixes()
@@ -166,10 +165,6 @@ class SnowflakeBot(commands.Bot):
             return self.get_user(member_id) or (await self.fetch_user(member_id))
         except discord.HTTPException:
             return None
-
-    async def close(self) -> None:
-        await self.session.close()
-        await super().close()
 
 
 async def main() -> None:
