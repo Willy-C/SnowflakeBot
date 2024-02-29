@@ -188,7 +188,7 @@ class Highlights(commands.Cog):
 
         return '\n'.join(context)
 
-    async def _send_highlight_dm(self, user_id: int, embed: discord.Embed, message: discord.Message, word: str) -> None:
+    async def _send_highlight_dm(self, user_id: int, embed: discord.Embed, message: discord.Message, word: Optional[str]) -> None:
         try:
             user = self.bot.get_user(user_id) or (await self.bot.fetch_user(user_id))
             await user.send(embed=embed)
@@ -206,7 +206,7 @@ class Highlights(commands.Cog):
                 # await self.delete_replies(user_id)
                 return
         else:
-            log.info('Sent highlight notification to %s in %s for %s', user_id, message.channel.id, word)
+            self.bot.dispatch('highlight_sent', user_id, message, word)
 
     async def send_highlight_notif(self, message: discord.Message, user_id: int, word: str, prev: list[discord.Message], after: list[discord.Message]) -> None:
         now = message.created_at
@@ -266,7 +266,7 @@ class Highlights(commands.Cog):
             ref = message.reference.resolved.jump_url
             embed.description += f' | [Replying to]({ref})'
 
-        await self._send_highlight_dm(user_id, embed, message, 'reply')
+        await self._send_highlight_dm(user_id, embed, message, word)
 
     async def wait_for_activity(self, message: discord.Message, user_ids: set[int], timeout: int = 20) -> set[int]:
         """Wait for activity from a list of user_ids"""
