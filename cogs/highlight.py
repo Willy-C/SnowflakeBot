@@ -441,6 +441,12 @@ class Highlights(commands.Cog):
         if isinstance(setting, str):
             setting = valid_setting.index(setting)
 
+        if setting == 0:
+            await self.delete_replies(ctx.author.id)
+            await ctx.tick(True)
+            await ctx.send(f'Successfully set your highlight replies to: `Off`', delete_after=7)
+            return
+
         query = '''INSERT INTO hl_replies(id, state) VALUES($1, $2);'''
         await self.bot.pool.execute(query, ctx.author.id, setting)
         self.replies[ctx.author.id] = setting
@@ -456,10 +462,16 @@ class Highlights(commands.Cog):
     ])
     async def highlight_replies_slash(self, interaction: discord.Interaction, setting: app_commands.Choice[int]):
         """Set highlight for replies"""
+        await interaction.response.defer(ephemeral=True)
+        if setting.value == 0:
+            await self.delete_replies(interaction.user.id)
+            await interaction.followup.send(f'Successfully set your highlight replies to: `Off`', ephemeral=True)
+            return
+
         query = '''INSERT INTO hl_replies(id, state) VALUES($1, $2) ON CONFLICT (id) DO UPDATE SET state=$2;'''
         await self.bot.pool.execute(query, interaction.user.id, setting.value)
         self.replies[interaction.user.id] = setting.value
-        await interaction.response.send_message(f'Successfully set your highlight replies to: `{setting.name}`', ephemeral=True)
+        await interaction.followup.send(f'Successfully set your highlight replies to: `{setting.name}`', ephemeral=True)
 
     @highlight.command(name='import')
     async def highlight_import(self, ctx: Context, *, server: str):
