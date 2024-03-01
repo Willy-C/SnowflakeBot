@@ -748,7 +748,7 @@ class Highlights(commands.Cog):
     @highlight_clear_group.command(name='blocks')
     async def highlight_clear_blocks(self, ctx: Context):
         """Clear all your highlight blocks"""
-        cont = await ctx.confirm_prompt('Are you sure you want to clear all your highlight blocks here? This cannot be undone.', ephemeral=True)
+        cont = await ctx.confirm_prompt('Are you sure you want to clear all your highlight blocks? This cannot be undone.', ephemeral=True)
         if not cont:
             return await ctx.send('Cancelled', ephemeral=True)
 
