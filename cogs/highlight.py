@@ -308,7 +308,20 @@ class Highlights(commands.Cog):
 
     async def handle_highlights(self, message: discord.Message, highlights: dict[int, Optional[str]]) -> None:
         """Handle highlights"""
-        filtered = {user_id: word for user_id, word in highlights.items() if not self.should_ignore(user_id, message)}
+        filtered = {}
+        for user_id, word in highlights.items():
+            if not self.should_ignore(user_id, message):
+                if user_id == self.bot.owner_id:
+                    filtered[user_id] = word
+                else:
+                    try:
+                        member = message.guild.get_member(user_id) or (await message.guild.fetch_member(user_id))
+                    except discord.NotFound:
+                        log.warning('Highlight member %s not found in guild %s, deleting...', user_id, message.guild.id)
+                        await self.delete_highlights(user_id, message.guild.id)
+                    else:
+                        if message.channel.permissions_for(member).read_messages:
+                            filtered[user_id] = word
         if not filtered:
             return
         active_task = self.bot.loop.create_task(self.wait_for_activity(message, set(filtered.keys()), timeout=20))
