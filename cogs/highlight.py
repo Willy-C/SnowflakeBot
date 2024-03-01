@@ -48,12 +48,23 @@ class Highlights(commands.Cog):
     def create_user_regex(self, words) -> re.Pattern:
         return re.compile(r'\b(' + '|'.join(map(re.escape, words)) + r')s?\b', re.IGNORECASE)
 
-    async def make_guild_cache(self, records: list[asyncpg.Record]) -> dict[int, re.Pattern]:
+    async def make_guild_cache(self, records: list[asyncpg.Record], guild: discord.Guild) -> dict[int, re.Pattern]:
         collect_words = defaultdict(list)
         for record in records:
             collect_words[record['id']].append(record['word'])
 
-        return {user_id: self.create_user_regex(words) for user_id, words in collect_words.items()}
+        left_guild = []
+        for user_id in collect_words:
+            try:
+                member = guild.get_member(user_id) or (await guild.fetch_member(user_id))
+            except discord.NotFound:
+                left_guild.append(user_id)
+                query = '''DELETE FROM highlights WHERE id=$1 AND guild=$2;'''
+                await self.bot.pool.execute(query, user_id, guild.id)
+                log.info('Member %s not found in guild %s, deleting highlights...', user_id, guild.id)
+                continue
+
+        return {user_id: self.create_user_regex(words) for user_id, words in collect_words.items() if user_id not in left_guild}
 
     async def fetch_all_highlights(self) -> None:
         query = '''SELECT id, word FROM highlights WHERE guild=$1;'''
@@ -61,7 +72,9 @@ class Highlights(commands.Cog):
             records = await self.bot.pool.fetch(query, guild.id)
             if not records:
                 continue
-            self.highlights[guild.id] = await self.make_guild_cache(records)
+            guild_regex = await self.make_guild_cache(records, guild=guild)
+            if guild_regex:
+                self.highlights[guild.id] = guild_regex
 
     async def fetch_ignores(self) -> None:
         query = '''SELECT * FROM hl_ignores;'''
@@ -76,6 +89,7 @@ class Highlights(commands.Cog):
             self.replies[record['id']] = record['state']
 
     async def populate_cache(self) -> None:
+        await self.bot.wait_until_ready()
         await self.fetch_all_highlights()
         await self.fetch_ignores()
         await self.fetch_dm_mentions()
