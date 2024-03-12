@@ -12,6 +12,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from utils import time
+from utils.fuzzy import finder
 
 if TYPE_CHECKING:
     from main import SnowflakeBot
@@ -314,6 +315,9 @@ class Reminders(commands.Cog):
         - next thursday buy milk
         - do the homework tomorrow
         - in 3 days study for exam
+        - 5pm start making dinner
+
+        It is *highly recommended* to set your timezone first with `/timezone set`
         """
         if len(when.arg) >= 1700:
             return await ctx.send('Reminder must be fewer than 1700 characters')
@@ -444,11 +448,43 @@ class Reminders(commands.Cog):
         reminders = await self.bot.pool.fetch(query, str(interaction.user.id))
         formatted = []
         for _id, expires, message in reminders:
-            message = 'No message' if message == '…' else message
+            message = 'No message...' if message == '…' else message
             formatted.append((_id, f' [ID: {_id}] {message} (in {time.human_timedelta(expires)})'))
-        return [app_commands.Choice(name=str(message), value=str(_id)) for _id, message in formatted]
+
+        reminder_mapping = {msg: _id for _id, msg in formatted}
+        keys = finder(current, reminder_mapping.keys())
+        return [app_commands.Choice(name=k, value=str(reminder_mapping[k])) for k in keys[:25]]
+
+    @commands.command()
+    async def desktop(self, ctx: Context, *, reminder: str='…'):
+        """Set a reminder that triggers next time you go online on your desktop client
+        Reminder expires if not triggered after 7 days
+        Example usage: %desktop check out this video https://youtu.be/D0q0QeQbw9U"""
+        start = ctx.message.created_at
+        await ctx.message.add_reaction('<a:typing:559157048919457801>')
+
+        def check(before, after):
+            return before.id == ctx.author.id and \
+                   ((before.desktop_status is not discord.Status.online and after.desktop_status is discord.Status.online)
+                    or (before.desktop_status is discord.Status.offline and after.desktop_status is not discord.Status.offline))
+
+        try:
+            await self.bot.wait_for('presence_update', check=check, timeout=604800)
+        except asyncio.TimeoutError:
+            await ctx.tick(False)
+        else:
+            await ctx.tick(True)
+
+            view = discord.ui.View()
+            view.add_item(discord.ui.Button(label='Go to original message', url=ctx.message.jump_url))
+            await ctx.send(f'{ctx.author.mention} desktop reminder from {time.human_timedelta(start)}: {reminder}',
+                           view=view)
+        finally:
+            try:
+                await ctx.message.remove_reaction('<a:typing:559157048919457801>', ctx.me)
+            except discord.HTTPException:
+                pass
 
 
 async def setup(bot: SnowflakeBot):
     await bot.add_cog(Reminders(bot))
-
