@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import traceback
 from typing import TYPE_CHECKING
 
@@ -44,27 +46,14 @@ class CommandErrorHandler(commands.Cog):
         elif isinstance(error, commands.NoPrivateMessage):
             return await ctx.author.send(f'The command `{ctx.command}` cannot be used in Private Messages.')
 
-        elif isinstance(error, TimezoneNotFound):
-            common = ['US/Eastern', 'US/Pacific', 'US/Central', 'US/Mountain']
-            url = 'https://gist.githubusercontent.com/Willy-C/a511d95f1d28c1562332e487924f0d66/raw/5e6dfb0f1db4852eeaf1eb35ae4b1be92ca919e2/pytz_all_timezones.txt'
-            e = discord.Embed(title='Timezones',
-                              description=f'A full list of timezones can be found [here]({url})\n\n'
-                                          f'Some common timezones include:\n '
-                                          f'```{" | ".join(common)}```\n\n'
-                                          f'Timezones are not case-sensitive',
-                              colour=discord.Colour.blue())
-            await ctx.send('Unable to find a timezone with that name', embed=e)
-            return
-
         elif isinstance(error, NoVoiceChannel):
             await ctx.send(str(error))
             return
-
         elif isinstance(error, commands.BadArgument):
-            return await ctx.send(f'Bad argument: {error}')
+            return await ctx.send(f'Bad argument: {error}', ephemeral=True)
 
         elif isinstance(error, commands.MissingRequiredArgument):
-            return await ctx.send(f'Missing required argument: `{error.param.name}` See {ctx.prefix}help {ctx.command} for more info')
+            return await ctx.send(f'Missing required argument: `{error.param.name}` See {ctx.prefix}help {ctx.command} for more info', ephemeral=True)
 
         elif isinstance(error, commands.MissingPermissions):
             return await ctx.send(f'I cannot complete this command, you are missing the following permission{"" if len(error.missing_permissions) == 1 else "s"}: {", ".join(error.missing_permissions)}')
@@ -100,7 +89,8 @@ class CommandErrorHandler(commands.Cog):
 
     async def on_error(self, event, *args, **kwargs):
         await self.bot.wait_until_ready()
-        await self.bot.owner.send(f'An error occurred in event `{event}`')
+        msg = f'An error occurred in event `{event}`\nArgs: {args}\nKwargs: {kwargs}'
+        await self.bot.owner.send(msg)
         tb = "".join(traceback.format_exc())
         if len(tb) >= 1980:
             url = await upload_hastebin(self.bot, tb)
@@ -109,6 +99,13 @@ class CommandErrorHandler(commands.Cog):
             await self.bot.owner.send(f'```py\n{tb}```')
 
     async def on_app_command_error(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError, /) -> None:
+        command = interaction.command
+        if command is not None:
+            if command._has_any_error_handlers():
+                return
+
+        error = getattr(error, 'original', error)
+
         e = discord.Embed(title="App Command Error", colour=0xA32952)
         e.add_field(name="Command", value=(interaction.command and interaction.command.name) or "No command found.")
         e.add_field(name="Author", value=interaction.user, inline=False)
@@ -118,7 +115,7 @@ class CommandErrorHandler(commands.Cog):
         if guild:
             location_fmt += f"\nGuild: {guild.name} ({guild.id})"
         e.add_field(name="Location", value=location_fmt, inline=True)
-
+        e.add_field(name='Namespace', value=' '.join(f'{k}: {v!r}' for k, v in interaction.namespace) or 'None', inline=False)
         await self.bot.owner.send(embed=e)
 
         tb = traceback.format_exception(type(error), error, error.__traceback__)
@@ -130,9 +127,9 @@ class CommandErrorHandler(commands.Cog):
             await self.bot.owner.send(f'```py\n{fmt}```')
 
 
-async def setup(bot):
+async def setup(bot: SnowflakeBot):
     await bot.add_cog(CommandErrorHandler(bot))
 
 
-async def teardown(bot):
+async def teardown(bot: SnowflakeBot):
     bot.on_error = commands.Bot.on_error
