@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 import secrets
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Callable
 
 import discord
 from discord.ext import commands
@@ -51,6 +51,51 @@ class ConfirmView(discord.ui.View):
         if self.delete_after:
             await interaction.delete_original_response()
         self.stop()
+
+
+class DisambiguatorView(discord.ui.View):
+    message: discord.Message
+
+    def __init__(self, ctx: Context, data: list, entry: Callable):
+        super().__init__()
+        self.ctx: Context = ctx
+        self.data: list = data
+
+        options = []
+        for i, x in enumerate(data):
+            opt = entry(x)
+            if not isinstance(opt, discord.SelectOption):
+                opt = discord.SelectOption(label=str(opt))
+            opt.value = str(i)
+            options.append(opt)
+
+        select = discord.ui.Select(options=options)
+
+        select.callback = self.on_select_submit
+        self.select = select
+        self.add_item(select)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id not in (self.ctx.author.id, self.ctx.bot.owner_id):
+            await interaction.response.send_message('This select menu is not meant for you, sorry.', ephemeral=True)
+            return False
+        return True
+
+    async def on_select_submit(self, interaction: discord.Interaction):
+        index = int(self.select.values[0])
+        self.selected = self.data[index]
+        await interaction.response.defer()
+        if not self.message.flags.ephemeral:
+            await self.message.delete()
+
+        self.stop()
+
+    async def on_timeout(self) -> None:
+        try:
+            self.select.disabled = True
+            await self.message.edit(view=self)
+        except (discord.HTTPException, AttributeError):
+            pass
 
 
 class Context(commands.Context):
@@ -167,3 +212,20 @@ class Context(commands.Context):
             return await self.send(content, reference=self.message.to_reference(fail_if_not_exists=False), **kwargs)
         else:
             return await self.send(content, **kwargs)
+
+    async def disambiguate(self, matches: list, entry: Callable, *, ephemeral: bool = False):
+        if len(matches) == 0:
+            raise ValueError('No results found.')
+
+        if len(matches) == 1:
+            return matches[0]
+
+        if len(matches) > 25:
+            raise ValueError('Too many results... sorry.')
+
+        view = DisambiguatorView(self, matches, entry)
+        view.message = await self.send(
+            'There are too many matches... Which one did you mean?', view=view, ephemeral=ephemeral
+        )
+        await view.wait()
+        return view.selected
