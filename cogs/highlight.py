@@ -761,6 +761,38 @@ class Highlights(commands.Cog):
         else:
             await ctx.send(f'{await ctx.tick(reaction=False)} Successfully cleared all your highlight blocks', ephemeral=True)
 
+    @highlight.command(with_app_command=False, name='info')
+    async def highlight_info(self, ctx: Context):
+        """Explains how highlight works"""
+        # Need to do this to make the list look nice on discord
+        description = '''Highlight is an attempt to emulate Skype's word highlighting feature.
+You will get a notification via DM when someone uses your trigger word or phrase in a message.
+        
+You __will not__ get a notification if you are active or if the same trigger notified you within the last 1 minute in the same channel. 
+Active means you have sent a message within the previous 40 seconds of the trigger or if you did any of the following within 20 seconds *after* the trigger:
+- Sent a message
+- Started typing
+- Added a reaction
+        '''
+
+        replies = '''You can also set up a notification when someone replies to your message using discord's reply feature.
+        You can choose to only get notifications if the message reply did not ping you or always get notifications.
+        
+        You __will not__ get a notification if you are active or if you were replied to within the last 1 minute in the same channel.
+        See above for full details on what active means.
+        '''
+
+        scope = '''Triggers you set will only apply to the server you set them in, however replies will apply to all servers you share with me.
+        You can also block users or channels from triggering your highlights.'''
+        embed = discord.Embed(
+            title='Highlight Info',
+            colour=discord.Colour.blurple(),
+            description=description
+        )
+        embed.add_field(name='Replies', value=replies, inline=False)
+        embed.add_field(name='Other Info', value=scope, inline=False)
+        await ctx.send(embed=embed)
+
 
 async def setup(bot: SnowflakeBot):
     await bot.add_cog(Highlights(bot))
