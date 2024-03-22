@@ -143,7 +143,11 @@ class Highlights(commands.Cog):
         now = message.created_at
 
         # get all messages within the last few minutes, default 5
-        prev = [msg async for msg in message.channel.history(limit=limit, after=now - timedelta(minutes=minutes))]
+        # we will do it in a task so we can start the wait_for sooner
+        async def fetch_prev() -> list[discord.Message]:
+            return [msg async for msg in message.channel.history(limit=limit, after=now - timedelta(minutes=minutes), before=message)]
+
+        task = self.bot.loop.create_task(fetch_prev())
 
         # get all messages within last 40 seconds, we will filter from our previous list to save an API call
         # recent_messages = [msg for msg in prev_messages[:-1] if (now - msg.created_at).seconds <= recent]
@@ -160,6 +164,8 @@ class Highlights(commands.Cog):
         except TimeoutError:
             pass
 
+        prev = await task
+        prev.append(message)
         return prev, after
 
     def format_message(self, message: discord.Message, bold: bool = False, word: str = None) -> str:
