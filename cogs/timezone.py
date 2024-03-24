@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import zoneinfo
-from typing import TYPE_CHECKING, NamedTuple, Optional
+from typing import TYPE_CHECKING, NamedTuple, Optional, Union, Annotated
 
 import discord
 from discord import app_commands
@@ -12,6 +12,7 @@ from lxml import etree
 
 from utils.cache import cache
 from utils.fuzzy import finder
+from utils.time import UserFriendlyTime, FriendlyTimeResult, format_dt
 
 
 if TYPE_CHECKING:
@@ -268,6 +269,31 @@ class Timezone(commands.Cog):
             return self._default_timezones
         matches = self.find_timezones(current)
         return [tz.to_choice() for tz in matches[:25]]
+
+    @commands.command()
+    async def timestamp(self, ctx: Context, *, time: Union[discord.User, discord.Message, discord.Object, Annotated[datetime.datetime, UserFriendlyTime(default='...')], str] = None):
+        """Get the timestamp of a time or creation time of an object"""
+        if isinstance(time, str):
+            return await ctx.reply(f'Unable to parse time or object from `{time}`', mention_author=False)
+
+        time = time or discord.utils.utcnow()
+        if isinstance(time, FriendlyTimeResult):
+            time = time.dt
+
+        def build_timestamps(dt):
+            styles = ['t', 'T', 'd', 'D', 'f', 'F', 'R']
+            return [format_dt(dt, style) for style in styles]
+
+        if isinstance(time, datetime.datetime):
+            timestamps = build_timestamps(time)
+            await ctx.reply('\n'.join(f'`{ts}` {ts}' for ts in timestamps), mention_author=False)
+        else:
+            title = f'Creation time for {getattr(time, "mention", time.id)}'
+            timestamps = build_timestamps(discord.utils.snowflake_time(time.id))
+            times = '\n'.join(f'`{ts}` {ts}' for ts in timestamps)
+            await ctx.reply(f'{title}\n{times}',
+                            allowed_mentions=discord.AllowedMentions.none(),
+                            mention_author=False)
 
 
 async def setup(bot: SnowflakeBot):
